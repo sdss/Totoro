@@ -15,6 +15,7 @@ system.
 
 import ConfigParser
 import os
+from types import NoneType
 
 
 TOTORO_CONFIG_PATH = os.path.join(os.getenv('HOME'), '.totoro/totoro.config')
@@ -84,6 +85,9 @@ class ConfigObject(object):
 
     def _evalValue(self, value):
         """Evaluates the type of a value."""
+
+        if isinstance(value, NoneType):
+            return None
         try:
             return eval(value)
         except:
