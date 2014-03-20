@@ -39,5 +39,5 @@ nosetests.xml
 # Sublime Text
 *.sublime*
 
-# Big data files
-Totoro/data
+# Big data files & stuff
+Totoro/ignore

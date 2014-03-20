@@ -20,9 +20,13 @@ USER = 'albireo'
 PASSWORD = ''
 
 SCHEMA = os.path.join(os.path.dirname(__file__), 'plateDB_Test.dump')
+# SCHEMA = os.path.join(os.path.dirname(__file__), '../ignore/platedb.sql')
 MANGADB_SCHEMA = os.path.join(os.path.dirname(__file__), 'mangaDB.sql')
 OVERWRITE = True
 DBNAME = 'plateDB_Test'
+# DBNAME = 'apo_platedb'
+ADD_LABELS = True
+ADD_TILES = True
 
 
 def _createConnection(database, user, password):
@@ -70,6 +74,7 @@ def addLabels(dbName):
     conn.commit()
     conn.close()
 
+
 # Checks if the database exists and removes it if OVERWRITE is TRUE
 conn, cur = _createConnection('postgres', 'postgres', 'postgres')
 cur.execute('select datname from pg_database')
@@ -97,17 +102,20 @@ cc = subprocess.Popen('psql {0} < {1}'.format(DBNAME, SCHEMA), shell=True,
 cc.communicate()
 
 # Adds labels and generic fields to the database
-addLabels(DBNAME)
+if ADD_LABELS:
+    addLabels(DBNAME)
 
 # Creates mangaDB schema
 print 'Creating mangaDB schema'
 
-conn, cur = _createConnection(DBNAME, USER, PASSWORD)
-cur.execute(open(MANGADB_SCHEMA, 'r').read())
+cc = subprocess.Popen('psql {0} < {1}'.format(DBNAME, MANGADB_SCHEMA),
+                      shell=True,
+                      stdout=subprocess.PIPE)
+cc.communicate()
 
-conn.commit()
 
-
-# from Totoro.helpers import addFromTilingCatalogue
-# addFromTilingCatalogue('/Users/albireo/Documents/MaNGA/MaNGA_Simulations/'
-#                        'Simulations/TilingCatalogues/tilecenters_180_SGC.fits')
+if ADD_TILES:
+    from Totoro.helpers import addFromTilingCatalogue
+    print 'Adding tiles'
+    samplePath = os.environ['MANGASAMPLE']
+    addFromTilingCatalogue(samplePath, isSample=True)

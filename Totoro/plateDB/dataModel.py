@@ -168,28 +168,6 @@ class Tile(Base):
 
 ###################### MANGADB CLASSES #####################
 
-class MangaDB_Tile(Base):
-    __tablename__ = 'tile'
-    __table_args__ = {'autoload': True, 'schema': 'mangadb'}
-
-    platedbTile = relationship('Tile', backref='magadbTile')
-
-    def __repr__(self):
-        return '<MangaDB Tile (pk={0}, id={1})>'.format(
-            self.pk, self.id)
-
-
-class MangaDB_Plate(Base):
-    __tablename__ = 'plate'
-    __table_args__ = {'autoload': True, 'schema': 'mangadb'}
-
-    platedbPlate = relationship('Plate', backref='magadbPlate')
-    plateStatus = relationship('MangaDB_PlateStatus', backref='mangadbPlates')
-    mangaDBTile = relationship('MangaDB_Tile', backref='mangadbPlates')
-
-    def __repr__(self):
-        return '<MangaDB Plate (pk={0})>'.format(self.pk)
-
 
 class MangaDB_Set(Base):
     __tablename__ = 'set'
@@ -200,15 +178,6 @@ class MangaDB_Set(Base):
     def __repr__(self):
         return '<MangaDB Set (pk={0}, name={1})>'.format(
             self.pk, self.name)
-
-
-class MangaDB_PlateStatus(Base):
-    __tablename__ = 'plate_status'
-    __table_args__ = {'autoload': True, 'schema': 'mangadb'}
-
-    def __repr__(self):
-        return '<MangaDB Plate_Status (pk={0}, label={1})>'.format(
-            self.pk, self.label)
 
 
 class MangaDB_SetStatus(Base):
@@ -229,15 +198,6 @@ class MangaDB_ExposureStatus(Base):
             self.pk, self.label)
 
 
-class MangaDB_SurveyMode(Base):
-    __tablename__ = 'survey_mode'
-    __table_args__ = {'autoload': True, 'schema': 'mangadb'}
-
-    def __repr__(self):
-        return '<MangaDB Survey_Mode (pk={0}, label={1})>'.format(
-            self.pk, self.label)
-
-
 class MangaDB_Spectrum(Base):
     __tablename__ = 'spectrum'
     __table_args__ = {'autoload': True, 'schema': 'mangadb'}
@@ -252,7 +212,7 @@ class MangaDB_DataCube(Base):
     __tablename__ = 'data_cube'
     __table_args__ = {'autoload': True, 'schema': 'mangadb'}
 
-    mangadbPlate = relationship('MangaDB_Plate', backref='dataCube')
+    plate = relationship('Plate', backref='mangaDB_dataCube')
 
     def __repr__(self):
         return '<MangaDB Data_Cube (pk={0})>'.format(self.pk)
@@ -270,3 +230,22 @@ class MangaDB_Exposure(Base):
 
     def __repr__(self):
         return '<MangaDB Exposure (pk={0})>'.format(self.pk)
+
+
+class MangaDB_Field(Base):
+    __tablename__ = 'field'
+    __table_args__ = {'autoload': True, 'schema': 'mangadb'}
+
+    def __repr__(self):
+        return '<MangaDB Field (pk={0})>'.format(self.pk)
+
+
+class MangaDB_Field_To_Plate(Base):
+    __tablename__ = 'field_to_plate'
+    __table_args__ = {'autoload': True, 'schema': 'mangadb'}
+
+    plate = relationship('Plate')
+    field = relationship('MangaDB_Field')
+
+    def __repr__(self):
+        return '<MangaDB Field_To_Plate (pk={0})>'.format(self.pk)
