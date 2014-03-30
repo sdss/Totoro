@@ -13,12 +13,12 @@ from __future__ import division
 from __future__ import print_function
 from astropy.table import Table, Column
 from ..exceptions import TotoroError
-import os
 from astropy import time
 from astropy.io import ascii
 from ..core.defaults import SURVEY, DEFAULT_PLAN_FILE, \
     OPTIMISED_PLAN_PATTERN, MJD_COLNAMES, AUTOSCHEDULER_VALID_COLNAMES
 import numpy as np
+import os
 
 
 class ObservingPlan(object):
@@ -144,7 +144,7 @@ class ObservingPlan(object):
 
         """
 
-        from ..utils import lmst2utc
+        from ..utils import lmst2time
 
         for row in tab:
             mjd = row[0]
@@ -152,7 +152,7 @@ class ObservingPlan(object):
                 sidTime = row[nn]
                 if sidTime < 0.:
                     continue
-                utc = lmst2utc(sidTime, mjd)
+                utc = lmst2time(sidTime, mjd)
                 jd = utc.jd
                 row[nn] = jd
 

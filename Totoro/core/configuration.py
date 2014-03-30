@@ -50,6 +50,7 @@ class ConfigObject(object):
         self.name = name
         self.comment = comment
         self.section = section
+        self.value = None
 
         self.configPath = os.path.dirname(TOTORO_CONFIG_PATH)
 
@@ -57,6 +58,10 @@ class ConfigObject(object):
 
     def __call__(self):
         """Returns the value in the configuration file or the default."""
+
+        if self.value is not None:
+            return self.value
+
         try:
             return self._evalValue(
                 self._configparser.get(

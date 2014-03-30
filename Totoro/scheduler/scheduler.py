@@ -19,13 +19,13 @@ from .observingPlan import ObservingPlan
 from astropy import time
 from .fields import Fields
 from astropy.coordinates.angles import Longitude
-from astropy.units import degree
-from ..core.defaults import LONGITUDE, SURVEY, EXPTIME
-from collections import OrderedDict
-from ..utils.conversion import utc2lmst
+from astropy.units import degree, hour
+from ..core.defaults import *
+from .. import log
 
 
 LONG = Longitude(LONGITUDE(), unit=degree)
+ONE_EXPOSURE = EXPTIME() / EFFICIENCY()
 
 
 class BaseScheduler(object):
@@ -55,6 +55,7 @@ class BaseScheduler(object):
         self.longitude = LONG
         self.kwargs = kwargs
 
+        log.debug('Loading observing plan')
         self.observingPlan = ObservingPlan(**self.kwargs)
         self.setStartEndTime(startTime, endTime, **kwargs)
 
@@ -111,34 +112,42 @@ class Planner(BaseScheduler):
 
     def __init__(self, **kwargs):
 
-        super(Planner, self).__init__(**kwargs)
-        self.getFields(**kwargs)
-        self.schedule = OrderedDict()
+        self._kwargs = kwargs
+        self.reset()
 
     def getFields(self, **kwargs):
         """Gets a table with the fields that can be scheduled."""
         self.fields = Fields(**kwargs)
-        self.fields.removeCompleted()
 
-    def getSchedule(self):
+        log.debug('Removing done fields')
+        self.fields.removeDone()
+
+    def simulate(self):
         """Applies the scheduling logic and returns the planner schedule."""
 
-        self.schedule = OrderedDict()
-        for row in self.observingPlan:
-            mjd = row['MJD']
-            startJD = row[SURVEY() + '_0']
-            endJD = row[SURVEY() + '_1']
-            self.observe(mjd, startJD, endJD)
+        for row in self.observingPlan[0:2]:
+            startJD = time.Time(row[SURVEY() + '_0'], scale='utc', format='jd')
+            endJD = time.Time(row[SURVEY() + '_1'], scale='utc', format='jd')
+            self._observeNight(startJD, endJD)
 
-    def observe(self, mjd, startJD, endJD):
+    def _observeNight(self, startJD, endJD):
 
-        lstStart = utc2lmst(startJD)
-        lstEnd = utc2lmst(endJD)
-        currentTime = lstStart
+        def remainingTime(tt):
+            return (endJD - tt).sec
 
-        # Remaining time in minutes
-        remainingTime = (lstEnd - lstStart).sec / 60.
+        self.fields.plugFields(startJD, endJD)
+        currentTime = startJD
+
+        while remainingTime(currentTime) > ONE_EXPOSURE:
+            print(currentTime)
+            fieldToObserve = self.fields.getOptimumField(currentTime)
+            currentTime = fieldToObserve.observe(currentTime, until=endJD)
+            print(currentTime)
+            if currentTime is None:
+                print('Help!!!')
 
     def reset(self):
         """Reset the class to its original state."""
-        self.getFields()
+
+        super(Planner, self).__init__(**self._kwargs)
+        self.getFields(**self._kwargs)

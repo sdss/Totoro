@@ -74,6 +74,7 @@ class ExposureFlavor(Base):
 class CameraFrame(Base):
     __tablename__ = 'camera_frame'
     __table_args__ = {'autoload': True, 'schema': 'platedb'}
+
     camera = relationship('Camera', backref='cameraFrames')
     exposure = relationship('Exposure',
                             backref=backref('cameraFrames'))
@@ -86,6 +87,7 @@ class CameraFrame(Base):
 class Camera(Base):
     __tablename__ = 'camera'
     __table_args__ = {'autoload': True, 'schema': 'platedb'}
+
     instrument = relationship('Instrument', backref='camera')
 
     def __repr__(self):
@@ -164,6 +166,18 @@ class Tile(Base):
     def __repr__(self):
         return '<Tile (pk={0}, id={1})>'.format(
             self.pk, self.id)
+
+
+class Plugging(Base):
+    __tablename__ = 'plugging'
+    __table_args__ = {'autoload': True, 'schema': 'platedb'}
+
+    plate = relationship('Plate', backref='pluggings')
+
+    def __repr__(self):
+        return '<Plugging (pk={0}, plate_id={1})>'.format(
+            self.pk, self.plate.plate_id)
+
 
 
 ###################### MANGADB CLASSES #####################

@@ -13,5 +13,9 @@ class TotoroWarning(Warning):
     """Base warning for Totoro."""
 
 
-class TotoroUserWarning(TotoroWarning):
+class TotoroUserWarning(UserWarning, TotoroWarning):
     """The primary warning class."""
+
+
+class FieldWarning(TotoroWarning):
+    """A warning for Field."""

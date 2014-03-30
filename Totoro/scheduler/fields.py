@@ -14,20 +14,19 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from ..core.defaults import SAMPLE, LATITUDE, EXPTIME, NDITHERS
-from ..core.defaults import AVG_SN_RED, AVG_SN_BLUE, ALPHA_RED, ALPHA_BLUE, \
-    R_SN2, B_SN2, EFFICIENCY, SKY_PRIORITY, COMPLETION_PRIORITY
-from ..exceptions import TotoroError, TotoroWarning
-import warnings
-import os
+from ..core.defaults import *
+from ..exceptions import TotoroError
 import numpy as np
 from astropy import table as tt
-from ..utils import getCompletedFields
+from ..utils import areFieldsDone, mlhalimit, computeAirmass
 from ..plateDB.dataModel import session, MangaDB_Field
 from astropy import coordinates as coo
 from astropy import units as uu
 from ..utils import DustMap
-from .exposure import Exposure
+from .plugging import Plugging
+from astropy import time
+from ..utils.conversion import jd2lmst, lmst2time
+from .. import log
 
 
 try:
@@ -35,60 +34,24 @@ try:
 except:
     DUST_MAP = None
 
+ONE_EXPOSURE = EXPTIME() / EFFICIENCY()
+
 
 class Fields(list):
 
-    def __init__(self, table=False, sample=False, **kwargs):
+    def __init__(self, fields=None, **kwargs):
 
-        if table is not False:
-            self._fields = table
-            self.dataSource = 'table'
-        elif sample is not False:
-            self._fields = self._fromSample(sample)
-            self.dataSource = 'sample'
-        else:
+        log.debug('Creating fields.')
+
+        if fields is None:
             self._fields = self._fromMangaDB()
-            self.dataSource = 'mangaDB'
+        else:
+            self._fields = fields
 
         list.__init__(
             self,
             [Field(field) for field in self._fields]
         )
-
-    def _fromSample(self, sample):
-        if isinstance(sample, basestring):
-            pass
-        else:
-            if SAMPLE() is not None:
-                sample = SAMPLE()
-            elif 'MANGASAMPLE' in os.environ:
-                sample = os.environ['MANGASAMPLE']
-            else:
-                raise TotoroError('no sample source.')
-
-        return self._getFieldsFromSample(sample)
-
-    @staticmethod
-    def _getFieldsFromSample(sample):
-        """Returns a table with the fields in a sample catalogue.
-
-        This method returns a `Table` with LOCATIONID, PLATERA and PLATEDEC
-        for each unique locationID in a sample catalogue.
-
-        """
-
-        if isinstance(sample, basestring):
-            sampleData = tt.Table.read(sample)
-        elif isinstance(sample, tt.Table):
-            sampleData = sample
-        else:
-            raise TotoroError('sample format not understood.')
-
-        locationIDs, idx = np.unique(sampleData['LOCATIONID'],
-                                     return_index=True)
-        validIdx = locationIDs > 0
-        locationID_Idx = idx[validIdx]
-        return sampleData[locationID_Idx]['LOCATIONID', 'PLATERA', 'PLATEDEC']
 
     @staticmethod
     def _fromMangaDB():
@@ -105,26 +68,62 @@ class Fields(list):
 
         return table
 
-    def removeCompleted(self):
+    @staticmethod
+    def fromFields(fields, **kwargs):
+        return Fields(fields=fields, **kwargs)
 
-        if self.dataSource == 'table' or \
-                self.dataSource == 'sample':
-            warnings.warn('Totoro.Tiles.removeCompleted inly works '
-                          'when dataSource=\'mangaDB\'. No fields have '
-                          'been removed.', TotoroWarning)
-        else:
-            completedFields = getCompletedFields()
-            for cc in completedFields:
-                self.deleteField(cc)
+    def removeDone(self):
 
-    def deleteField(self, locationID):
-        locIDs = [ff.locationID for ff in self]
-        if locationID not in locIDs:
-            raise TotoroError('locationID not found.')
-        idx = locIDs.index(locationID)
+        fieldPKs = np.array([ff.fieldPK for ff in self])
+        doneFields = fieldPKs[np.where(areFieldsDone(fieldPKs))]
+
+        for fieldPK in doneFields:
+            self.deleteField(fieldPK)
+
+    def deleteField(self, fieldPK):
+
+        fieldPKs = [ff.fieldPK for ff in self]
+
+        if fieldPK not in fieldPKs:
+            raise TotoroError('fieldPK not found.')
+
+        idx = fieldPKs.index(fieldPK)
+
         self.pop(idx)
 
-    def getPriorities(self, sortedIndices=False):
+    def plugFields(self, jdStart, jdEnd, nCartridges=MAX_CARTRIDGES()):
+
+        # Needs improvement to minimise repluggings.
+
+        # Testing this method
+        # for field in self:
+        #     field.plugged = False
+
+        checkPoints = time.Time(np.linspace(jdStart.jd, jdEnd.jd, nCartridges),
+                                format='jd', scale='utc')
+
+        fieldsToPlug = []
+        for checkPoint in checkPoints:
+            priorities, orderFields = self.getPriorities(checkPoint)
+
+            for ii in range(len(orderFields)):
+                fieldToPlug = self[orderFields[ii]]
+                if fieldToPlug.ID not in fieldsToPlug:
+                    fieldsToPlug.append(fieldToPlug.ID)
+                    break
+
+        mjd = int(jdStart.mjd)
+        log.info('MJD {0} - Plugging fields {1}'.format(
+            mjd, fieldsToPlug))
+
+        for field in self:
+            if field.fieldPK in fieldsToPlug:
+                field.plugged = True
+                field.nPluggings += 1
+            else:
+                field.plugged = False
+
+    def getPriorities(self, tt, sortedIndices=True):
         """Returns a list with the priorities of the fields.
 
         This method returns a list with the priority of each field in the
@@ -133,7 +132,8 @@ class Fields(list):
 
         """
 
-        priorities = [ff.getPriority() for ff in self]
+        lst = jd2lmst(tt)
+        priorities = [ff.getPriority(lst) for ff in self]
         order = np.argsort(priorities)[::-1]
 
         if sortedIndices:
@@ -141,146 +141,191 @@ class Fields(list):
         else:
             return priorities
 
+    def getOptimumField(self, tt):
+        lst = jd2lmst(tt)
+        plugged = [ff for ff in self if ff.plugged is True]
+        priorities = [ff.getPriority(lst) for ff in self
+                      if ff.plugged is True and ff.isComplete() is False]
+        order = np.argsort(priorities)[::-1]
+        return plugged[order[0]]
+
 
 class Field(object):
 
+    fieldPK = None
+    plugged = False
+    nPluggings = 0.
+
     def __init__(self, field):
 
-        self._priority = None
+        self.plugging = Plugging(parent=self)
 
         self.locationID = int(field['LOCATIONID'])
-        self.plateCentre = coo.ICRS(ra=field['PLATERA'], dec=field['PLATEDEC'],
-                                    unit=(uu.degree, uu.degree))
+        self.centre = coo.ICRS(ra=field['PLATERA'], dec=field['PLATEDEC'],
+                               unit=(uu.degree, uu.degree))
+        self.fieldPK = field['FIELD_PK']
 
-        if 'FIELD_PK' in field.colnames:
-            self.fieldPK = field['FIELD_PK']
-
-        self.HAlimits = self.mlhalimit()
+        visWindow = mlhalimit(self.centre.dec.deg)
+        self.visibilityWindow = coo.Longitude([-visWindow, visWindow],
+                                              unit=uu.hour, wrap_angle='180d')
 
         if DUST_MAP is None:
             self.iIncrease = 1
             self.gIncrease = 1
         else:
             self.gIncrease, self.iIncrease = DUST_MAP.eval(
-                self.plateCentre.ra.deg, self.plateCentre.dec.deg)
+                self.centre.ra.deg, self.centre.dec.deg)
 
-        self.SN2_Blue = None
-        self.SN2_Red = None
+    def isComplete(self):
+        return self.plugging.complete
 
-        self.nExposuresH0 = self.getCompletionTime(HA=0.)
+    def _isHAvalid(self, HA, HArange=None):
 
-        self.exposures = []
-        self.isCompleted = False
-        self.setCompleted = True
+        if HArange is None:
+            HArange = self.visibilityWindow
 
-    @property
-    def nExposures(self):
-        return len(self.exposures)
-
-    @property
-    def observabilityWindow(self):
-        if self.setCompleted is True:
-            return [-self.HAlimits, self.HAlimits]
+        if np.abs(HA) < HArange:
+            return True
         else:
-            return [-self.HAlimits, self.HAlimits]  # To be changed
+            return False
 
     def getPriority(self, LST):
 
-        HA = LST.hour - self.plateCentre.ra.hour
-        HA.wrap_at(24 * uu.hour, inplace=True)
+        # HA = LST - self.centre.ra
 
-        airMass = self.computeAirmass(HA.deg)
-        if airMass > 2:
-            return 0
+        # if HA.hour < self.visibilityWindow[0].hour or HA > self.visibilityWindow[1]:
+        #     return 0.
 
-        skyPriority = 1. / (airMass ** ALPHA_RED() * self.iIncrease)
-        skyPriority *= SKY_PRIORITY()
+        # airMass = computeAirmass(self.centre.dec.deg, HA.deg)
+        # skyPriority = 1. / (airMass ** ALPHA_RED() * self.iIncrease)
+        # skyPriority *= SKY_PRIORITY()
 
-        completionPriority = self.exposuresCompleted / self.nExposuresH0
-        completionPriority *= COMPLETION_PRIORITY()
+        # completionPriority = self.getCompletion()
+        # completionPriority *= COMPLETION_PRIORITY()
 
-        return skyPriority + completionPriority
+        return 0.0 # skyPriority + completionPriority
 
-    def getCompletionTime(self, HA=0, direction='both'):
+    def getCompletion(self):
 
-        haArray = [0]
+        snRed = np.mean(self.plugging.SN_Red)
+        snBlue = np.mean(self.plugging.SN_Red)
 
-        if direction == 'both':
-            for ii in range(1, 10):
-                haArray += [ii, -ii]
-        elif direction == 'forward':
-            for ii in range(1, 20):
-                haArray += [ii]
-        elif direction == 'backwards':
-            for ii in range(1, 20):
-                haArray += [-ii]
+        if snRed == 0.0:
+            redCompletion = 0.0
+        else:
+            redCompletion = R_SN2() / snRed
 
-        haArray = np.array(haArray, dtype=float)
-        haArray = HA + 15. * haArray * EXPTIME() / 60. / EFFICIENCY()
+        if snBlue == 0.0:
+            blueCompletion = 0.0
+        else:
+            blueCompletion = B_SN2() / snBlue
 
-        airmasses = self.computeAirmass(haArray)
+        if redCompletion >= 1. and blueCompletion >= 1.:
+            return 1.
 
-        snRed = self.SN2_Red + np.cumsum(
-            AVG_SN_RED() / airmasses ** ALPHA_RED() / self.iIncrease)
-        snBlue = self.SN2_Blue + np.cumsum(
-            AVG_SN_BLUE() / airmasses ** ALPHA_BLUE() / self.iIncrease)
+        completion = np.mean([redCompletion, blueCompletion])
 
-        if snBlue[-1] < B_SN2() or snRed[-1] < R_SN2():
+        return completion
+
+    def observe(self, startTime, until=None):
+
+        if until is None:
+            until = self.dateHAlimits(startTime)
+
+        availableTime = (until - startTime).sec
+        nExposures = int(availableTime / ONE_EXPOSURE)
+
+        if nExposures < 1:
             return None
 
-        idxRed = np.where(snRed >= R_SN2())[0][0]
-        idxBlue = np.where(snBlue >= B_SN2())[0][0]
-        idx = np.max([idxRed, idxBlue])
+        if nExposures > 3:
+            nExposures = 3
 
-        nExp = idx + 1
-        nExp = np.int(np.ceil(np.float(nExp) / NDITHERS()) * NDITHERS())
+        lstStart = jd2lmst(startTime)
+        log.info('Starting observation of field locID={0} '.format(
+            self.locationID) + '({1:.4f}, {2:.4f})'.format(
+            self.fieldPK, self.centre.ra, self.centre.dec) +
+            ' at LST={0:.4f} h'.format(lstStart.hour))
 
-        return nExp
+        # setsWithMissingDithers = self.plugging.getIncompleteSets()
 
-    def computeAirmass(self, ha, correct=[75., 10.]):
+        # tDelta = time.TimeDelta(ONE_EXPOSURE.hour * 3600, format='sec')
+        # tDeltaSet = tDelta * NDITHERS()
 
-        lat = LATITUDE()
-        dec = self.plateCentre.dec.deg
+        # if len(setsWithMissingDithers) > 0:
+        #     endTime = startTime + tDelta
+        #     lstEnd = jd2lmst(endTime)
+        #     for ss in setsWithMissingDithers:
+        #         limits = ss.HAlimits
+        #         if self.isHAinRange(lstStart, limits) and \
+        #                 self.isHAinRange(lstEnd, limits):
+        #             ss.fixMissingDither(lstStart)
+        #             return endTime
 
-        airmass = (np.sin(lat * np.pi / 180.) * np.sin(dec * np.pi / 180.) +
-                   np.cos(lat * np.pi / 180.) * np.cos(dec * np.pi / 180.) *
-                   np.cos(ha * np.pi / 180.)) ** (-1)
+        return self.plugging.addSet(startTime=startTime, nExposures=nExposures)
 
-        if correct is not None:
-            if hasattr(airmass, '__getitem__'):
-                airmass[np.abs(ha) > correct[0]] = correct[1]
-            else:
-                if np.abs(ha) > correct[0]:
-                    airmass = correct[1]
+    def dateHAlimits(self, tt):
 
-        return airmass
+        mjd = int(tt.mjd)
+        ha0Time = lmst2time(self.centre.ra.hour, mjd)
+        delta = time.TimeDelta(self.HAlimits.hour * 3600 * uu.second)
+        return delta + ha0Time
 
-    def mlhalimit(self):
-        """Returns HA limits.
+    # def getCompletionTime(self, HA=0, direction='both'):
 
-        Calculates the maximum HAs acceptable for a list of declinations.
-        Uses the polinomial fit by David Law and a omega limit of 0.5.
+    #     haArray = [0]
 
-        """
+    #     if direction == 'both':
+    #         for ii in range(1, 10):
+    #             haArray += [ii, -ii]
+    #     elif direction == 'forward':
+    #         for ii in range(1, 20):
+    #             haArray += [ii]
+    #     elif direction == 'backwards':
+    #         for ii in range(1, 20):
+    #             haArray += [-ii]
 
-        funcFit = np.array([1.59349, 0.109658, -0.00607871,
-                            0.000185393, -2.54646e-06, 1.16686e-08])[::-1]
+    #     haArray = np.array(haArray, dtype=float)
+    #     haArray = HA + 15. * haArray * EXPTIME() / 3600. / EFFICIENCY()
 
-        dec = self.plateCentre.dec.degree
-        if dec < -10 or dec > 80:
-            return 0.
-        else:
-            return np.abs(np.polyval(funcFit, dec))
+    #     airmasses = computeAirmass(self.plateCentre.dec.deg, haArray)
 
-    def addExposure(self, **kwargs):
-        """Adds an exposure to the field."""
-        self.exposures.append(Exposure(**kwargs))
-        self._uptdateCompletion()
+    #     snRed = self.SN2_Red + np.cumsum(
+    #         AVG_SN_RED() / airmasses ** ALPHA_RED() / self.iIncrease)
+    #     snBlue = self.SN2_Blue + np.cumsum(
+    #         AVG_SN_BLUE() / airmasses ** ALPHA_BLUE() / self.iIncrease)
 
-    # def _uptdateCompletion(self):
+    #     if snBlue[-1] < B_SN2() or snRed[-1] < R_SN2():
+    #         return None
+
+    #     idxRed = np.where(snRed >= R_SN2())[0][0]
+    #     idxBlue = np.where(snBlue >= B_SN2())[0][0]
+    #     idx = np.max([idxRed, idxBlue])
+
+    #     nExp = idx + 1
+    #     nExp = np.int(np.ceil(np.float(nExp) / NDITHERS()) * NDITHERS())
+
+    #     return nExp
+
+    # def addExposure(self, **kwargs):
+    #     """Adds an exposure to the field."""
+    #     self.exposures.append(Exposure(**kwargs))
+    #     self._updateCompletion()
+
+    def isDone(self):
+        """Returns True if all the pluggings for the field are flagged good."""
+        return areFielsdDone(self.fieldPK)
+
+    @property
+    def ID(self):
+        return self.fieldPK
+
+    @ID.setter
+    def ID(self, value):
+        self.fieldPK = value
 
     def __repr__(self):
         return(
             '<Totoro.Field (designID={0:d}, RA={1:.4f}, Dec={2:.4f})>'.format(
-                self.locationID, self.RA, self.Dec)
+                self.locationID, self.centre.ra, self.centre.dec)
             )
