@@ -22,7 +22,7 @@ import warnings
 from .. import log, config, dustMap, site
 from .set import getPlateSets, Set
 from .exposure import Exposure
-from ..logic import setArrangement, updateSets, getValidSet
+from ..logic import setArrangement, updatePlate, getValidSet, addExposure
 import numpy as np
 from ..utils import getIntervalIntersectionLength, getAPOcomplete
 from copy import deepcopy
@@ -152,18 +152,19 @@ class Plate(plateDB.Plate):
             self.checkPlate()
             self.sets = getPlateSets(self.pk, format='pk', silent=silent,
                                      **kwargs)
-            if updateSets:
-                self.updateSets()
 
             if silent is False:
                 log.debug('loaded plate with pk={0}, plateid={1}'.format(
                           self.pk, self.plate_id))
 
+            if updateSets:
+                self.updatePlate()
+
         else:
             self.sets = []
 
     def __repr__(self):
-        return ('<Totoro Plate (plate_id={0}, pk={1}, completion={2:.2f})'
+        return ('<Totoro Plate (plate_id={0}, pk={1}, completion={2:.2f})>'
                 .format(self.plate_id, self.pk, self.getPlateCompletion()))
 
     @classmethod
@@ -201,6 +202,9 @@ class Plate(plateDB.Plate):
 
         return mockPlate
 
+    def addExposure(self, exposure):
+        return addExposure(exposure, self)
+
     def checkPlate(self):
 
         if not hasattr(self, 'pk') or not hasattr(self, 'plate_id'):
@@ -212,7 +216,7 @@ class Plate(plateDB.Plate):
         nMaNGAExposures = len(self.getMangadbExposures())
         nScienceExposures = len(self.getScienceExposures())
         if nMaNGAExposures != nScienceExposures:
-            warnings.warn('{0} plateDB.Exposures found for plate_id={1} '
+            warnings.warn('plate_id={1}: {0} plateDB.Exposures found '
                           'but only {2} mangaDB.Exposures'.format(
                               nScienceExposures, self.plate_id,
                               nMaNGAExposures), NoMangaExposure)
@@ -226,8 +230,8 @@ class Plate(plateDB.Plate):
 
         return False
 
-    def updateSets(self):
-        result = updateSets(self)
+    def updatePlate(self):
+        result = updatePlate(self)
         if result:
             self.update()
 
@@ -260,8 +264,8 @@ class Plate(plateDB.Plate):
         else:
 
             if len(self.plate_pointings) > 1:
-                warnings.warn('multiple plate pointings for plate_id={0:d}. '
-                              'Using the first one.'.format(self.plate_id),
+                warnings.warn('plate_id={0:d}: multiple plate pointings found.'
+                              ' Using the first one.'.format(self.plate_id),
                               MultiplePlatePointings)
 
             return np.array(
@@ -366,11 +370,10 @@ class Plate(plateDB.Plate):
 
         kwargs.update(self.kwargs)
 
-        newSelf = Plate(self.pk, format='pk', **kwargs)
+        newSelf = Plate(self.pk, format='pk', silent=True, **kwargs)
         self = newSelf
 
-        log.debug('plate with plate_id={0} has been reloaded'.format(
-                  self.plate_id))
+        log.debug('plate_id={0} has been reloaded'.format(self.plate_id))
 
     def getValidExposures(self):
         """Returns all valid exposures, even if they belong to an incomplete

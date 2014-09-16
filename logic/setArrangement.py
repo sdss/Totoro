@@ -26,54 +26,77 @@ import warnings
 import numpy as np
 
 
-def updateSets(plate, **kwargs):
+def updatePlate(plate, **kwargs):
     """Finds missing exposures """
 
-    log.debug('updating sets for plate_id={0}'.format(plate.plate_id))
+    log.debug('plate_id={0}: updating sets'.format(plate.plate_id))
+
+    badSetStatus = checkBadSets(plate, **kwargs)
 
     newExposures = getNewExposures(plate)
 
     if len(newExposures) > 0:
 
-        log.info('{0} new exposure(s) found with '
-                 'mangaDB.Exposure.pk={1}'.format(
-                     len(newExposures),
+        log.info('plate_id={0}: {1} new exposure(s) found with '
+                 'mangaDB.Exposure.pk={21}'.format(
+                     plate.plate_id, len(newExposures),
                      ', '.join([str(exp.mangadbExposure[0].pk)
                                 for exp in newExposures])))
 
         if len(newExposures) >= \
                 config['setArrangement']['forceRearrangementMinExposures']:
-            log.info('more than {0} new exposures found. Triggering a complete'
-                     ' set rearrangement.'
-                     .format(config['setArrangement']
+            log.info('plate_id={0}: more than {1} new exposures found. '
+                     'Triggering a complete set rearrangement.'
+                     .format(plate.plate_id,
+                             config['setArrangement']
                              ['forceRearrangementMinExposures']))
-            return rearrangeSets(plate, **kwargs)
+            updateStatus = rearrangeSets(plate, **kwargs)
         else:
             results = []
             for exp in newExposures:
                 results.append(addExposure(exp, plate))
             if any(results):
                 removeOrphanSets()
-                return True
+                updateStatus = True
             else:
-                return False
+                updateStatus = False
     else:
-        log.debug('no new exposures found.')
+        log.debug('plate_id={0}: no new exposures found.'.format(
+                  plate.plate_id))
+        updateStatus = False
+
+    if updateStatus or badSetStatus:
+        return True
+    else:
         return False
 
 
-def getValidSet(totoroExp, plate, setStatus=None):
+def checkBadSets(plate, **kwargs):
+    """Identifies bad sets and breaks them."""
+
+    setQuality = [set.getQuality()[0] for set in plate.sets]
+    if 'Bad' in setQuality:
+        nBadSets = len([True for ss in setQuality if ss == 'Bad'])
+        log.debug('plate_id={0}: found {1} bad sets. Fixing them.'.format(
+                  plate.plate_id, nBadSets))
+        plate = fixBadSets(plate, setQuality=setQuality)
+        return True
+    return False
+
+
+def getValidSet(totoroExp, plate, setQuality=None):
+    """Gets the best possible set for an exposure"""
 
     from ..dbclasses import Set
 
     if not totoroExp.isValid()[0]:
         return False
 
-    if setStatus is None:
-        setStatus = [set.getQuality()[0] for set in plate.sets]
+    if setQuality is None:
+        setQuality = [set.getQuality(silent=True)[0] for set in plate.sets]
 
     incompleteSets = [set for nn, set in enumerate(plate.sets)
-                      if setStatus[nn].lower() == 'incomplete']
+                      if setQuality[nn].lower() == 'incomplete']
 
     distanceToEndOfVisibilityWindow = [
         plate.getLSTRange()[1] - np.mean(set.getLSTRange())
@@ -85,7 +108,7 @@ def getValidSet(totoroExp, plate, setStatus=None):
     for set in incompleteSetsSorted:
         mockSet = Set.fromExposures(set.totoroExposures + [totoroExp],
                                     silent=True)
-        mockSetQuality.append(mockSet.getQuality()[0])
+        mockSetQuality.append(mockSet.getQuality(silent=True)[0])
         if mockSetQuality[-1] in ['Good', 'Excellent']:
             return set
 
@@ -97,6 +120,7 @@ def getValidSet(totoroExp, plate, setStatus=None):
 
 
 def addExposure(exp, plate):
+    """Adds an exposure to a plate."""
 
     from ..dbclasses import Exposure, Set
 
@@ -113,6 +137,9 @@ def addExposure(exp, plate):
         plate.sets.append(validSet)
 
     validSet.totoroExposures.append(totoroExp)
+
+    if plate.isMock:
+        return True
 
     db = TotoroDBConnection()
     session = db.Session()
@@ -148,6 +175,7 @@ def getNewSetPK():
 
 
 def getNewExposures(plate):
+    """Gets unassigned exposures in a plate."""
 
     newExposures = []
     for exp in plate.getScienceExposures():
@@ -168,7 +196,7 @@ def rearrangeSets(plate, **kwargs):
     """Assigns a set to each exposure for a given plate. Overwrites any current
     assignment"""
 
-    log.info('reorganising sets for plate_id={0}'.format(plate.plate_id))
+    log.info('plate_id={0}: reorganising sets'.format(plate.plate_id))
 
     optimalArrangement = getOptimalArrangement(plate, **kwargs)
 
@@ -183,12 +211,14 @@ def rearrangeSets(plate, **kwargs):
 
     removeOrphanSets()
 
-    log.info('rearrangement was successful')
+    log.info('plate_id={0}: rearrangement was successful'.format(
+             plate.plate_id))
 
     return True
 
 
 def removeSet(set_pk, orphan=False):
+    """Removes a set and sets set_pk to None for all its exposures."""
 
     if set_pk is None:
         return
@@ -211,6 +241,7 @@ def removeSet(set_pk, orphan=False):
 
 
 def updateSet(set):
+    """Updates the set_pk for the exposures in the set. Writes to the DB."""
 
     db = TotoroDBConnection()
     session = db.Session()
@@ -218,7 +249,7 @@ def updateSet(set):
     setPKs = [exposure._mangaExposure.set_pk
               for exposure in set.totoroExposures]
 
-    for ss in setPKs:
+    for ss in np.unique(setPKs):
         removeSet(ss)
 
     with session.begin():
@@ -239,6 +270,7 @@ def updateSet(set):
 
 
 def removeOrphanSets():
+    """Removes sets without exposures."""
 
     db = TotoroDBConnection()
     session = db.Session()
@@ -255,6 +287,8 @@ def removeOrphanSets():
 
 
 def getNumberPermutations(ditherPositions):
+    """Estimates the number of permutations to check for a certain list of
+    dithered positions."""
 
     repDict = collections.defaultdict(int)
     for cc in ditherPositions:
@@ -268,6 +302,7 @@ def getNumberPermutations(ditherPositions):
 def getOptimalArrangement(plate, startDate=None,
                           expLimit=config['setArrangement']['exposureLimit'],
                           forceLimit=False, **kwargs):
+    """Gets the best possible arrangement for the exposures in a plate."""
 
     from ..dbclasses import Exposure, Set, Plate
 
@@ -287,18 +322,20 @@ def getOptimalArrangement(plate, startDate=None,
 
     if len(validExposures) > expLimit:
         if forceLimit is False:
-            log.info('hard limit for number of exposures in rearrangement '
-                     '({0}) reached. Not rearranging.'.format(expLimit))
+            log.info('plate_id={0}: hard limit for number of exposures '
+                     'in rearrangement ({1}) reached. Not rearranging.'.format(
+                         plate.plate_id, expLimit))
             return False
         else:
-            log.debug('hard limit for number of exposures in rearrangement '
-                      'reached but ignoring because forceLimit=True.')
+            log.debug('plate_id={0}: hard limit for number of exposures '
+                      'in rearrangement reached but ignoring because '
+                      'forceLimit=True.'.format(plate.plate_id))
 
     ditherPositions = [exp.ditherPosition for exp in validExposures]
     permutations = calculatePermutations(ditherPositions)
 
-    log.info('testing {0} combinations. This might take a while.'.format(
-        getNumberPermutations(ditherPositions)))
+    log.info('plate_id={0}: testing {1} combinations. This might take a while.'
+             .format(plate.plate_id, getNumberPermutations(ditherPositions)))
 
     def getSetId(set):
         """Creates a unique identifier for a set based on the ids of its
@@ -323,7 +360,7 @@ def getOptimalArrangement(plate, startDate=None,
             # a dictionary with the quality of the set
             setId = getSetId(set)
             if setId not in setQuality:
-                setQuality[setId] = set.getQuality()[0]
+                setQuality[setId] = set.getQuality(silent=True)[0]
 
         del set
 
@@ -363,9 +400,10 @@ def getOptimalArrangement(plate, startDate=None,
     # For the selected plates, checks if they have bad sets and, in that case
     # breaks them into incomplete sets.
     for maxPlate in maxPlates:
-        setStatus = [setQuality[getSetId(set)] for set in maxPlate.sets]
-        if 'Bad' in setStatus:
-            fixBadSets(maxPlate, setStatus=setStatus)
+        maxPlateSetQuality = [setQuality[getSetId(set)]
+                              for set in maxPlate.sets]
+        if 'Bad' in setQuality:
+            fixBadSets(maxPlate, setQuality=maxPlateSetQuality)
 
     if len(maxPlates) == 1:
         optimumPlate = maxPlates[0]
@@ -388,6 +426,8 @@ def getOptimalArrangement(plate, startDate=None,
 
 
 def calculatePermutations(inputList):
+    """Calculates all the possible permutations based on an input list of
+    dithered positions."""
 
     pairs = [(nn, inputList[nn]) for nn in range(len(inputList))]
     pairs = sorted(pairs, key=lambda value: value[1])
@@ -405,35 +445,40 @@ def calculatePermutations(inputList):
         yield list(itertools.izip_longest(*prod))
 
 
-def fixBadSets(plate, setStatus=None):
+def fixBadSets(plate, setQuality=None):
+    """Breaks bad sets into incomplete sets."""
 
     from ..dbclasses import Set
 
-    if setStatus is None:
-        setStatus = [set.getQuality()[0] for set in plate.sets]
+    if setQuality is None:
+        setQuality = [set.getQuality(silent=True)[0] for set in plate.sets]
 
     exposuresToAssign = []
     setsToRemove = []
-    newSetStatus = []
+    newSetQuality = []
 
     for nn, set in enumerate(plate.sets):
-        if setStatus[nn].lower() == 'bad':
+        if setQuality[nn].lower() == 'bad':
             exposuresToAssign += set.totoroExposures
             setsToRemove.append(set)
         else:
-            newSetStatus.append(setStatus[nn])
+            newSetQuality.append(setQuality[nn])
 
     map(plate.sets.remove, setsToRemove)
 
     for exposure in exposuresToAssign:
-        validSet = getValidSet(exposure, plate, setStatus=newSetStatus)
+        validSet = getValidSet(exposure, plate, setQuality=newSetQuality)
 
         if validSet is None:
             validSet = Set.createMockSet(ra=plate.ra, dec=plate.dec,
                                          silent=True)
             plate.sets.append(validSet)
-            newSetStatus.append('Incomplete')
+            newSetQuality.append('Incomplete')
 
         validSet.totoroExposures.append(exposure)
+
+    if not plate.isMock:
+        map(removeSet, [set.pk for set in setsToRemove])
+        map(updateSet, [set for set in plate.sets])
 
     return plate
