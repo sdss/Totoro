@@ -35,7 +35,7 @@ dbConnectionTunnel: &dbConnectionTunnel
 dbConnection: *dbConnectionProduction
 
 observingPlan:
-    schedule: +../../../../schedules/Sch_base.6yrs.txt.frm.dat
+    schedule: +data/Sch_base.6yrs.txt.frm.dat
 
 fields:
     tilingCatalogue: $MANGA_TILING_CATALOGUE
