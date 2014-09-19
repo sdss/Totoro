@@ -279,7 +279,7 @@ class Plate(plateDB.Plate):
         if self._complete is not None:
             return self._complete
         else:
-            return logic.isPlateComplete(self)
+            return utils.isPlateComplete(self)
 
     def copy(self):
         return deepcopy(self)
@@ -391,18 +391,15 @@ class Plate(plateDB.Plate):
 
         return validExposures
 
-    def getLSTRange(self, mjd=None, **kwargs):
+    def getHARange(self, mjd=None, **kwargs):
 
         ha0 = -self.mlhalimit
         ha1 = self.mlhalimit
 
-        lst0 = (ha0 + self.coords[0]) % 360. / 15
-        lst1 = (ha1 + self.coords[0]) % 360. / 15
-
-        LSTRange = np.array([lst0, lst1])
+        haRange = np.array([ha0, ha1])
 
         if mjd is None:
-            return LSTRange
+            return haRange
         elif mjd == 'now':
             mjd = time.Time.now().mjd
         else:
@@ -414,11 +411,26 @@ class Plate(plateDB.Plate):
             warnings.warn('no observing block found for MJD={0:d}. '
                           'Observing windows will not be contrained.'
                           .format(mjd), TotoroExpections.NoObservingBlock)
-            return LSTRange
+            return haRange
 
         observingRangeLST = map(site.localSiderealTime, jdRange)
-        LSTRange = utils.getIntervalIntersection(
-            LSTRange, observingRangeLST, wrapAt=24.)
+        observingRangeHA = (observingRangeLST * 15 - self.ra) % 360.
+
+        return utils.getIntervalIntersection(haRange, observingRangeHA)
+
+    def getLSTRange(self, **kwargs):
+
+        haRange = self.getHARange(**kwargs)
+
+        if haRange is False:
+            return False
+
+        ha0, ha1 = haRange
+
+        lst0 = (ha0 + self.coords[0]) % 360. / 15
+        lst1 = (ha1 + self.coords[0]) % 360. / 15
+
+        LSTRange = np.array([lst0, lst1])
 
         return LSTRange
 

@@ -19,6 +19,7 @@ from Totoro.exceptions import TotoroError
 from Totoro import scheduler
 import numpy as np
 import yaml
+from astropy import time
 
 
 __ALL__ = ['getNightlyOutput']
@@ -39,6 +40,14 @@ def getNightlyOutput(input=None, format='dict', **kwargs):
         nightly = input
     else:
         raise TotoroError('input format not supported.')
+
+    # Determines the MJD for which the windows are calculated
+    if len(nightly.observingBlocks) == 0:
+        mjd = None
+    else:
+        jd = np.mean([nightly.observingBlocks['JD0'],
+                      nightly.observingBlocks['JD1']])
+        mjd = time.Time(jd, format='jd', scale='tai').mjd
 
     output = OrderedDict()
 
@@ -61,10 +70,9 @@ def getNightlyOutput(input=None, format='dict', **kwargs):
         thisPlate['cartridge'] = plate.getActiveCartNumber()
         thisPlate['complete'] = plate.isComplete
         thisPlate['completionPercentage'] = plate.getPlateCompletion() * 100.
-        thisPlate['HARange'] = formatValue(
-            np.array([-1., 1.]) * plate.mlhalimit)
+        thisPlate['HARange'] = formatValue(plate.getHARange(mjd=mjd))
         thisPlate['UTVisibilityWindow'] = formatValue(
-            plate.getUTVisibilityWindow(format='datetime'))
+            plate.getUTRange(mjd=mjd, returnType='datetime'))
         thisPlate['SN2'] = formatValue(plate.getCumulatedSN2())
 
         thisPlate['sets'] = OrderedDict()
@@ -81,8 +89,9 @@ def getNightlyOutput(input=None, format='dict', **kwargs):
 
             thisSet['SN2Range'] = formatValue(set.getSN2Range())
             thisSet['seeingRange'] = formatValue(set.getSeeingRange())
-            thisSet['UTRange'] = set.getUTVisibilityWindow(format='datetime')
-            thisSet['HARange'] = formatValue(set.getHARange())
+            thisSet['UTRange'] = set.getUTVisibilityWindow(
+                mjd=mjd, returnType='datetime')
+            thisSet['HARange'] = formatValue(set.getHARange(mjd=mjd))
             thisSet['missingDithers'] = formatValue(
                 set.getMissingDitherPositions())
 

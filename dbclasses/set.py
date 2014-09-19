@@ -191,11 +191,11 @@ class Set(mangaDB.Set):
     def getHARange(self, mjd=None, **kwargs):
         """Returns the HA limits to add more exposures to the set."""
 
-        haRange = self.getHA()
+        ha = self.getHA()
+        haRange = np.array([np.max(ha) - 15., np.min(ha) + 15.]) % 360.
 
         if mjd is None:
-            return np.array(
-                [np.max(haRange) - 15., np.min(haRange) + 15.]) % 360.
+            return haRange
         elif mjd == 'now':
             mjd = time.Time.now().mjd
         else:
