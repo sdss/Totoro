@@ -14,14 +14,13 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from ..exceptions import TotoroError, NoMangaExposure
-from .. import TotoroDBConnection
-from ..logic import mangaLogic
-from .. import log, config, site
+from Totoro.exceptions import TotoroError, NoMangaExposure
+from Totoro import TotoroDBConnection
+from Totoro import logic
+from Totoro import log, config, site, dustMap
 import numpy as np
-from .. import utils
+from Totoro import utils
 from astropy import time
-from .. import dustMap
 import warnings
 
 
@@ -188,7 +187,7 @@ class Exposure(plateDB.Exposure):
         t0 = time.Time(0, format='mjd', scale='tai')
         tStart = t0 + time.TimeDelta(startTime, format='sec', scale='tai')
 
-        lst = site.localSiderialTime(tStart.jd)
+        lst = site.localSiderealTime(tStart.jd)
         ha = (lst * 15. - self.ra) % 360.
 
         return np.array([ha, ha + expTime / 3600. * 15]) % 360.
@@ -219,7 +218,7 @@ class Exposure(plateDB.Exposure):
     def isValid(self, flag=True, **kwargs):
         """Checks if an exposure is valid."""
 
-        return mangaLogic.checkExposure(self, flag=flag, **kwargs)
+        return logic.checkExposure(self, flag=flag, **kwargs)
 
     @property
     def ditherPosition(self):

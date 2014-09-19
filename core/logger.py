@@ -11,7 +11,7 @@ import sys
 import logging
 from logging import FileHandler
 import warnings
-from . import colourPrint
+from colourPrint import colourPrint
 import shutil
 from textwrap import TextWrapper
 

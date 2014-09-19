@@ -1,3 +1,2 @@
-from .configuration import TotoroConfig
-from .colourPrint import colourPrint
-from .logger import TotoroLogger
+from configuration import TotoroConfig
+from logger import TotoroLogger

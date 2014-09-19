@@ -57,3 +57,8 @@ class NoMangaExposure(TotoroUserWarning):
 class ExposureWithoutSet(TotoroUserWarning):
     """Warning in case an exposure has no set."""
     pass
+
+
+class NoObservingBlock(TotoroUserWarning):
+    """Warning in case a MJD has no MaNGA observing time."""
+    pass

@@ -14,9 +14,9 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from .. import config, readPath, TotoroDBConnection, log
-from ..dbclasses import Plate, Plates
-from ..exceptions import TotoroError
+from Totoro import config, readPath, TotoroDBConnection, log
+import plate
+from Totoro.exceptions import TotoroError
 import os
 from astropy import table
 import numpy as np
@@ -71,8 +71,8 @@ class Fields(list):
         placeholder for future functionality when fields might be rejected
         based on the coordinates of drilled plates."""
 
-        allDrilled = Plates.getAll(onlyIncomplete=False, silent=True,
-                                   updateSets=False)
+        allDrilled = plate.Plates.getAll(onlyIncomplete=False, silent=True,
+                                         updateSets=False)
         mangaTileIDs = map(lambda xx: xx.getMangaTileID(), allDrilled)
 
         nRemoved = 0
@@ -112,7 +112,7 @@ class Fields(list):
                               ' instance.')
 
 
-class Field(Plate):
+class Field(plate.Plate):
 
     def __repr__(self):
         return '<Field: manga_tileid={0:d}>'.format(self.manga_tileid)

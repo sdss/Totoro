@@ -17,10 +17,9 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from .. import TotoroDBConnection
-from .. import config, log
+from Totoro import TotoroDBConnection, config, log
 import numpy as np
-from ..utils import isIntervalInsideOther
+from Totoro import utils
 
 
 def removeSet(set_pk):
@@ -56,10 +55,10 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
     10: manually overriden bad.
     """
 
-    from ..dbclasses import Exposure
+    from Totoro import dbclasses
 
     # Performs a quick check to see if the exposure is alredy flagged.
-    if isinstance(exposure, Exposure):
+    if isinstance(exposure, dbclasses.Exposure):
         statusLabel = exposure._mangaExposure.status.label \
             if not exposure.isMock else None
         if exposure.isMock:
@@ -70,8 +69,8 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
         elif hasattr(exposure, 'platedbExposure'):
             statusLabel = exposure.status.label
         else:
-            exposure = Exposure(exposure, format=format,
-                                parent=parent, silent=True)
+            exposure = dbclasses.Exposure(exposure, format=format,
+                                          parent=parent, silent=True)
             statusLabel = exposure._mangaExposure.status.label
 
     if not forceReflag and statusLabel is not None:
@@ -81,9 +80,9 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
             return (False, 10)
 
     # If the exposure is not flagged, perform the QA tests
-    if not isinstance(exposure, Exposure):
-        exposure = Exposure(exposure, format=format,
-                            parent=parent, silent=silent)
+    if not isinstance(exposure, dbclasses.Exposure):
+        exposure = dbclasses.Exposure(exposure, format=format,
+                                      parent=parent, silent=silent)
 
     def flagHelper(status, errorCode, message=None):
         """Helper function to log and flag exposures."""
@@ -136,8 +135,8 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
     # Checks visibility window
     visibilityWindow = np.array([-exposure.mlhalimit, exposure.mlhalimit])
     HA = exposure.getHA()
-    if not isIntervalInsideOther(HA, visibilityWindow,
-                                 onlyOne=False, wrapAt=360):
+    if not utils.isIntervalInsideOther(HA, visibilityWindow,
+                                       onlyOne=False, wrapAt=360):
         return flagHelper(False, 5,
                           'Invalid exposure. plateDB.Exposure.pk={0} '
                           'has HA range [{1}, {2}] that is outside the '
@@ -176,12 +175,12 @@ def setExposureStatus(exposure, status, **kwargs):
 
     """
 
-    from ..dbclasses import Exposure
+    from Totoro import dbclasses
 
     db = TotoroDBConnection()
     session = db.Session()
 
-    if isinstance(exposure, Exposure):
+    if isinstance(exposure, dbclasses.Exposure):
         pk = exposure._mangaExposure.pk
     elif isinstance(exposure, db.plateDB.Exposure):
         pk = exposure.mangadbExposure[0].pk
@@ -221,14 +220,14 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
 
     """
 
-    from ..dbclasses.set import Set
+    from Totoro import dbclasses
 
-    if isinstance(input, Set):
+    if isinstance(input, dbclasses.Set):
         set = input
         if set.isMock:
             flag = False
     else:
-        set = Set(input, silent=silent)
+        set = dbclasses.Set(input, silent=silent)
 
     if set.isMock is False:
         if set.set_status_pk is not None and not forceReflag:
@@ -312,12 +311,12 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
 def setSetStatus(set, status):
     """Sets the status of a set."""
 
-    from ..dbclasses import Set
+    from Totoro import dbclasses
 
     db = TotoroDBConnection()
     session = db.Session()
 
-    if isinstance(set, (Set, db.mangaDB.Set)):
+    if isinstance(set, (dbclasses.Set, db.mangaDB.Set)):
         pk = set.pk
     else:
         pk = set

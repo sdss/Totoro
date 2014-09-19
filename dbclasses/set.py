@@ -14,15 +14,16 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from .exposure import Exposure
-from ..apoDB import TotoroDBConnection
-from .. import log, config, site
-from ..exceptions import TotoroError, EmptySet
-from ..logic.mangaLogic import checkSet
-from ..utils import getMinMaxIntervalSequence, getIntervalFromPoints, \
-    calculateMean
+from exposure import Exposure
+from Totoro.apoDB import TotoroDBConnection
+from Totoro import log, config, site
+from Totoro.exceptions import TotoroError, EmptySet
+from Totoro import logic
+from Totoro import utils
+from Totoro import scheduler
 import numpy as np
 from copy import copy
+from astropy import time
 
 
 totoroDB = TotoroDBConnection()
@@ -64,13 +65,14 @@ class Set(mangaDB.Set):
         return instance
 
     def __init__(self, inp=None, format='pk', mock=False,
-                 silent=False, *args, **kwargs):
+                 silent=False, mjd=None, *args, **kwargs):
 
         self.isMock = mock
         if inp is None:
             self.isMock = True
 
-        self.kwargs = kwargs
+        self._kwargs = kwargs
+        self.mjd = mjd
 
         if not self.isMock:
             self.totoroExposures = self.loadExposures(silent=silent)
@@ -93,7 +95,7 @@ class Set(mangaDB.Set):
         """Reloads the set."""
 
         newSelf = Set(self.pk, fromat='pk', silent=True, mock=self.isMock,
-                      **self.kwargs)
+                      mjd=self.mjd, **self._kwargs)
         self = newSelf
 
         log.debug('Set pk={0} has been reloaded'.format(
@@ -109,8 +111,6 @@ class Set(mangaDB.Set):
         return newSet
 
     def loadExposures(self, silent=False):
-
-        from .exposure import Exposure
 
         return [Exposure(mangaExp.pk, format='pk', parent='mangaDB',
                          silent=silent)
@@ -162,11 +162,11 @@ class Set(mangaDB.Set):
 
     def getCoordinates(self):
 
-        if 'ra' in self.kwargs and 'dec' in self.kwargs:
-            if (self.kwargs['ra'] is not None and
-                    self.kwargs['dec'] is not None):
+        if 'ra' in self._kwargs and 'dec' in self._kwargs:
+            if (self._kwargs['ra'] is not None and
+                    self._kwargs['dec'] is not None):
                 return np.array(
-                    [self.kwargs['ra'], self.kwargs['dec']], np.float)
+                    [self._kwargs['ra'], self._kwargs['dec']], np.float)
         else:
             self._checkHasExposures()
             return self.totoroExposures[0].getCoordinates()
@@ -181,18 +181,40 @@ class Set(mangaDB.Set):
         validExposures = self.getValidExposures()
         if not midPoint or len(validExposures) == 1:
             expHAs = np.array([exp.getHA() for exp in validExposures])
-            return getMinMaxIntervalSequence(expHAs)
+            return utils.getMinMaxIntervalSequence(expHAs)
         else:
             midPoints = np.array(
-                [calculateMean(exposure.getHA())
+                [utils.calculateMean(exposure.getHA())
                  for exposure in self.totoroExposures if exposure.valid])
-            return np.array(getIntervalFromPoints(midPoints))
+            return np.array(utils.getIntervalFromPoints(midPoints))
 
-    def getHARange(self):
+    def getHARange(self, mjd=None, **kwargs):
         """Returns the HA limits to add more exposures to the set."""
 
         haRange = self.getHA()
-        return np.array([np.max(haRange) - 15., np.min(haRange) + 15.]) % 360.
+
+        if mjd is None:
+            return np.array(
+                [np.max(haRange) - 15., np.min(haRange) + 15.]) % 360.
+        elif mjd == 'now':
+            mjd = time.Time.now().mjd
+        else:
+            mjd = int(mjd)
+
+        jdRange = scheduler.observingPlan.getMJD(mjd)
+        mangaLSTRange = np.array(site.localSiderealTime(jdRange))
+
+        mangaHARange = (mangaLSTRange * 15. - self.ra) % 360.
+
+        haRange = utils.getIntervalIntersection(haRange, mangaHARange,
+                                                wrapAt=360.)
+        if haRange is False:
+            return False
+
+        plateHALimit = utils.mlhalimit(self.dec)
+
+        return utils.getIntervalIntersection(
+            haRange, np.array([-plateHALimit, plateHALimit]), wrapAt=360.)
 
     def getDitherPositions(self):
         """Returns a list of dither positions in the set."""
@@ -262,7 +284,7 @@ class Set(mangaDB.Set):
     def getQuality(self, **kwargs):
         """Returns the quality of the set."""
 
-        return checkSet(self, **kwargs)
+        return logic.checkSet(self, **kwargs)
 
     def getValidExposures(self):
 
@@ -282,28 +304,55 @@ class Set(mangaDB.Set):
 
         return np.mean(seeings)
 
-    def getLSTRange(self):
+    def getLST(self):
 
-        ha0, ha1 = self.getHARange()
+        ha0, ha1 = self.getHA()
 
         lst0 = (ha0 + self.ra) % 360. / 15
         lst1 = (ha1 + self.ra) % 360. / 15
 
         return np.array([lst0, lst1])
 
-    def getUTVisibilityWindow(self, date=None, format='str'):
+    def getLSTRange(self, **kwargs):
 
-        lst0, lst1 = self.getLSTRange()
+        haRange = self.getHARange(**kwargs)
 
-        ut0 = site.localTime(lst0, date=date, utc=True,
-                             returntype='datetime')
-        ut1 = site.localTime(lst1, date=date, utc=True,
-                             returntype='datetime')
+        if haRange is False:
+            return False
 
-        if format == 'str':
-            return ('{0:%H:%M}'.format(ut0), '{0:%H:%M}'.format(ut1))
+        ha0, ha1 = haRange
+
+        lst0 = (ha0 + self.ra) % 360. / 15
+        lst1 = (ha1 + self.ra) % 360. / 15
+
+        return np.array([lst0, lst1])
+
+    def getUTVisibilityWindow(self, **kwargs):
+        return self.getUTRange(**kwargs)
+
+    def getUTRange(self, mjd=None, returnType='str', **kwargs):
+
+        lstRange = self.getLSTRange(mjd=mjd, **kwargs)
+
+        if lstRange is False:
+            return False
+
+        lst0, lst1 = lstRange
+
+        if mjd is None or mjd == 'now':
+            date = time.Time.now()
         else:
-            return (ut0, ut1)
+            date = time.Time(mjd, format='mjd', scale='tai')
+
+        date0 = site.localSiderealTimeToDate(lst0, date=date)
+        date1 = date0 + time.TimeDelta(
+            (lst1 - lst0) % 24. * 3600., format='sec')
+
+        if returnType == 'str':
+            return ('{0:%H:%M}'.format(date0.datetime),
+                    '{0:%H:%M}'.format(date1.datetime))
+        else:
+            return (date0.datetime, date1.datetime)
 
     @property
     def complete(self):

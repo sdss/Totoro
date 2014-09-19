@@ -14,17 +14,17 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from ..apoDB import TotoroDBConnection
-from ..utils import mlhalimit, isPlateComplete
-from ..exceptions import TotoroError, MultiplePlatePointings, PlateNotPlugged
-from ..exceptions import NoMangaExposure
+from Totoro.apoDB import TotoroDBConnection
+from Totoro import utils
+from Totoro import exceptions as TotoroExpections
 import warnings
-from .. import log, config, dustMap, site
-from .set import getPlateSets, Set
-from .exposure import Exposure
-from ..logic import setArrangement, updatePlate, getValidSet, addExposure
+from astropy import time
+from Totoro import log, config, dustMap, site
+import set as TotoroSet
+from Totoro import scheduler
+from exposure import Exposure
+from Totoro import logic
 import numpy as np
-from ..utils import getIntervalIntersectionLength, getAPOcomplete
 from copy import deepcopy
 import os
 
@@ -111,7 +111,7 @@ class Plates(list):
 
         incompletePlates = []
         for totoroPlate in totoroPlates:
-            if not isPlateComplete(totoroPlate):
+            if not utils.isPlateComplete(totoroPlate):
                 incompletePlates.append(totoroPlate)
         return incompletePlates
 
@@ -135,23 +135,24 @@ class Plate(plateDB.Plate):
         return instance
 
     def __init__(self, input, format='pk', mock=False, silent=False,
-                 updateSets=True, **kwargs):
+                 updateSets=True, mjd=None, **kwargs):
 
         self._complete = None
         self.isMock = mock
-        self.kwargs = kwargs
+        self._kwargs = kwargs
+        self.mjd = mjd
 
         if 'dust' in kwargs:
             self.dust = kwargs['dust']
         else:
             self.dust = None if dustMap is None else dustMap(self.ra, self.dec)
 
-        self.mlhalimit = mlhalimit(self.dec)
+        self.mlhalimit = utils.mlhalimit(self.dec)
 
         if not self.isMock:
             self.checkPlate()
-            self.sets = getPlateSets(self.pk, format='pk', silent=silent,
-                                     **kwargs)
+            self.sets = TotoroSet.getPlateSets(
+                self.pk, format='pk', silent=silent, **kwargs)
 
             if silent is False:
                 log.debug('loaded plate with pk={0}, plateid={1}'.format(
@@ -188,7 +189,7 @@ class Plate(plateDB.Plate):
     def createMockPlate(cls, ra=None, dec=None, silent=False, **kwargs):
 
         if ra is None or dec is None:
-            raise TotoroError('ra and dec must be specified')
+            raise TotoroExpections.TotoroError('ra and dec must be specified')
 
         mockPlate = plateDB.Plate.__new__(cls)
         mockPlate.__init__(None, mock=True, ra=ra, dec=dec, **kwargs)
@@ -203,7 +204,7 @@ class Plate(plateDB.Plate):
         return mockPlate
 
     def addExposure(self, exposure):
-        return addExposure(exposure, self)
+        return logic.addExposure(exposure, self)
 
     def checkPlate(self):
 
@@ -211,7 +212,7 @@ class Plate(plateDB.Plate):
             raise AttributeError('Plate instance has no pk or plate_id.')
 
         if not self.isMaNGA:
-            raise TotoroError('this is not a MaNGA plate!')
+            raise TotoroExpections.TotoroError('this is not a MaNGA plate!')
 
         nMaNGAExposures = len(self.getMangadbExposures())
         nScienceExposures = len(self.getScienceExposures())
@@ -219,7 +220,8 @@ class Plate(plateDB.Plate):
             warnings.warn('plate_id={1}: {0} plateDB.Exposures found '
                           'but only {2} mangaDB.Exposures'.format(
                               nScienceExposures, self.plate_id,
-                              nMaNGAExposures), NoMangaExposure)
+                              nMaNGAExposures),
+                          TotoroExpections.NoMangaExposure)
 
     @property
     def isMaNGA(self):
@@ -231,12 +233,12 @@ class Plate(plateDB.Plate):
         return False
 
     def updatePlate(self):
-        result = updatePlate(self)
+        result = logic.updatePlate(self)
         if result:
             self.update()
 
     def rearrangeSets(self, startDate=None, **kwargs):
-        result = setArrangement.rearrangeSets(
+        result = logic.setArrangement.rearrangeSets(
             self, startDate=startDate, **kwargs)
         if result is True:
             self.update()
@@ -256,17 +258,17 @@ class Plate(plateDB.Plate):
 
     def getCoordinates(self):
 
-        if 'ra' in self.kwargs and 'dec' in self.kwargs:
-            if (self.kwargs['ra'] is not None and
-                    self.kwargs['dec'] is not None):
+        if 'ra' in self._kwargs and 'dec' in self._kwargs:
+            if (self._kwargs['ra'] is not None and
+                    self._kwargs['dec'] is not None):
                 return np.array(
-                    [self.kwargs['ra'], self.kwargs['dec']], np.float)
+                    [self._kwargs['ra'], self._kwargs['dec']], np.float)
         else:
 
             if len(self.plate_pointings) > 1:
                 warnings.warn('plate_id={0:d}: multiple plate pointings found.'
                               ' Using the first one.'.format(self.plate_id),
-                              MultiplePlatePointings)
+                              TotoroExpections.MultiplePlatePointings)
 
             return np.array(
                 [self.plate_pointings[0].pointing.center_ra,
@@ -277,7 +279,7 @@ class Plate(plateDB.Plate):
         if self._complete is not None:
             return self._complete
         else:
-            return isPlateComplete(self)
+            return logic.isPlateComplete(self)
 
     def copy(self):
         return deepcopy(self)
@@ -315,7 +317,7 @@ class Plate(plateDB.Plate):
             if len(plugging.activePlugging) > 0:
                 return int(plugging.cartridge.number)
 
-        raise PlateNotPlugged(
+        raise TotoroExpections.PlateNotPlugged(
             'plate_id={0} is not currently plugged'.format(self.plate_id))
 
     def getMangadbExposures(self):
@@ -368,9 +370,10 @@ class Plate(plateDB.Plate):
     def update(self, **kwargs):
         """Reloads the plate."""
 
-        kwargs.update(self.kwargs)
+        kwargs.update(self._kwargs)
 
-        newSelf = Plate(self.pk, format='pk', silent=True, **kwargs)
+        newSelf = Plate(self.pk, format='pk', silent=True, mjd=self.mjd,
+                        **kwargs)
         self = newSelf
 
         log.debug('plate_id={0} has been reloaded'.format(self.plate_id))
@@ -388,7 +391,7 @@ class Plate(plateDB.Plate):
 
         return validExposures
 
-    def getLSTRange(self):
+    def getLSTRange(self, mjd=None, **kwargs):
 
         ha0 = -self.mlhalimit
         ha1 = self.mlhalimit
@@ -396,19 +399,50 @@ class Plate(plateDB.Plate):
         lst0 = (ha0 + self.coords[0]) % 360. / 15
         lst1 = (ha1 + self.coords[0]) % 360. / 15
 
-        return (lst0, lst1)
+        LSTRange = np.array([lst0, lst1])
 
-    def getUTVisibilityWindow(self, format='str'):
-
-        lst0, lst1 = self.getLSTRange()
-
-        ut0 = site.localTime(lst0, utc=True, returntype='datetime')
-        ut1 = site.localTime(lst1, utc=True, returntype='datetime')
-
-        if format == 'str':
-            return ('{0:%H:%M}'.format(ut0), '{0:%H:%M}'.format(ut1))
+        if mjd is None:
+            return LSTRange
+        elif mjd == 'now':
+            mjd = time.Time.now().mjd
         else:
-            return (ut0, ut1)
+            mjd = int(mjd)
+
+        jdRange = scheduler.observingPlan.getMJD(mjd)
+
+        if jdRange is None:
+            warnings.warn('no observing block found for MJD={0:d}. '
+                          'Observing windows will not be contrained.'
+                          .format(mjd), TotoroExpections.NoObservingBlock)
+            return LSTRange
+
+        observingRangeLST = map(site.localSiderealTime, jdRange)
+        LSTRange = utils.getIntervalIntersection(
+            LSTRange, observingRangeLST, wrapAt=24.)
+
+        return LSTRange
+
+    def getUTVisibilityWindow(self, **kwargs):
+        return self.getUTRange(**kwargs)
+
+    def getUTRange(self, mjd=None, returnType='str', **kwargs):
+
+        lst0, lst1 = self.getLSTRange(mjd=mjd, **kwargs)
+
+        if mjd is None or mjd == 'now':
+            date = time.Time.now()
+        else:
+            date = time.Time(mjd, format='mjd', scale='tai')
+
+        date0 = site.localSiderealTimeToDate(lst0, date=date)
+        date1 = date0 + time.TimeDelta(
+            (lst1 - lst0) % 24. * 3600., format='sec')
+
+        if returnType == 'str':
+            return ('{0:%H:%M}'.format(date0.datetime),
+                    '{0:%H:%M}'.format(date1.datetime))
+        else:
+            return (date0.datetime, date1.datetime)
 
     def isVisible(self, LST0, LST1, minLength=None):
         """Returns True if the plate is visible in a range of LST."""
@@ -416,7 +450,7 @@ class Plate(plateDB.Plate):
         if minLength is None:
             minLength = config['exposure']['exposureTime']
 
-        lstIntersectionLength = getIntervalIntersectionLength(
+        lstIntersectionLength = utils.getIntervalIntersectionLength(
             self.getLSTRange(), (LST0, LST1), wrapAt=24.)
 
         secIntersectionLength = lstIntersectionLength * 3600.
@@ -439,14 +473,15 @@ class Plate(plateDB.Plate):
                 log.debug('mock exposure is invalid.')
             return False
 
-        validSet = getValidSet(exposure, self)
+        validSet = logic.getValidSet(exposure, self)
         added = False
         for set in self.sets:
             if set == validSet:
                 set.totoroExposures.append(exposure)
                 added = True
         if not added:
-            self.sets.append(Set.fromExposures([exposure], sient=silent))
+            self.sets.append(
+                TotoroSet.fromExposures([exposure], sient=silent))
 
         return exposure
 
@@ -465,8 +500,8 @@ class Plate(plateDB.Plate):
         for set in incompleteSets:
 
             lstRange = set.getLSTRange()
-            intersectionLength = getIntervalIntersectionLength(
-                (LST0, LST1), lstRange)
+            intersectionLength = logic.getIntervalIntersectionLength(
+                (LST0, LST1), lstRange, wrapAt=24)
 
             if intersectionLength * 3600 > expTime:
                 return set
@@ -499,7 +534,7 @@ class Plate(plateDB.Plate):
             return False
 
     def getAPOcomplete(self):
-        return getAPOcomplete(self)
+        return utils.getAPOcomplete(self)
 
     def getMangaTileID(self):
         if len(self.design.inputs) == 0:
