@@ -15,10 +15,10 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from astropysics import obstools
-from Totoro.exceptions import TotoroError
+from sdss.internal.manga.Totoro.exceptions import TotoroError
 from timeline import Timelines
-from Totoro import log, site
-from Totoro.scheduler import observingPlan
+from sdss.internal.manga.Totoro import log, site
+from sdss.internal.manga.Totoro.scheduler import observingPlan
 from astropy import time
 
 
@@ -148,7 +148,7 @@ class Nightly(BaseScheduler):
     def getPlates(self, **kwargs):
         """Gets the plugged plates."""
 
-        from Totoro import dbclasses
+        from sdss.internal.manga.Totoro import dbclasses
 
         plates = dbclasses.Plates.getPlugged(**kwargs)
 
@@ -162,14 +162,14 @@ class Nightly(BaseScheduler):
     def printTabularOutput(self):
         """Prints a series of tables with information about the schedule."""
 
-        from .. import output
+        from sdss.internal.manga.Totoro import output
 
         output.printTabularOutput(self.plates)
 
     def getOutput(self, format='dict'):
         """Returns the nightly output in the selected format."""
 
-        from .. import output
+        from sdss.internal.manga.Totoro import output
 
         if format == 'table':
             return output.getTabularOutput(self.plates)

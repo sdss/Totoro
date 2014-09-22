@@ -14,16 +14,16 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from Totoro import config, readPath, TotoroDBConnection, log
+from sdss.internal.manga import Totoro
 import plate
-from Totoro.exceptions import TotoroError
+from sdss.internal.manga.Totoro.exceptions import TotoroError
 import os
 from astropy import table
 import numpy as np
 from numbers import Integral
 
 
-db = TotoroDBConnection()
+db = Totoro.TotoroDBConnection()
 session = db.Session()
 
 
@@ -32,8 +32,10 @@ class Fields(list):
     def __init__(self, tilingCatalogue=None, rejectDrilled=True, silent=False,
                  **kwargs):
 
-        self.tilingCatalogue = readPath(config['fields']['tilingCatalogue']) \
-            if tilingCatalogue is None else readPath(tilingCatalogue)
+        self.tilingCatalogue = Totoro.readPath(
+            Totoro.config['fields']['tilingCatalogue']) \
+            if tilingCatalogue is None else Totoro.readPath(
+                tilingCatalogue)
 
         self._tiles = self._getTiles(**kwargs)
 
@@ -48,9 +50,9 @@ class Fields(list):
 
         logMsg = 'loaded {0} fields from tiling catalogue'.format(len(self))
         if not silent:
-            log.info(logMsg)
+            Totoro.log.info(logMsg)
         else:
-            log.debug(logMsg)
+            Totoro.log.debug(logMsg)
 
         if rejectDrilled:
             self._rejectDrilled(silent=silent, **kwargs)
@@ -84,9 +86,9 @@ class Fields(list):
         logMsg = ('rejected {0} fields because they have already been drilled'
                   .format(nRemoved))
         if not silent:
-            log.info(logMsg)
+            Totoro.log.info(logMsg)
         else:
-            log.debug(logMsg)
+            Totoro.log.debug(logMsg)
 
     def removeField(self, inp):
 

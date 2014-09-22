@@ -17,9 +17,9 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from Totoro import TotoroDBConnection, config, log
+from sdss.internal.manga.Totoro import TotoroDBConnection, config, log
 import numpy as np
-from Totoro import utils
+from sdss.internal.manga.Totoro import utils
 
 
 def removeSet(set_pk):
@@ -55,7 +55,7 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
     10: manually overriden bad.
     """
 
-    from Totoro import dbclasses
+    from sdss.internal.manga.Totoro import dbclasses
 
     # Performs a quick check to see if the exposure is alredy flagged.
     if isinstance(exposure, dbclasses.Exposure):
@@ -175,7 +175,7 @@ def setExposureStatus(exposure, status, **kwargs):
 
     """
 
-    from Totoro import dbclasses
+    from sdss.internal.manga.Totoro import dbclasses
 
     db = TotoroDBConnection()
     session = db.Session()
@@ -220,7 +220,7 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
 
     """
 
-    from Totoro import dbclasses
+    from sdss.internal.manga.Totoro import dbclasses
 
     if isinstance(input, dbclasses.Set):
         set = input
@@ -311,7 +311,7 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
 def setSetStatus(set, status):
     """Sets the status of a set."""
 
-    from Totoro import dbclasses
+    from sdss.internal.manga.Totoro import dbclasses
 
     db = TotoroDBConnection()
     session = db.Session()

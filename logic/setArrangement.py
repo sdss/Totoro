@@ -16,8 +16,8 @@ from __future__ import division
 from __future__ import print_function
 import itertools
 from mangaLogic import checkExposure
-from Totoro.exceptions import NoMangaExposure
-from Totoro import TotoroDBConnection, log, config
+from sdss.internal.manga.Totoro.exceptions import NoMangaExposure
+from sdss.internal.manga.Totoro import TotoroDBConnection, log, config
 from sqlalchemy import func
 from scipy.misc import factorial
 import collections
@@ -86,7 +86,7 @@ def checkBadSets(plate, **kwargs):
 def getValidSet(totoroExp, plate, setQuality=None):
     """Gets the best possible set for an exposure"""
 
-    from Totoro import dbclasses
+    from sdss.internal.manga.Totoro import dbclasses
 
     if not totoroExp.isValid()[0]:
         return False
@@ -121,7 +121,7 @@ def getValidSet(totoroExp, plate, setQuality=None):
 def addExposure(exp, plate):
     """Adds an exposure to a plate."""
 
-    from Totoro import dbclasses
+    from sdss.internal.manga.Totoro import dbclasses
 
     if not isinstance(exp, dbclasses.Exposure):
         totoroExp = dbclasses.Exposure(exp, silent=True)
@@ -303,7 +303,7 @@ def getOptimalArrangement(plate, startDate=None,
                           forceLimit=False, **kwargs):
     """Gets the best possible arrangement for the exposures in a plate."""
 
-    from Totoro import dbclasses
+    from sdss.internal.manga.Totoro import dbclasses
 
     exposures = [dbclasses.Exposure(exp.pk, parent='mangaDB', silent=True)
                  for exp in plate.getMangadbExposures()]
@@ -447,7 +447,7 @@ def calculatePermutations(inputList):
 def fixBadSets(plate, setQuality=None):
     """Breaks bad sets into incomplete sets."""
 
-    from Totoro import dbclasses
+    from sdss.internal.manga.Totoro import dbclasses
 
     if setQuality is None:
         setQuality = [set.getQuality(silent=True)[0] for set in plate.sets]

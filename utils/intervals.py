@@ -15,7 +15,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from ..exceptions import TotoroError
+from sdss.internal.manga.Totoro.exceptions import TotoroError
 import itertools
 
 

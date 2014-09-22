@@ -14,11 +14,11 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from Totoro import config, log, site, TotoroDBConnection
+from sdss.internal.manga.Totoro import config, log, site, TotoroDBConnection
 import warnings
-from Totoro.exceptions import TotoroUserWarning
-from Totoro import utils
-from Totoro import logic
+from sdss.internal.manga.Totoro.exceptions import TotoroUserWarning
+from sdss.internal.manga.Totoro import utils
+from sdss.internal.manga.Totoro import logic
 
 
 db = TotoroDBConnection()
@@ -54,7 +54,7 @@ class Timeline(object):
 
     def __init__(self, startTime, endTime, plates=None, **kwargs):
 
-        from Totoro import dbclasses
+        from sdss.internal.manga.Totoro import dbclasses
 
         self.startTime = startTime
         self.endTime = endTime

@@ -1,6 +1,6 @@
 
 import warnings
-from Totoro.exceptions import TotoroUserWarning
+from sdss.internal.manga.Totoro.exceptions import TotoroUserWarning
 
 try:
     from observingPlan import ObservingPlan

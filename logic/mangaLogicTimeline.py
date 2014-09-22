@@ -15,8 +15,8 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from Totoro import utils
-from Totoro import config, site
+from sdss.internal.manga.Totoro import utils
+from sdss.internal.manga.Totoro import config, site
 from astropy import table
 
 
@@ -102,7 +102,7 @@ def getOptimalPlate(plates, JD0, JD1, mode='planner', **kwargs):
 
 def getVisiblePlates(plates, LST0, LST1, **kwargs):
 
-    from Totoro import dbclasses
+    from sdss.internal.manga.Totoro import dbclasses
 
     return dbclasses.Plates.fromList(
         [plate for plate in plates
@@ -111,7 +111,7 @@ def getVisiblePlates(plates, LST0, LST1, **kwargs):
 
 def getIncompletePlates(plates):
 
-    from Totoro import dbclasses
+    from sdss.internal.manga.Totoro import dbclasses
 
     return dbclasses.Plates.fromList(
         [plate for plate in plates
@@ -120,7 +120,7 @@ def getIncompletePlates(plates):
 
 def getPlatesWithEnoughTime(plates, JD0, JD1):
 
-    from Totoro import dbclasses
+    from sdss.internal.manga.Totoro import dbclasses
 
     pp = []
 
