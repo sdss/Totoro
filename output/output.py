@@ -67,9 +67,9 @@ def getNightlyOutput(input=None, format='dict', **kwargs):
         thisPlate['cartridge'] = plate.getActiveCartNumber()
         thisPlate['complete'] = plate.isComplete
         thisPlate['completionPercentage'] = plate.getPlateCompletion() * 100.
-        thisPlate['HARange'] = formatValue(plate.getHARange(mjd=mjd))
+        thisPlate['HARange'] = formatValue(plate.getHARange(intersect=False))
         thisPlate['UTVisibilityWindow'] = formatValue(
-            plate.getUTRange(mjd=mjd, returnType='datetime'))
+            plate.getUTRange(mjd=mjd, intersect=False, returnType='datetime'))
         thisPlate['SN2'] = formatValue(plate.getCumulatedSN2())
 
         thisPlate['sets'] = OrderedDict()
@@ -87,8 +87,8 @@ def getNightlyOutput(input=None, format='dict', **kwargs):
             thisSet['SN2Range'] = formatValue(set.getSN2Range())
             thisSet['seeingRange'] = formatValue(set.getSeeingRange())
             thisSet['UTRange'] = set.getUTVisibilityWindow(
-                mjd=mjd, returnType='datetime')
-            thisSet['HARange'] = formatValue(set.getHARange(mjd=mjd))
+                mjd=mjd, intersect=False, returnType='datetime')
+            thisSet['HARange'] = formatValue(set.getHARange(intersect=False))
             thisSet['missingDithers'] = formatValue(
                 set.getMissingDitherPositions())
 
