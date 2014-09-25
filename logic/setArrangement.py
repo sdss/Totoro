@@ -37,7 +37,7 @@ def updatePlate(plate, **kwargs):
     if len(newExposures) > 0:
 
         log.info('plate_id={0}: {1} new exposure(s) found with '
-                 'mangaDB.Exposure.pk={21}'.format(
+                 'mangaDB.Exposure.pk={0}'.format(
                      plate.plate_id, len(newExposures),
                      ', '.join([str(exp.mangadbExposure[0].pk)
                                 for exp in newExposures])))
