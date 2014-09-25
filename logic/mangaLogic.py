@@ -58,16 +58,16 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
     from sdss.internal.manga.Totoro import dbclasses
 
     # Performs a quick check to see if the exposure is alredy flagged.
+    statusLabel = None
     if isinstance(exposure, dbclasses.Exposure):
-        statusLabel = exposure._mangaExposure.status.label \
-            if not exposure.isMock else None
-        if exposure.isMock:
+        if not exposure.isMock and exposure._mangaExposure.status is not None:
+            statusLabel = exposure._mangaExposure.status.label
+        elif exposure.isMock:
             flag = False
     else:
         if hasattr(exposure, 'mangadbExposure'):
-            statusLabel = exposure.mangadbExposure[0].status.label
-        elif hasattr(exposure, 'platedbExposure'):
-            statusLabel = exposure.status.label
+            if exposure.mangadbExposure[0].status is not None:
+                statusLabel = exposure.mangadbExposure[0].status.label
         else:
             exposure = dbclasses.Exposure(exposure, format=format,
                                           parent=parent, silent=True)
