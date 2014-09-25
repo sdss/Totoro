@@ -203,7 +203,8 @@ class Set(mangaDB.Set):
             return haRangePlate
 
         if mjd is None:
-            mjd = time.Time.now().mjd
+            mjd = int(np.round(time.Time.now().mjd))
+            log.debug('Set.getHARange: MJD set to {0:d}'.format(mjd))
         else:
             mjd = int(mjd)
 
@@ -343,9 +344,9 @@ class Set(mangaDB.Set):
         lst0, lst1 = lstRange
 
         if mjd is None:
-            date = time.Time.now()
-        else:
-            date = time.Time(mjd, format='mjd', scale='tai')
+            date = int(np.round(time.Time.now().mjd))
+
+        date = time.Time(mjd, format='mjd', scale='tai')
 
         date0 = site.localSiderealTimeToDate(lst0, date=date)
         date1 = date0 + time.TimeDelta(

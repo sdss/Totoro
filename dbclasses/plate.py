@@ -402,7 +402,8 @@ class Plate(plateDB.Plate):
             return haRange
 
         if mjd is None:
-            mjd = time.Time.now().mjd
+            mjd = int(np.round(time.Time.now().mjd))
+            log.debug('Plate.getHARange: MJD set to {0:d}'.format(mjd))
         else:
             mjd = int(mjd)
 
@@ -443,9 +444,9 @@ class Plate(plateDB.Plate):
         lst0, lst1 = self.getLSTRange(mjd=mjd, **kwargs)
 
         if mjd is None:
-            date = time.Time.now()
-        else:
-            date = time.Time(mjd, format='mjd', scale='tai')
+            mjd = int(np.round(time.Time.now().mjd))
+
+        date = time.Time(mjd, format='mjd', scale='tai')
 
         date0 = site.localSiderealTimeToDate(lst0, date=date)
         date1 = date0 + time.TimeDelta(
