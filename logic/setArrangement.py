@@ -311,7 +311,7 @@ def getOptimalArrangement(plate, startDate=None,
     validExposures = []
     invalidExposures = []
     for exposure in exposures:
-        if checkExposure(exposure, **kwargs)[0]:
+        if checkExposure(exposure, forceReflag=True, flag=True, **kwargs)[0]:
             validExposures.append(exposure)
         else:
             invalidExposures.append(exposure)
@@ -352,6 +352,7 @@ def getOptimalArrangement(plate, startDate=None,
 
             exposures = [validExposures[ii]
                          for ii in setIndices if ii is not None]
+
             set = dbclasses.Set.fromExposures(exposures, silent=True)
             sets.append(set)
 
@@ -401,8 +402,8 @@ def getOptimalArrangement(plate, startDate=None,
     for maxPlate in maxPlates:
         maxPlateSetQuality = [setQuality[getSetId(set)]
                               for set in maxPlate.sets]
-        if 'Bad' in setQuality:
-            fixBadSets(maxPlate, setQuality=maxPlateSetQuality)
+        if 'Bad' in maxPlateSetQuality:
+            maxPlate = fixBadSets(maxPlate, setQuality=maxPlateSetQuality)
 
     if len(maxPlates) == 1:
         optimumPlate = maxPlates[0]

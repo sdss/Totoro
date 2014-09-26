@@ -83,10 +83,16 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
                                           parent=parent, silent=True)
             statusLabel = exposure._mangaExposure.status.label
 
-    if not forceReflag and statusLabel is not None:
-        if statusLabel.lower() in ['override good', 'totoro good']:
-            return (True, 0)
-        elif statusLabel.lower() in ['bad', 'override bad', 'totoro bad']:
+    if statusLabel is not None:
+        # If the exposure has been overriden good or bad outside Totoro,
+        # we don't want to change that.
+        if statusLabel.lower() == 'override good':
+            return (True, 10)
+        elif statusLabel.lower() in ['override bad', 'bad']:
+            return (False, 10)
+        elif not forceReflag and statusLabel.lower() == 'totoro good':
+            return (True, 10)
+        elif not forceReflag and statusLabel.lower() == 'totoro bad':
             return (False, 10)
 
     # If the exposure is not flagged, perform the QA tests
@@ -95,7 +101,7 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
                                       parent=parent, silent=silent)
 
     # Checks if the exposure has been completely reduce. If not, returns False
-    # but does not flag it.
+    # but does not flag it as Totoro Good/Bad.
     if None in list(exposure.getSN2Array()):
         setExposureStatus(exposure, 'Good')
         return (False, 6)
@@ -332,9 +338,10 @@ def setSetStatus(set, status):
         try:
             queryStatus = session.query(db.mangaDB.SetStatus).filter(
                 db.mangaDB.SetStatus.label == status).one()
+            statusPK = queryStatus.pk
         except:
-            return False
-        statusPK = queryStatus.pk
+            statusPK = None
+
         ss = session.query(db.mangaDB.Set).get(pk)
         ss.set_status_pk = statusPK
 
