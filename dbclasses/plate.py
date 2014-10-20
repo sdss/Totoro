@@ -55,8 +55,7 @@ class Plates(list):
                     plateDB.Plate,
                     plateDB.PlateToSurvey,
                     plateDB.Survey, plateDB.SurveyMode).filter(
-                        plateDB.Survey.label == 'MaNGA',
-                        plateDB.SurveyMode.label == 'MaNGA dither').order_by(
+                        plateDB.Survey.label == 'MaNGA').order_by(
                             plateDB.Plate.plate_id).all()
 
         plates = [actPlug.plugging.plate_pk for actPlug in activePluggings]
@@ -495,19 +494,15 @@ class Plate(plateDB.Plate):
                 silent=silent, **kwargs)
 
         if exposure.isValid(silent=silent)[0] is False:
-            if not silent:
-                log.debug('mock exposure is invalid.')
+            log.debug('mock exposure is invalid.')
             return False
 
         validSet = logic.getValidSet(exposure, self)
-        added = False
-        for set in self.sets:
-            if set == validSet:
-                set.totoroExposures.append(exposure)
-                added = True
-        if not added:
-            self.sets.append(
-                TotoroSet.fromExposures([exposure], sient=silent))
+
+        if validSet is not None:
+            validSet.totoroExposures.append(exposure)
+        else:
+            self.sets.append(TotoroSet.Set.fromExposures([exposure]))
 
         return exposure
 
@@ -537,11 +532,7 @@ class Plate(plateDB.Plate):
     def getLastExposure(self):
         """Returns the last exposure taken."""
 
-        exposures = []
-        for set in self.sets:
-            for exp in set.totoroExposures:
-                if exp.valid:
-                    exposures.append(exp)
+        exposures = self.getValidExposures()
 
         startTime = [exp.start_time for exp in exposures]
         order = np.argsort(startTime)
@@ -549,7 +540,10 @@ class Plate(plateDB.Plate):
         return exposures[order[-1]]
 
     def getPriority(self):
-        return self.plate_pointings[0].priority
+        if not self.isMock:
+            return self.plate_pointings[0].priority
+        else:
+            return 5
 
     @property
     def isPlugged(self):
@@ -573,3 +567,19 @@ class Plate(plateDB.Plate):
                 noExt = os.path.splitext(basename)[0]
                 return int(noExt.split('_')[1])
             return None
+
+    def getAltitude(self, LST=None):
+        """Returns the altitude of the plate at a certain LST."""
+
+        if LST is None:
+            LST = site.localSiderealTime()
+
+        HA = (LST * 15. - self.ra) % 360.
+
+        sinAlt = (np.sin(np.deg2rad(self.dec)) *
+                  np.sin(np.deg2rad(site.latitude)) +
+                  np.cos(np.deg2rad(self.dec)) *
+                  np.cos(np.deg2rad(site.latitude)) *
+                  np.cos(np.deg2rad(HA)))
+
+        return np.rad2deg(np.arcsin(sinAlt))
