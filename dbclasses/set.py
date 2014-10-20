@@ -171,28 +171,25 @@ class Set(mangaDB.Set):
             self._checkHasExposures()
             return self.totoroExposures[0].getCoordinates()
 
-    def getHA(self, midPoint=None):
+    def getHA(self):
         """Returns the HA interval of the exposures in the set. If midPoint is
         set, the middle point of the exposures is used for the calculation."""
 
-        if midPoint is None:
-            midPoint = config['set']['useHAmidPoint']
+        exposures = self.getValidExposures()
 
-        validExposures = self.getValidExposures()
-        if not midPoint or len(validExposures) == 1:
-            expHAs = np.array([exp.getHA() for exp in validExposures])
+        if len(exposures) == 0:
+            return np.array([0.0, 0.0])
+        elif len(exposures) >= 1:
+            expHAs = np.array([exp.getHA() for exp in exposures])
             return utils.getMinMaxIntervalSequence(expHAs)
-        else:
-            midPoints = np.array(
-                [utils.calculateMean(exposure.getHA())
-                 for exposure in self.totoroExposures if exposure.valid])
-            return np.array(utils.getIntervalFromPoints(midPoints))
 
-    def getHARange(self, intersect=False, mjd=None, **kwargs):
+    def getHARange(self, intersect=False, mjd=None,
+                   maxHARange=config['set']['maxHARange'], **kwargs):
         """Returns the HA limits to add more exposures to the set."""
 
         ha = self.getHA()
-        haRange = np.array([np.max(ha) - 15., np.min(ha) + 15.]) % 360.
+        haRange = np.array([np.max(ha) - maxHARange,
+                            np.min(ha) + maxHARange]) % 360.
 
         plateHALimit = utils.mlhalimit(self.dec)
 
@@ -344,7 +341,7 @@ class Set(mangaDB.Set):
         lst0, lst1 = lstRange
 
         if mjd is None:
-            date = int(np.round(time.Time.now().mjd))
+            mjd = int(np.round(time.Time.now().mjd))
 
         date = time.Time(mjd, format='mjd', scale='tai')
 
