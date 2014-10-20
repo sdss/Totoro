@@ -29,7 +29,7 @@ def getScheduleFile():
                                 'Sch_base.6yrs.txt.frm.dat')
     except:
         # If the autoscheduler is not available, uses the local schedule file
-        schedule = readPath(config['observingPlan']['schedule'])
+        schedule = readPath(config['observingPlan']['fallBackSchedule'])
         warnings.warn('The master autoscheduler could not be found. '
                       'Using a local copy of the schedule. BE CAREFUL! '
                       'THIS FILE MIGHT BE OUTDATED!',
@@ -62,7 +62,11 @@ class ObservingPlan(object):
 
     """
 
-    def __init__(self, schedule=None, **kwargs):
+    def __init__(self, schedule=readPath(config['observingPlan']['schedule']),
+                 **kwargs):
+
+        if isinstance(schedule, basestring) and schedule.lower() == 'none':
+            schedule = None
 
         if schedule is None:
             schedule = getScheduleFile()
