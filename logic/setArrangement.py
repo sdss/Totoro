@@ -327,15 +327,17 @@ def getOptimalArrangement(plate, startDate=None,
                          plate.plate_id, expLimit))
             return False
         else:
-            log.debug('plate_id={0}: hard limit for number of exposures '
-                      'in rearrangement reached but ignoring because '
-                      'forceLimit=True.'.format(plate.plate_id))
+            log.info('plate_id={0}: hard limit for number of exposures '
+                     'in rearrangement reached but ignoring because '
+                     'forceLimit=True.'.format(plate.plate_id))
 
     ditherPositions = [exp.ditherPosition for exp in validExposures]
     permutations = calculatePermutations(ditherPositions)
+    nPermutations = getNumberPermutations(ditherPositions)
 
-    log.info('plate_id={0}: testing {1} combinations. This might take a while.'
-             .format(plate.plate_id, getNumberPermutations(ditherPositions)))
+    log.info('plate_id={0}: testing {1} combinations for {2} exposures. '
+             'This might take a while.'
+             .format(plate.plate_id, nPermutations, len(ditherPositions)))
 
     def getSetId(set):
         """Creates a unique identifier for a set based on the ids of its
@@ -345,7 +347,7 @@ def getOptimalArrangement(plate, startDate=None,
     plates = []
     setQuality = {}
     completion = []
-    for permutation in permutations:
+    for nn, permutation in enumerate(permutations):
 
         sets = []
 
@@ -369,9 +371,6 @@ def getOptimalArrangement(plate, startDate=None,
         mockPlate = dbclasses.Plate.fromSets(sets, ra=ra, dec=dec, dust=None,
                                              silent=True)
 
-        plates.append(mockPlate)
-        del mockPlate
-
         # Instead of using Plate.getPlateCompletion, we calculate the plate
         # completion here using the setQuality dictionary. Way faster this
         # way.
@@ -382,8 +381,16 @@ def getOptimalArrangement(plate, startDate=None,
              for set in sets], axis=0)
         plateSN2[0:2] /= config['SN2thresholds']['plateBlue']
         plateSN2[2:] /= config['SN2thresholds']['plateRed']
+        plateCompletion = np.min(plateSN2)
 
-        completion.append(np.min(plateSN2))
+        if len(completion) == 0 or plateCompletion >= 0.9 * np.max(completion):
+            plates.append(mockPlate)
+            completion.append(plateCompletion)
+
+        del mockPlate
+
+        if nn*100./nPermutations % 10 == 0 and nn > 0:
+            log.info('{0:d}% completed'.format(int(nn*100./nPermutations)))
 
     maxCompletion = np.max(completion)
     completion = np.array(completion)
@@ -393,6 +400,8 @@ def getOptimalArrangement(plate, startDate=None,
     validPlates = plates[completion >= 0.9 * maxCompletion]
     validCompletion = completion[completion >= 0.9 * maxCompletion]
     sortCompletion = np.argsort(validCompletion)[::-1]
+
+    del plates
 
     maxPlates = [validPlates[idx] for idx in sortCompletion]
     log.debug('{0} plates with completion > 0.9*maxCompletion'.format(
@@ -463,9 +472,14 @@ def calculatePermutations(inputList):
     splitPairs = [list(bb) for aa, bb in itertools.groupby(
                   pairs, lambda value: value[1])]
 
-    indices = [[element[0] for element in sP] for sP in splitPairs]
+    indicesSeed = [[element[0] for element in sP] for sP in splitPairs]
+    nExpPerDither = [len(ii) for ii in indicesSeed]
+    for ii in indicesSeed:
+        if len(ii) < np.max(nExpPerDither):
+            ii += [None] * (np.max(nExpPerDither)-len(ii))
 
-    indices = [list(itertools.permutations(idx)) for idx in indices[0:]]
+    indices = [[tuple(indicesSeed[0])]]
+    indices += [list(itertools.permutations(idx)) for idx in indicesSeed[1:]]
 
     cartesianProduct = itertools.product(*indices)
     for prod in cartesianProduct:
