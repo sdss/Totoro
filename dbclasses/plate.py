@@ -472,7 +472,6 @@ class Plate(plateDB.Plate):
         date0, date1 = site.localSiderealTimeToDate([lst0, lst1], date=date)
 
         # Sanity check
-        print(date0, date1)
         if date0.jd > date1.jd:
             raise ValueError('date0 is greater than date1')
 
