@@ -27,7 +27,6 @@ import warnings
 totoroDB = TotoroDBConnection()
 plateDB = totoroDB.plateDB
 mangaDB = totoroDB.mangaDB
-session = totoroDB.Session()
 
 
 class Exposure(plateDB.Exposure):
@@ -39,6 +38,8 @@ class Exposure(plateDB.Exposure):
             return plateDB.Exposure.__new__(cls)
 
         base = cls.__bases__[0]
+
+        session = totoroDB.Session()
 
         if isinstance(input, base):
             instance = input
@@ -112,7 +113,8 @@ class Exposure(plateDB.Exposure):
         if ra is None or dec is None:
             raise TotoroError('ra and dec must be specified')
 
-        newExposure = Exposure(None, mock=True, ra=ra, dec=dec, **kwargs)
+        newExposure = Exposure(None, mock=True, ra=ra, dec=dec, silent=silent,
+                               **kwargs)
         newExposure.pk = None if 'pk' not in kwargs else kwargs['pk']
 
         if startTime is None:

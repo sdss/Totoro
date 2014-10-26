@@ -28,11 +28,8 @@ class pluggerTestCase(unittest.TestCase):
 
     def testSchedule(self):
 
-        observingBlocks = self.plugger.observingBlocks
-
-        self.assertEqual(len(observingBlocks), 1)
-        self.assertAlmostEqual(observingBlocks[0]['JD0'], 2456951.82708)
-        self.assertAlmostEqual(observingBlocks[0]['JD1'], 2456952.00208)
+        self.assertAlmostEqual(self.plugger.startDate, 2456951.82708)
+        self.assertAlmostEqual(self.plugger.endDate, 2456952.00208)
 
     def testPlates(self):
 
@@ -46,7 +43,7 @@ class pluggerTestCase(unittest.TestCase):
     def testPlugger(self):
 
         pluggerSchedule = self.plugger.getOutput()
-        print(pluggerSchedule.timeline.lstRange)
+        print(pluggerSchedule)
 
 
 if __name__ == '__main__':

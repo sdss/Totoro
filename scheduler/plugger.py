@@ -98,11 +98,29 @@ def getCartPriority(carts):
             priorities.append(0)
             continue
 
-        completion = Plate(cartActivePluggings[0].plugging.plate.plate_id,
-                           format='plate_id').getPlateCompletion()
+        try:
+            completion = Plate(cartActivePluggings[0].plugging.plate.plate_id,
+                               format='plate_id').getPlateCompletion()
+        except exceptions.TotoroError:
+            # If plate is not MaNGA (i.e., is APOGEE using one of our carts)
+            completion = 0.  # Forces priority to be zero.
+
         priorities.append(completion * priority)
 
     return np.array(priorities)
+
+
+def getCartPlate(cartNumber):
+    """Returns the plate plugged in a cart or None."""
+
+    session = db.Session()
+    with session.begin():
+        activePluggings = session.query(db.plateDB.ActivePlugging).all()
+
+    for aP in activePluggings:
+        if aP.plugging.cartridge.number == cartNumber:
+            return aP.plugging.plate
+    return None
 
 
 class PluggerScheduler(object):
@@ -120,32 +138,44 @@ class PluggerScheduler(object):
         self.carts = OrderedDict([(key, None) for key in config['carts']])
 
         self._scheduleForced()
-        if (len(self._platesToAllocate) >= len(self.carts) or
-                self.timeline.lstRange.size == 0):
-            self.allocateCarts(plates=self._platesToAllocate)
-        else:
-            self.timeline.schedule([plate for plate in self._platesAtAPO
-                                    if plate not in self._platesToAllocate])
+
+        # if (len(self._platesToAllocate) >= len(self.carts) or
+        #         self.timeline.lstRange.size == 0):
+        self.allocateCarts(plates=self._platesToAllocate)
+        # else:
+        #     self.timeline.schedule([plate for plate in self._platesAtAPO
+        #                             if plate not in self._platesToAllocate])
 
     def _scheduleForced(self):
 
-        from sdss.internal.manga.Totoro.dbclasses import Plates
-
         forcePlugPriority = int(config['plugger']['forcePlugPriority'])
-        forcePlugPlates = Plates([plate for plate in self._platesAtAPO
-                                  if plate.priority == forcePlugPriority])
+        forcePlugPlates = [plate for plate in self._platesAtAPO
+                           if plate.priority == forcePlugPriority]
 
-        if len(forcePlugPlates) > len(self.carts):
-            warnings.warn('{0} plates marked with priority {1:d} but only '
-                          '{2} carts available. Using the first {2} plates.'
-                          .format(len(forcePlugPlates), forcePlugPriority,
-                                  len(self.carts)),
-                          exceptions.TotoroPluggerWarning)
-            forcePlugPlates = forcePlugPlates[0:len(self.carts)]
-        elif len(forcePlugPlates) == 0:
+        if len(forcePlugPlates) == 0:
             return
 
-        self.timeline.schedule(forcePlugPlates, mode='plugger', force=True)
+        # Sort forced plates so that the plates that are already plugged are
+        # first.
+        forcePlugPlatesSorted = [plate for plate in forcePlugPlates
+                                 if plate.isPlugged] + \
+                                [plate for plate in forcePlugPlates
+                                 if not plate.isPlugged]
+
+        if len(forcePlugPlatesSorted) > len(self.carts):
+            warnings.warn('{0} plates marked with priority {1:d} but only '
+                          '{2} carts available. Using the first {2} plates.'
+                          .format(len(forcePlugPlatesSorted),
+                                  forcePlugPriority, len(self.carts)),
+                          exceptions.TotoroPluggerWarning)
+            forcePlugPlatesSorted = forcePlugPlatesSorted[0:len(self.carts)]
+
+        print(forcePlugPlatesSorted[0].getPlateCompletion())
+        self.timeline.schedule(forcePlugPlatesSorted, mode='plugger',
+                               force=True)
+        print(forcePlugPlatesSorted[0].sets)
+        print([len(set.totoroExposures) for set in forcePlugPlatesSorted[0].sets])
+
         self._platesToAllocate += forcePlugPlates
 
     def allocateCarts(self, plates=None, **kwargs):
@@ -169,8 +199,8 @@ class PluggerScheduler(object):
 
                 self.carts[cartNumber] = plate.plate_id
 
-                log.debug('Cart #{0} -> plate_id={1} (already plugged)'
-                          .format(cartNumber, plate.plate_id))
+                log.important('Cart #{0} -> plate_id={1} (already plugged)'
+                              .format(cartNumber, plate.plate_id))
 
                 allocatedPlates.append(plate)
 
@@ -185,20 +215,20 @@ class PluggerScheduler(object):
                     self.carts[cartNumber] = plate.plate_id
 
                     if status == 'empty':
-                        log.debug('Cart #{0} -> plate_id={1} (empty cart)'
-                                  .format(cartNumber, plate.plate_id))
+                        log.important('Cart #{0} -> plate_id={1} (empty cart)'
+                                      .format(cartNumber, plate.plate_id))
                     elif status == 'noMaNGAPlate':
-                        log.info('Cart #{0} -> plate_id={1} (replacing '
-                                 'no-MaNGA plate)'.format(
-                                     cartNumber, plate.plate_id))
+                        log.important('Cart #{0} -> plate_id={1} (replacing '
+                                      'no-MaNGA plate)'.format(
+                                          cartNumber, plate.plate_id))
                     elif status == 'complete':
-                        log.info('Cart #{0} -> plate_id={1} (replacing '
-                                 'complete plate)'.format(
-                                     cartNumber, plate.plate_id))
+                        log.important('Cart #{0} -> plate_id={1} (replacing '
+                                      'complete plate)'.format(
+                                          cartNumber, plate.plate_id))
                     elif status == 'notStarted':
-                        log.info('Cart #{0} -> plate_id={1} (replacing '
-                                 'not started plate)'.format(
-                                     cartNumber, plate.plate_id))
+                        log.important('Cart #{0} -> plate_id={1} (replacing '
+                                      'not started plate)'.format(
+                                          cartNumber, plate.plate_id))
 
                     allocatedPlates.append(plate)
 

@@ -28,39 +28,55 @@ def getIntervalIntersectionLength(aa, bb, wrapAt=360):
     if intersection is False:
         return 0.0
     else:
-        return (intersection[1] - intersection[0]) % wrapAt
+        if wrapAt is None:
+            return (intersection[1] - intersection[0])
+        else:
+            return (intersection[1] - intersection[0]) % wrapAt
 
 
 def getIntervalIntersection(aa, bb, wrapAt=360):
     """Returns the intersection between two intervals."""
 
-    if (bb[1] - bb[0]) % wrapAt > (aa[1] - aa[0]) % wrapAt:
-        aa, bb = bb, aa
+    if wrapAt is None:
+        if bb[1] - bb[0] > aa[1] - aa[0]:
+            aa, bb = bb, aa
+    else:
+        if (bb[1] - bb[0]) % wrapAt > (aa[1] - aa[0]) % wrapAt:
+            aa, bb = bb, aa
 
-    if isPointInInterval(bb[0], aa) and isPointInInterval(bb[1], aa):
+    if (isPointInInterval(bb[0], aa, wrapAt=wrapAt) and
+            isPointInInterval(bb[1], aa, wrapAt=wrapAt)):
         return np.array([bb[0], bb[1]])
 
-    if not isPointInInterval(bb[0], aa) and not isPointInInterval(bb[1], aa):
+    if (not isPointInInterval(bb[0], aa, wrapAt=wrapAt) and
+            not isPointInInterval(bb[1], aa, wrapAt=wrapAt)):
         return False
 
-    if isPointInInterval(bb[0], aa):
+    if isPointInInterval(bb[0], aa, wrapAt=wrapAt):
         return np.array([bb[0], aa[1]])
 
-    if isPointInInterval(bb[1], aa):
+    if isPointInInterval(bb[1], aa, wrapAt=wrapAt):
         return np.array([aa[0], bb[1]])
 
 
 def isPointInInterval(point, ival, wrapAt=360):
     """Returns True if point in interval."""
 
-    return (point - ival[0]) % wrapAt <= (ival[1] - ival[0]) % wrapAt
+    if wrapAt is None:
+        return (point - ival[0]) <= (ival[1] - ival[0])
+    else:
+        return (point - ival[0]) % wrapAt <= (ival[1] - ival[0]) % wrapAt
 
 
 def isIntervalInsideOther(aa, bb, wrapAt=360, onlyOne=False):
     """Checks if the interval aa (a numpy.ndarray of length 2) is inside bb."""
 
-    p1 = ((aa[0] - bb[0]) % wrapAt < (bb[1]-bb[0]) % wrapAt)
-    p2 = ((aa[1] - bb[0]) % wrapAt < (bb[1]-bb[0]) % wrapAt)
+    if wrapAt is None:
+        p1 = (aa[0] - bb[0]) < (bb[1]-bb[0])
+        p2 = (aa[1] - bb[0]) < (bb[1]-bb[0])
+    else:
+        p1 = ((aa[0] - bb[0]) % wrapAt < (bb[1]-bb[0]) % wrapAt)
+        p2 = ((aa[1] - bb[0]) % wrapAt < (bb[1]-bb[0]) % wrapAt)
 
     if p1 and p2:
         return True
@@ -71,7 +87,10 @@ def isIntervalInsideOther(aa, bb, wrapAt=360, onlyOne=False):
 
 
 def intervalLength(aa, wrapAt=360.):
-    return (aa[1] - aa[0]) % wrapAt
+    if wrapAt is None:
+        return (aa[1] - aa[0])
+    else:
+        return (aa[1] - aa[0]) % wrapAt
 
 
 def getMinMaxIntervalSequence(intervals, wrapAt=360):
@@ -113,13 +132,19 @@ def getMinMaxIntervalSequence(intervals, wrapAt=360):
 
 
 def calculateMean(interval, wrapAt=360.):
-
-    return (interval[0] + ((interval[1] - interval[0]) % wrapAt) / 2.) % wrapAt
+    if wrapAt is None:
+        return (interval[0] + (interval[1] - interval[0]) / 2.)
+    else:
+        return ((interval[0] + ((interval[1] - interval[0]) % wrapAt) / 2.) %
+                wrapAt)
 
 
 def getIntervalFromPoints(points, wrapAt=360.):
 
-    points = np.array(points) % wrapAt
+    if wrapAt is None:
+        points = np.array(points)
+    else:
+        points = np.array(points) % wrapAt
 
     if len(points) == 1:
         return points
@@ -137,3 +162,41 @@ def getIntervalFromPoints(points, wrapAt=360.):
         [intervalLength(interval) for interval in validExtremes])
     # print(validExtremes, lengths)
     return validExtremes[np.argmin(lengths)]
+
+
+def removeInterval(master, interToRemove, wrapAt=360.):
+    """Removes an interval within another interval or set of intervals"""
+
+    master = np.atleast_2d(master)
+
+    if master.shape[0] == 1:
+        if isIntervalInsideOther(master[0], interToRemove, wrapAt=wrapAt):
+            return np.array([])
+
+    newMaster = []
+    for interval in master:
+
+        intersection = getIntervalIntersection(interval, interToRemove,
+                                               wrapAt=wrapAt)
+
+        if intersection is False:
+            newMaster.append(interval)
+            continue
+
+        if intersection[0] == interval[0]:
+            newMaster.append([intersection[1], interval[1]])
+        elif intersection[1] == interval[1]:
+            newMaster.append([interval[0], intersection[0]])
+        else:
+            newMaster.append([interval[0], intersection[0]])
+            newMaster.append([intersection[1], interval[1]])
+
+    if wrapAt is None:
+        newMaster = np.array(newMaster)
+    else:
+        newMaster = np.array(newMaster) % wrapAt
+
+    if newMaster.shape[0] == 1:
+        newMaster = newMaster[0]
+
+    return newMaster

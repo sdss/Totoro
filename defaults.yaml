@@ -29,7 +29,7 @@ dbConnectionTunnel: &dbConnectionTunnel
     user: sdssdb_admin
     password: 4-photometry
     host: localhost
-    port: 6432
+    port: 6000
     database: apodb
 
 dbConnection: *dbConnectionProduction
@@ -55,15 +55,13 @@ dustMap:
     grid: +data/IGincrease.fits
 
 planner:
-    nCarts: 6
     efficiency: 0.9
 
 plugger:
-    nCarts: 2
-    efficiency: 0.75
+    efficiency: 0.80
     maxLeftoverTime: 900.
-    pluggedPlatePriority: 10
-    defaultPlatePriority: 5
+    forcePlugPriority: 10
+    defaultPriority: 5
 
 simulation:
     blueSN2: 3.6
@@ -74,7 +72,7 @@ simulation:
 SN2thresholds:
     plateRed: 60
     plateBlue: 25
-    exposureRed: 3.0
+    exposureRed: 1.5
     exposureBlue: 0.8
 
 exposure:
@@ -96,3 +94,4 @@ setArrangement:
     exposureLimit: 15
     forceRearrangementMinExposures: 3
 
+carts: [1, 2, 3, 4]

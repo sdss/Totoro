@@ -29,10 +29,82 @@ from copy import deepcopy
 import os
 
 
+__ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'Plates', 'Plate']
+
+
 totoroDB = TotoroDBConnection()
 plateDB = totoroDB.plateDB
 mangaDB = totoroDB.mangaDB
-session = totoroDB.Session()
+
+
+def getPlugged(onlyIncomplete=False, **kwargs):
+
+    session = totoroDB.Session()
+    with session.begin(subtransactions=True):
+        activePluggings = session.query(
+            plateDB.ActivePlugging).join(
+                plateDB.Plugging,
+                plateDB.Plate,
+                plateDB.PlateToSurvey,
+                plateDB.Survey).filter(
+                    plateDB.Survey.label == 'MaNGA').order_by(
+                        plateDB.Plate.plate_id).all()
+
+    plates = [actPlug.plugging.plate_pk for actPlug in activePluggings]
+
+    if onlyIncomplete:
+        return _getIncomplete(plates, **kwargs)
+    else:
+        return Plates(plates, **kwargs)
+
+
+def getAtAPO(onlyIncomplete=False, **kwargs):
+
+    session = totoroDB.Session()
+    with session.begin(subtransactions=True):
+        plates = session.query(plateDB.Plate).join(
+            plateDB.PlateLocation).filter(
+                plateDB.PlateLocation.label == 'APO').join(
+                    plateDB.PlateToSurvey).join(
+                        plateDB.Survey).filter(
+                            plateDB.Survey.label == 'MaNGA').order_by(
+                                plateDB.Plate.plate_id).all()
+
+    plates = [plate.pk for plate in plates]
+
+    if onlyIncomplete:
+        return _getIncomplete(plates, **kwargs)
+    else:
+        return Plates(plates, **kwargs)
+
+
+def getAll(onlyIncomplete=False, **kwargs):
+
+    session = totoroDB.Session()
+    with session.begin(subtransactions=True):
+        plates = session.query(plateDB.Plate).join(
+            plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
+            ).filter(plateDB.Survey.label == 'MaNGA',
+                     plateDB.SurveyMode.label == 'MaNGA dither').order_by(
+                plateDB.Plate.plate_id).all()
+
+    plates = [plate.pk for plate in plates]
+
+    if onlyIncomplete:
+        return _getIncomplete(plates, **kwargs)
+    else:
+        return Plates(plates, **kwargs)
+
+
+def _getIncomplete(plates, **kwargs):
+
+    totoroPlates = [Plate(plate, format='pk') for plate in plates]
+
+    incompletePlates = []
+    for totoroPlate in totoroPlates:
+        if not utils.isPlateComplete(totoroPlate):
+            incompletePlates.append(totoroPlate)
+    return Plates(incompletePlates)
 
 
 class Plates(list):
@@ -45,75 +117,6 @@ class Plates(list):
             list.__init__(self, [Plate(ii, format=format, **kwargs)
                                  for ii in inp])
 
-    @staticmethod
-    def getPlugged(onlyIncomplete=False, **kwargs):
-
-        with session.begin(subtransactions=True):
-            activePluggings = session.query(
-                plateDB.ActivePlugging).join(
-                    plateDB.Plugging,
-                    plateDB.Plate,
-                    plateDB.PlateToSurvey,
-                    plateDB.Survey, plateDB.SurveyMode).filter(
-                        plateDB.Survey.label == 'MaNGA').order_by(
-                            plateDB.Plate.plate_id).all()
-
-        plates = [actPlug.plugging.plate_pk for actPlug in activePluggings]
-
-        if onlyIncomplete:
-            return Plates._getIncomplete(plates, **kwargs)
-        else:
-            return Plates(plates, **kwargs)
-
-    @staticmethod
-    def getAtAPO(onlyIncomplete=False, **kwargs):
-
-        with session.begin(subtransactions=True):
-            plates = session.query(plateDB.Plate).join(
-                plateDB.PlateLocation).filter(
-                    plateDB.PlateLocation.label == 'APO').join(
-                        plateDB.PlateToSurvey).join(
-                            plateDB.Survey, plateDB.SurveyMode).filter(
-                                plateDB.Survey.label == 'MaNGA',
-                                plateDB.SurveyMode.label ==
-                                'MaNGA dither').order_by(
-                                    plateDB.Plate.plate_id).all()
-
-        plates = [plate.pk for plate in plates]
-
-        if onlyIncomplete:
-            return Plates._getIncomplete(plates, **kwargs)
-        else:
-            return Plates(plates, **kwargs)
-
-    @staticmethod
-    def getAll(onlyIncomplete=False, **kwargs):
-
-        with session.begin(subtransactions=True):
-            plates = session.query(plateDB.Plate).join(
-                plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
-                ).filter(plateDB.Survey.label == 'MaNGA',
-                         plateDB.SurveyMode.label == 'MaNGA dither').order_by(
-                    plateDB.Plate.plate_id).all()
-
-        plates = [plate.pk for plate in plates]
-
-        if onlyIncomplete:
-            return Plates._getIncomplete(plates, **kwargs)
-        else:
-            return Plates(plates, **kwargs)
-
-    @staticmethod
-    def _getIncomplete(plates, **kwargs):
-
-        totoroPlates = [Plate(plate, format='pk') for plate in plates]
-
-        incompletePlates = []
-        for totoroPlate in totoroPlates:
-            if not utils.isPlateComplete(totoroPlate):
-                incompletePlates.append(totoroPlate)
-        return incompletePlates
-
 
 class Plate(plateDB.Plate):
 
@@ -124,6 +127,7 @@ class Plate(plateDB.Plate):
 
         base = cls.__bases__[0]
 
+        session = totoroDB.Session()
         with session.begin(subtransactions=True):
             instance = session.query(base).filter(
                 eval('{0}.{1} == {2}'.format(base.__name__, format, input))
@@ -242,6 +246,12 @@ class Plate(plateDB.Plate):
                 log.debug('plate_id={0} is marked complete but force=True.'
                           .format(self.plate_id))
 
+        if (self.currentSurveyMode is None or
+                self.currentSurveyMode.label != 'MaNGA dither'):
+            log.debug('plate_id={0} has surveyMode which is not MaNGA dither. '
+                      'Not updating sets.')
+            return False
+
         result = logic.updatePlate(self)
         if result:
             self.update()
@@ -335,6 +345,7 @@ class Plate(plateDB.Plate):
         """Returns a list of mangaDB.Exposure objects with all the exposures
         for this plate."""
 
+        session = totoroDB.Session()
         with session.begin(subtransactions=True):
             mangaExposures = session.query(totoroDB.mangaDB.Exposure).join(
                 plateDB.Exposure,
@@ -452,22 +463,25 @@ class Plate(plateDB.Plate):
 
     def getUTRange(self, mjd=None, returnType='str', **kwargs):
 
-        lst0, lst1 = self.getLSTRange(mjd=mjd, **kwargs)
+        lst0, lst1 = self.getLSTRange(**kwargs)
 
         if mjd is None:
             mjd = int(np.round(time.Time.now().mjd))
 
         date = time.Time(mjd, format='mjd', scale='tai')
+        date0, date1 = site.localSiderealTimeToDate([lst0, lst1], date=date)
 
-        date0 = site.localSiderealTimeToDate(lst0, date=date)
-        date1 = date0 + time.TimeDelta(
-            (lst1 - lst0) % 24. * 3600., format='sec')
+        # Sanity check
+        if date0.jd > date1.jd:
+            raise ValueError('data0 is greater than date1')
 
         if returnType == 'str':
             return ('{0:%H:%M}'.format(date0.datetime),
                     '{0:%H:%M}'.format(date1.datetime))
-        else:
+        elif returnType == 'datetime':
             return (date0.datetime, date1.datetime)
+        else:
+            return (date0, date1)
 
     def isVisible(self, LST0, LST1, minLength=None):
         """Returns True if the plate is visible in a range of LST."""
@@ -494,7 +508,7 @@ class Plate(plateDB.Plate):
                 silent=silent, **kwargs)
 
         if exposure.isValid(silent=silent)[0] is False:
-            log.debug('mock exposure is invalid.')
+            log.debug('mock exposure is invalid. Removing it.')
             return False
 
         validSet = logic.getValidSet(exposure, self)
@@ -539,7 +553,8 @@ class Plate(plateDB.Plate):
 
         return exposures[order[-1]]
 
-    def getPriority(self):
+    @property
+    def priority(self):
         if not self.isMock:
             return self.plate_pointings[0].priority
         else:
