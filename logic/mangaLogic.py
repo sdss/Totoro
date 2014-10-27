@@ -53,6 +53,7 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
     4: SN2 too low.
     5: HA range outside the range of visibility of the plate.
     6: exposure not completely reduced
+    7: low transparency
     10: manually overriden bad.
     """
 
@@ -115,6 +116,15 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
                           'has dither position {1}'
                           .format(exposure._mangaExposure.pk,
                                   exposure.ditherPosition))
+
+    # Checks tranparency
+    if (exposure._mangaExposure.transparency is not None and
+            exposure._mangaExposure.transparency <
+            config['exposure']['transparency']):
+        return flagHelper(False, 7,
+                          'Invalid exposure. plateDB.Exposure.pk={0} '
+                          'has low transparency.'
+                          .format(exposure._mangaExposure.pk))
 
     # Checks exposure time
     minExpTime = config['exposure']['minExpTime']

@@ -72,14 +72,15 @@ simulation:
 SN2thresholds:
     plateRed: 60
     plateBlue: 25
-    exposureRed: 1.5
-    exposureBlue: 0.8
+    exposureRed: 0.5
+    exposureBlue: 0.5
 
 exposure:
     exposureTime: 900
     minExpTime: 899
     maxSeeing: 2.5
     maxAltitude: 80
+    transparency: 0.2
     validDitherPositions: ['N', 'S', 'E']
 
 set:

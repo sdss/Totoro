@@ -294,9 +294,12 @@ def getNumberPermutations(ditherPositions):
     for cc in ditherPositions:
         repDict[cc] += 1
 
-    return int(
-        np.product(
-            [factorial(ii) for ii in sorted(repDict.values())[1:]]))
+    maxNDither = 0
+    for key in repDict.keys():
+        if repDict[key] > maxNDither:
+            maxNDither = repDict[key]
+
+    return int(factorial(maxNDither)**(len(repDict.keys())-1))
 
 
 def getOptimalArrangement(plate, startDate=None,
@@ -389,8 +392,8 @@ def getOptimalArrangement(plate, startDate=None,
 
         del mockPlate
 
-        if nn*100./nPermutations % 10 == 0 and nn > 0:
-            log.info('{0:d}% completed'.format(int(nn*100./nPermutations)))
+        if (nn+1)*100./nPermutations % 10 == 0:
+            log.info('{0:d}% completed'.format(int((nn+1)*100./nPermutations)))
 
     maxCompletion = np.max(completion)
     completion = np.array(completion)
@@ -400,7 +403,6 @@ def getOptimalArrangement(plate, startDate=None,
     validPlates = plates[completion >= 0.9 * maxCompletion]
     validCompletion = completion[completion >= 0.9 * maxCompletion]
     sortCompletion = np.argsort(validCompletion)[::-1]
-
     del plates
 
     maxPlates = [validPlates[idx] for idx in sortCompletion]
@@ -448,16 +450,15 @@ def getEarliestIncompletePlate(incompletePlates):
 
     minHAs = []
     for plate in incompletePlates:
-        minHAplate = 999.
+        HAPlate = []
         for set in plate.sets:
             if set.getQuality()[0] is not 'Incomplete':
                 continue
-            haMid = intervals.calculateMean(set.getHARange())
+            haMid = intervals.calculateMean(set.getHA(), wrapAt=360.)
             if haMid > 180:
-                haMid -= 180.
-            if haMid < minHAplate:
-                minHAplate = haMid
-        minHAs.append(minHAplate)
+                haMid -= 360.
+            HAPlate.append(haMid)
+        minHAs.append(np.min(HAPlate))
 
     return incompletePlates[np.argmin(minHAs)]
 
@@ -472,7 +473,9 @@ def calculatePermutations(inputList):
     splitPairs = [list(bb) for aa, bb in itertools.groupby(
                   pairs, lambda value: value[1])]
 
-    indicesSeed = [[element[0] for element in sP] for sP in splitPairs]
+    sortedPairs = sorted(splitPairs, key=lambda xx: len(xx))[::-1]
+
+    indicesSeed = [[element[0] for element in sP] for sP in sortedPairs]
     nExpPerDither = [len(ii) for ii in indicesSeed]
     for ii in indicesSeed:
         if len(ii) < np.max(nExpPerDither):
