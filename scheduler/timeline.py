@@ -54,13 +54,13 @@ class Timelines(list):
 class Timeline(object):
     """A timeline object that can be used to schedule one observing night."""
 
-    def __init__(self, startTime, endTime, **kwargs):
+    def __init__(self, startDate, endDate, **kwargs):
 
-        self.startTime = startTime
-        self.endTime = endTime
+        self.startDate = startDate
+        self.endDate = endDate
         self._plates = []
 
-        self.unallocatedPlateWindow = np.array([self.startTime, self.endTime])
+        self.unallocatedPlateWindow = np.array([self.startDate, self.endDate])
         self.unallocatedExps = self.unallocatedPlateWindow.copy()
 
     def allocateJDs(self, plates=None, **kwargs):
@@ -68,7 +68,7 @@ class Timeline(object):
 
         plates = self._plates if plates is None else plates
 
-        nominalMJD = int(Time((self.startTime+self.endTime)/2., format='jd',
+        nominalMJD = int(Time((self.startDate+self.endDate)/2., format='jd',
                               scale='tai').mjd)
 
         for plate in plates:
@@ -76,8 +76,8 @@ class Timeline(object):
                 if not exp.isValid:
                     continue
                 jdRange = exp.getJD()
-                if (jdRange[1] >= self.startTime and
-                        jdRange[0] <= self.endTime):
+                if (jdRange[1] >= self.startDate and
+                        jdRange[0] <= self.endDate):
                     self.unallocatedExps = utils.removeInterval(
                         self.unallocatedExps, jdRange, wrapAt=None)
 

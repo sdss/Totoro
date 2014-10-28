@@ -18,6 +18,7 @@ from sdss.internal.manga.Totoro import log, config, readPath
 from sdss.internal.manga.Totoro.dbclasses import Fields
 from sdss.internal.manga.Totoro.scheduler.timeline import Timelines
 from sdss.internal.manga.Totoro import exceptions
+from astropy import time
 import warnings
 
 
@@ -83,12 +84,17 @@ class PlannerScheduler(object):
         from sdss.internal.manga.Totoro.dbclasses import Field
 
         for nn, timeline in enumerate(self.timelines):
+
+            startDate = time.Time(timeline.startDate, format='jd')
+
             timeline.schedule(self.plates, mode='planner', **kwargs)
+
             remainingTime = timeline.remainingTime
-            totalTime = 24. * (timeline.endTime - timeline.startTime)
-            log.info('Scheduled timeline {0:.3f}-{1:.3f} ({2:.1f}h). '
-                     .format(timeline.startTime, timeline.endTime,
-                             totalTime))
+            totalTime = 24. * (timeline.endDate - timeline.startDate)
+
+            log.info('Scheduled timeline {0:.3f}-{1:.3f} [{2}] ({3:.1f}h). '
+                     .format(timeline.startDate, timeline.endDate,
+                             startDate.iso.split()[0], totalTime))
             log.info('... plates observed: {0} (Unused time {1:.1f}h)'
                      .format(len(timeline._plates), remainingTime))
 
