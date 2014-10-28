@@ -183,7 +183,9 @@ def removeInterval(master, interToRemove, wrapAt=360.):
             newMaster.append(interval)
             continue
 
-        if intersection[0] == interval[0]:
+        if intersection[0] == interval[0] and intersection[1] == interval[1]:
+            continue
+        elif intersection[0] == interval[0]:
             newMaster.append([intersection[1], interval[1]])
         elif intersection[1] == interval[1]:
             newMaster.append([interval[0], intersection[0]])
