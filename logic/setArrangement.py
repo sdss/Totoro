@@ -436,6 +436,13 @@ def getOptimalArrangement(plate, startDate=None,
             maxPlates[ii] for ii in
             np.where(np.array(nIncompleteSets) == np.min(nIncompleteSets))[0]]
 
+        # If thre are no incomplete sets
+        if np.min(nIncompleteSets) == 0:
+            completion = [plateMin.getPlateCompletion()
+                          for plateMin in minIncompleteSetPlates]
+            optimumPlate = minIncompleteSetPlates[np.argmax(completion)]
+            return optimumPlate
+
         if len(minIncompleteSetPlates) == 0:
             optimumPlate = minIncompleteSetPlates[0]
         else:
