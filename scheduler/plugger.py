@@ -124,7 +124,7 @@ def getCartPlate(cartNumber):
 
 
 class PluggerScheduler(object):
-    """A class to schedule plugging recuests."""
+    """A class to schedule plugging requests."""
 
     def __init__(self, plates, jd0, jd1, **kwargs):
 

@@ -20,7 +20,7 @@ from sdss.internal.manga.Totoro import log, config, site
 from sdss.internal.manga.Totoro.exceptions import TotoroError, EmptySet
 from sdss.internal.manga.Totoro import logic
 from sdss.internal.manga.Totoro import utils
-from sdss.internal.manga.Totoro import scheduler
+# from sdss.internal.manga.Totoro import scheduler
 import numpy as np
 from copy import copy
 from astropy import time
@@ -202,26 +202,26 @@ class Set(mangaDB.Set):
             haRange, np.array([-plateHALimit, plateHALimit]), wrapAt=360.)
         haRangePlate[haRangePlate > 180] -= 360
 
-        if intersect is False:
-            return haRangePlate
+        # if intersect is False:
+        return haRangePlate
 
-        if mjd is None:
-            mjd = int(np.round(time.Time.now().mjd))
-            log.debug('Set.getHARange: MJD set to {0:d}'.format(mjd))
-        else:
-            mjd = int(mjd)
+        # if mjd is None:
+        #     mjd = int(np.round(time.Time.now().mjd))
+        #     log.debug('Set.getHARange: MJD set to {0:d}'.format(mjd))
+        # else:
+        #     mjd = int(mjd)
 
-        jdRange = scheduler.observingPlan.getMJD(mjd)
-        mangaLSTRange = np.array(site.localSiderealTime(jdRange))
+        # jdRange = scheduler.observingPlan.getMJD(mjd)
+        # mangaLSTRange = np.array(site.localSiderealTime(jdRange))
 
-        mangaHARange = (mangaLSTRange * 15. - self.ra) % 360.
+        # mangaHARange = (mangaLSTRange * 15. - self.ra) % 360.
 
-        haRange = utils.getIntervalIntersection(haRangePlate, mangaHARange,
-                                                wrapAt=360.)
-        if haRange is False:
-            return False
-        else:
-            return haRange
+        # haRange = utils.getIntervalIntersection(haRangePlate, mangaHARange,
+        #                                         wrapAt=360.)
+        # if haRange is False:
+        #     return False
+        # else:
+        #     return haRange
 
     def getDitherPositions(self):
         """Returns a list of dither positions in the set."""
@@ -288,10 +288,10 @@ class Set(mangaDB.Set):
 
         return np.array([seeingRangeMin, seeingRangeMax])
 
-    def getQuality(self, **kwargs):
+    def getQuality(self, silent=True, **kwargs):
         """Returns the quality of the set."""
 
-        return logic.checkSet(self, **kwargs)
+        return logic.checkSet(self, silent=silent, **kwargs)
 
     def getValidExposures(self):
 

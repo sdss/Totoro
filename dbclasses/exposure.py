@@ -76,6 +76,8 @@ class Exposure(plateDB.Exposure):
         self.isMock = mock
         self.kwargs = kwargs
 
+        self._haRange = None
+
         if not silent:
             log.debug('Loaded exposure plateDB.Exposure.pk={0}'
                       .format(self.pk))
@@ -183,6 +185,9 @@ class Exposure(plateDB.Exposure):
     def getHA(self):
         """Returns the HA range in which the exposure was taken."""
 
+        if self._haRange is not None:
+            return self._haRange
+
         startTime = float(self.start_time)
         expTime = float(self.exposure_time)
 
@@ -194,6 +199,8 @@ class Exposure(plateDB.Exposure):
 
         ha = np.array([ha0, ha0 + expTime / 3600. * 15]) % 360.
         ha[ha > 180.] -= 360.
+
+        self._haRange = ha
 
         return ha
 

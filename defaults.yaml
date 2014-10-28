@@ -56,6 +56,8 @@ dustMap:
 
 planner:
     efficiency: 0.9
+    tilesBeingDrilled: +data/tilesBeingDrilled.dat
+    platesIgnore: +data/platesIgnore.dat
 
 plugger:
     efficiency: 0.80
