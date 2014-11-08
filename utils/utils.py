@@ -89,6 +89,8 @@ def isPlateComplete(plate, format='plate_id', **kwargs):
                               'complete' if plateComplete else 'incomplete'),
                           exceptions.TotoroUserWarning)
             return plugComplete
+        else:
+            return plugComplete
     else:
         return plateComplete
 
