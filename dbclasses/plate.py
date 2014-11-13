@@ -29,7 +29,8 @@ from copy import deepcopy
 import os
 
 
-__ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'Plates', 'Plate']
+__ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'Plates', 'Plate',
+           'fromPlateID']
 
 
 totoroDB = TotoroDBConnection()
@@ -46,8 +47,10 @@ def getPlugged(onlyIncomplete=False, **kwargs):
                 plateDB.Plugging,
                 plateDB.Plate,
                 plateDB.PlateToSurvey,
-                plateDB.Survey).filter(
-                    plateDB.Survey.label == 'MaNGA').order_by(
+                plateDB.Survey,
+                plateDB.SurveyMode).filter(
+                    plateDB.Survey.label == 'MaNGA',
+                    plateDB.SurveyMode.label == 'MaNGA dither').order_by(
                         plateDB.Plate.plate_id).all()
 
     plates = [actPlug.plugging.plate_pk for actPlug in activePluggings]
@@ -63,12 +66,12 @@ def getAtAPO(onlyIncomplete=False, **kwargs):
     session = totoroDB.Session()
     with session.begin(subtransactions=True):
         plates = session.query(plateDB.Plate).join(
-            plateDB.PlateLocation).filter(
-                plateDB.PlateLocation.label == 'APO').join(
-                    plateDB.PlateToSurvey).join(
-                        plateDB.Survey).filter(
-                            plateDB.Survey.label == 'MaNGA').order_by(
-                                plateDB.Plate.plate_id).all()
+            plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode).filter(
+                plateDB.Survey.label == 'MaNGA',
+                plateDB.SurveyMode.label == 'MaNGA dither'
+            ).join(plateDB.PlateLocation).filter(
+                plateDB.PlateLocation.label == 'APO').order_by(
+                    plateDB.Plate.plate_id).all()
 
     plates = [plate.pk for plate in plates]
 
@@ -133,6 +136,10 @@ class Plates(list):
         return getPlugged(**kwargs)
 
 
+def fromPlateID(plateid, **kwargs):
+    return Plate(plateid, format='plate_id', **kwargs)
+
+
 class Plate(plateDB.Plate):
 
     def __new__(cls, input=None, format='pk', **kwargs):
@@ -188,10 +195,6 @@ class Plate(plateDB.Plate):
     def __repr__(self):
         return ('<Totoro Plate (plate_id={0}, pk={1}, completion={2:.2f})>'
                 .format(self.plate_id, self.pk, self.getPlateCompletion()))
-
-    @classmethod
-    def fromPlateID(cls, plateid, **kwargs):
-        return Plate(plateid, format='plate_id', **kwargs)
 
     @classmethod
     def fromSets(cls, sets, silent=False, **kwargs):
