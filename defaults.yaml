@@ -60,8 +60,8 @@ planner:
     platesIgnore: +data/platesIgnore.dat
 
 plugger:
-    efficiency: 0.90
-    maxLeftoverTime: 900.
+    efficiency: 0.9
+    noPlugPriority: 2
     forcePlugPriority: 10
     defaultPriority: 5
 
