@@ -18,9 +18,9 @@ import numpy as np
 from sdss.internal.manga.Totoro import config
 from sdss.internal.manga.Totoro import exceptions
 import warnings
-from sdss.manga import mlhalimit as mlhalimitHours
+from sdss.manga.mlhalimit import mlhalimit as mlhalimitHours
 from collections import OrderedDict
-from sdss.utilities import Site
+from sdss.utilities.Site import Site
 
 
 def mlhalimit(dec):
