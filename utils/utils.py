@@ -83,8 +83,9 @@ def isPlateComplete(plate, format='plate_id', **kwargs):
 
     if plugComplete is not None:
         if plugComplete is not plateComplete:
-            warnings.warn('plugging status is {0} but calculated '
-                          'status is {1}.'.format(
+            warnings.warn('plate={0}: plugging status is {1} but calculated '
+                          'status is {2}.'.format(
+                              plate.plate_id,
                               'complete' if plugComplete else 'incomplete',
                               'complete' if plateComplete else 'incomplete'),
                           exceptions.TotoroUserWarning)
