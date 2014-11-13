@@ -57,8 +57,11 @@ def computeAirmass(dec, ha, lat=config['observatory']['latitude'],
         return airmass
 
 
-def isPlateComplete(plate, format='plate_id', **kwargs):
-    """Returns if a plate is complete using the MaNGA logic."""
+def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
+                    **kwargs):
+    """Returns if a plate is complete using the MaNGA logic. If
+    forceCheckCompletion is False and the plugging is marked as complete,
+    no plateCompletion check is performed (this saves some time)."""
 
     from sdss.internal.manga.Totoro.dbclasses import Plate
 
@@ -66,11 +69,6 @@ def isPlateComplete(plate, format='plate_id', **kwargs):
         if format.lower() not in ['pk', 'plate_id']:
             raise exceptions.TotoroError('format must be plate_id or pk.')
         plate = Plate(plate, format=format.lower(), **kwargs)
-
-    if plate.getPlateCompletion(includeIncompleteSets=False) > 1.:
-        plateComplete = True
-    else:
-        plateComplete = False
 
     plugStatus = [plugging.status.label for plugging in plate.pluggings]
 
@@ -80,6 +78,14 @@ def isPlateComplete(plate, format='plate_id', **kwargs):
         plugComplete = False
     else:
         plugComplete = None
+
+    if plugComplete is not None and forceCheckCompletion is False:
+        return plugComplete
+
+    if plate.getPlateCompletion(includeIncompleteSets=False) > 1.:
+        plateComplete = True
+    else:
+        plateComplete = False
 
     if plugComplete is not None:
         if plugComplete is not plateComplete:
