@@ -142,11 +142,14 @@ class Plate(plateDB.Plate):
 
         base = cls.__bases__[0]
 
-        session = totoroDB.Session()
-        with session.begin(subtransactions=True):
-            instance = session.query(base).filter(
-                eval('{0}.{1} == {2}'.format(base.__name__, format, input))
-                ).one()
+        if isinstance(input, base):
+            instance = input
+        else:
+            session = totoroDB.Session()
+            with session.begin(subtransactions=True):
+                instance = session.query(base).filter(
+                    eval('{0}.{1} == {2}'.format(base.__name__, format, input))
+                    ).one()
 
         instance.__class__ = cls
 
