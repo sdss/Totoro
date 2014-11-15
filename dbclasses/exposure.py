@@ -145,7 +145,10 @@ class Exposure(plateDB.Exposure):
 
         self._seeing = 1.0
 
-        self._dust = dustMap(self.ra, self.dec)
+        if dustMap is not None:
+            self._dust = dustMap(self.ra, self.dec)
+        else:
+            self._dust = {'iIncrease': [1], 'gIncrease': [1]}
 
         haRange = self.getHA()
         ha = utils.calculateMean(haRange)

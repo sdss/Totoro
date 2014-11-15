@@ -158,16 +158,17 @@ class Plugger(object):
         log.info('Scheduling {0:.2f} hours'.format(
                  (self.endDate - self.startDate)*24.))
 
-        self.plates = self.getPlatesAtAPO()
+        self.plates = self.getPlatesAtAPO(**kwargs)
 
-    def getPlatesAtAPO(self, rejectComplete=False):
+    def getPlatesAtAPO(self, rejectComplete=False, onlyMarked=False, **kwargs):
 
         from sdss.internal.manga.Totoro import dbclasses
 
-        log.info('getting plates at APO with rejectComplete={0}'.format(
-                 rejectComplete))
+        log.info('getting plates at APO with rejectComplete={0}, '
+                 'onlyMarked={1}'.format(rejectComplete, onlyMarked))
 
-        plates = dbclasses.getAtAPO(onlyIncomplete=rejectComplete)
+        plates = dbclasses.getAtAPO(onlyIncomplete=rejectComplete,
+                                    onlyMarked=onlyMarked)
 
         log.info('plates found: {0}'.format(len(plates)))
 
