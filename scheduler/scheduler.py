@@ -22,8 +22,7 @@ from planner import PlannerScheduler
 from astropy import time
 
 
-__ALL__ = ['BaseScheduler', 'Planner', 'Nightly', 'Plugger'
-           'pluggingRequest']
+__ALL__ = ['BaseScheduler', 'Planner', 'Nightly', 'Plugger']
 
 
 class BaseScheduler(object):
@@ -234,26 +233,3 @@ class Nightly(object):
             return output.getTabularOutput(self.plates)
         else:
             return output.getNightlyOutput(self, format=format)
-
-
-def pluggingRequest(mjd=None):
-    """Creates a `Plugger` instance for the requested mjd and returns the
-    output. If `mjd=None`, the current MJD will be used."""
-
-    if mjd is None:
-        tt = time.Time.now()
-    else:
-        tt = time.Time(int(mjd), format='mjd')
-
-    printMJD = int(tt.jd) - 2400000
-
-    log.info('creating plugging request for MJD={0:d}'.format(printMJD))
-    observingPlan = ObservingPlan()
-    jd0, jd1 = observingPlan.getJD(jd=int(tt.jd))
-
-    if jd0 is None or jd1 is None:
-        raise TotoroError('not MaNGA observations scheduled for '
-                          'MJD={0:d}'.format(printMJD))
-
-    plugger = Plugger(jd0, jd1)
-    plugger.getOutput()
