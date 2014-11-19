@@ -2,7 +2,8 @@
 logging:
     logLevel: INFO
     logFileLevel: DEBUG
-    logFilePath: '~/.totoro/totoro.log'
+    logFilePath: ~/.totoro/totoro.log
+    mode: append
 
 dbConnectionProduction: &dbConnectionProduction
     user: sdssdb_admin

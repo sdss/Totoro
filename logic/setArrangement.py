@@ -33,8 +33,11 @@ def updatePlate(plate, **kwargs):
     log.debug('plate_id={0}: updating sets'.format(plate.plate_id))
 
     badSetStatus = checkBadSets(plate, **kwargs)
+    if badSetStatus:
+        plate = fixBadSets(plate)
+        return True
 
-    newExposures = getNewExposures(plate)
+    newExposures = getNewExposures(plate, **kwargs)
 
     if len(newExposures) > 0:
 
@@ -66,7 +69,7 @@ def updatePlate(plate, **kwargs):
                   plate.plate_id))
         updateStatus = False
 
-    if updateStatus or badSetStatus:
+    if updateStatus:
         return True
     else:
         return False
@@ -75,7 +78,7 @@ def updatePlate(plate, **kwargs):
 def checkBadSets(plate, **kwargs):
     """Identifies bad sets and breaks them."""
 
-    setQuality = [set.getQuality()[0] for set in plate.sets]
+    setQuality = [set.getQuality(silent=True)[0] for set in plate.sets]
     if 'Bad' in setQuality:
         nBadSets = len([True for ss in setQuality if ss == 'Bad'])
         log.debug('plate_id={0}: found {1} bad sets. Fixing them.'.format(
@@ -157,7 +160,7 @@ def addExposure(exp, plate):
     if validSet.pk is not None:
         log.info('adding mangaDB exposure pk={0} to set {1} -> {2} set.'
                  .format(totoroExp._mangaExposure.pk, validSet.pk,
-                         validSet.getQuality(flag=False)[0]))
+                         validSet.getQuality(silent=True, flag=False)[0]))
 
     return True
 
@@ -175,7 +178,7 @@ def getNewSetPK():
     return [xx for xx in np.arange(1, np.max(setPKs)+1) if xx not in setPKs][0]
 
 
-def getNewExposures(plate):
+def getNewExposures(plate, silent=True, **kwargs):
     """Gets unassigned exposures in a plate."""
 
     newExposures = []
@@ -184,9 +187,9 @@ def getNewExposures(plate):
             warnings.warn('exposure pk={0} has no mangaDB '
                           'counterpart.'.format(exp.pk), NoMangaExposure)
             continue
-        if exp.mangadbExposure[0].set_pk is not None:
+        if checkExposure(exp, silent=silent, flag=True)[0] is False:
             continue
-        if checkExposure(exp, silent=True, flag=True)[0] is False:
+        if exp.mangadbExposure[0].set_pk is not None:
             continue
         newExposures.append(exp)
 
@@ -313,6 +316,8 @@ def getOptimalArrangement(plate, startDate=None,
                           forceLimit=False, **kwargs):
     """Gets the best possible arrangement for the exposures in a plate."""
 
+    silent = kwargs.pop('silent', True)
+
     from sdss.internal.manga.Totoro import dbclasses
 
     permutationLimit = config['setArrangement']['permutationLimit'] \
@@ -324,7 +329,8 @@ def getOptimalArrangement(plate, startDate=None,
     validExposures = []
     invalidExposures = []
     for exposure in exposures:
-        if checkExposure(exposure, forceReflag=True, flag=True, **kwargs)[0]:
+        if checkExposure(exposure, forceReflag=True, flag=True,
+                         silent=silent, **kwargs)[0]:
             validExposures.append(exposure)
         else:
             invalidExposures.append(exposure)
@@ -393,14 +399,17 @@ def getOptimalArrangement(plate, startDate=None,
         # Instead of using Plate.getPlateCompletion, we calculate the plate
         # completion here using the setQuality dictionary. Way faster this
         # way.
-        plateSN2 = np.sum(
+        plateSN2 = np.nansum(
             [set.getSN2Array()
              if setQuality[getSetId(set)] in ['Excellent', 'Good']
              else np.array([0.0, 0.0, 0.0, 0.0])
              for set in sets], axis=0)
-        plateSN2[0:2] /= config['SN2thresholds']['plateBlue']
-        plateSN2[2:] /= config['SN2thresholds']['plateRed']
-        plateCompletion = np.min(plateSN2)
+
+        blueSN2 = np.nanmean(plateSN2[0:2])
+        blueCompletion = blueSN2 / config['SN2thresholds']['plateBlue']
+        redSN2 = np.nanmean(plateSN2[2:])
+        redCompletion = redSN2 / config['SN2thresholds']['plateRed']
+        plateCompletion = np.min([blueCompletion, redCompletion])
 
         if len(completion) == 0 or plateCompletion >= 0.9 * np.max(completion):
             plates.append(mockPlate)
@@ -448,7 +457,7 @@ def getOptimalArrangement(plate, startDate=None,
         for tmpPlate in maxPlates:
             nn = 0
             for set in tmpPlate.sets:
-                if set.getQuality()[0] == 'Incomplete':
+                if set.getQuality(silent=True)[0] == 'Incomplete':
                     nn += 1
             nIncompleteSets.append(nn)
 
@@ -479,7 +488,7 @@ def getEarliestIncompletePlate(incompletePlates):
     for plate in incompletePlates:
         HAPlate = []
         for set in plate.sets:
-            if set.getQuality()[0] is not 'Incomplete':
+            if set.getQuality(silent=True)[0] is not 'Incomplete':
                 continue
             haMid = intervals.calculateMean(set.getHA(), wrapAt=360.)
             if haMid > 180:

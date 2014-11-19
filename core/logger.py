@@ -10,10 +10,12 @@ import os
 import sys
 import logging
 from logging import FileHandler
+from logging.handlers import TimedRotatingFileHandler
 import warnings
 from colourPrint import colourPrint
 import shutil
 from textwrap import TextWrapper
+from sdss.internal.manga.Totoro.exceptions import TotoroError
 
 
 # Initialize by calling initLog()
@@ -39,7 +41,8 @@ def initLog():
     log._set_defaults(
         logLevel=config['logging']['logLevel'].upper(),
         logFileLevel=config['logging']['logFileLevel'].upper(),
-        logFilePath=config['logging']['logFilePath'])
+        logFilePath=config['logging']['logFilePath'],
+        mode=config['logging']['mode'])
 
     return log
 
@@ -47,10 +50,12 @@ def initLog():
 class MyFormatter(logging.Formatter):
 
     warning_fmp = '%(asctime)s - %(levelname)s: %(message)s [%(origin)s]'
-    info_fmt = '%(asctime)s - %(levelname)s: %(message)s'
+    info_fmt = '%(asctime)s - %(levelname)s - %(message)s [%(funcName)s @ ' + \
+        '%(filename)s]'
 
-    def __init__(self, fmt='%(levelno)s: %(msg)s'):
-        logging.Formatter.__init__(self, fmt)
+    def __init__(self, fmt='%(levelname)s - %(message)s [%(funcName)s @ ' +
+                 '%(filename)s]'):
+        logging.Formatter.__init__(self, fmt, datefmt='%Y-%m-%d %H:%M:%S')
 
     def format(self, record):
 
@@ -157,7 +162,8 @@ class TotoroLogger(Logger):
     def _set_defaults(self,
                       logLevel='WARNING',
                       logFileLevel='INFO',
-                      logFilePath='~/.totoro/totoro.log'):
+                      logFilePath='~/.totoro/totoro.log',
+                      mode='append'):
         """Reset logger to its initial state."""
 
         # Remove all previous handlers
@@ -171,7 +177,6 @@ class TotoroLogger(Logger):
         self.sh = logging.StreamHandler()
         self.sh.emit = self._stream_formatter
         self.addHandler(self.sh)
-        self.sh.setLevel(logLevel)
 
         # Set up the main log file handler if requested (but this might fail if
         # configuration directory or log file is not writeable).
@@ -182,15 +187,32 @@ class TotoroLogger(Logger):
             os.mkdir(logDir)
 
         try:
-            self.fh = FileHandler(logFilePath, mode='w')
+            if mode.lower() == 'overwrite':
+                self.fh = FileHandler(logFilePath, mode='w')
+            elif mode.lower() == 'append':
+                self.fh = TimedRotatingFileHandler(
+                    logFilePath, when='midnight', utc=True)
+            else:
+                raise TotoroError('logger mode {0} not recognised'
+                                  .format(mode))
         except (IOError, OSError) as e:
             warnings.warn(
                 'log file {0!r} could not be opened for writing: '
                 '{1}'.format(logFilePath, unicode(e)), RuntimeWarning)
         else:
             self.fh.setFormatter(fmt)
-            self.fh.setLevel(logFileLevel)
             self.addHandler(self.fh)
+
+        # Adds a header only to the file handler
+        self.sh.setLevel(logging.CRITICAL)
+        self.fh.setLevel(logging.DEBUG)
+        self.debug('')
+        self.debug('--------------------------------')
+        self.debug('----- Restarting logger. -------')
+        self.debug('--------------------------------')
+
+        self.sh.setLevel(logLevel)
+        self.fh.setLevel(logFileLevel)
 
         self.logFilename = logFilePath
         warnings.showwarning = self._showwarning

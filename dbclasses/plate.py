@@ -61,7 +61,11 @@ def getPlugged(onlyIncomplete=False, **kwargs):
         return Plates(plates, **kwargs)
 
 
-def getAtAPO(onlyIncomplete=False, onlyMarked=False, **kwargs):
+def getAtAPO(onlyIncomplete=False, onlyMarked=False, rejectLowPriority=False,
+             **kwargs):
+    """Gets plates at APO with various conditions."""
+
+    minimumPriority = config['plugger']['noPlugPriority']
 
     session = totoroDB.Session()
     with session.begin(subtransactions=True):
@@ -70,15 +74,20 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False, **kwargs):
                 plateDB.Survey.label == 'MaNGA',
                 plateDB.SurveyMode.label == 'MaNGA dither'
             ).join(plateDB.PlateLocation).filter(
-                plateDB.PlateLocation.label == 'APO').order_by(
-                    plateDB.Plate.plate_id)
+                plateDB.PlateLocation.label == 'APO')
 
         if onlyMarked is False:
-            plates = plates.all()
+            plates = plates
         else:
             plates = plates.join(plateDB.PlateToPlateStatus,
                                  plateDB.PlateStatus).filter(
-                plateDB.PlateStatus.label == 'Accepted').all()
+                plateDB.PlateStatus.label == 'Accepted')
+
+        if rejectLowPriority:
+            plates = plates.join(plateDB.PlatePointing).filter(
+                plateDB.PlatePointing.priority > minimumPriority)
+
+        plates = plates.order_by(plateDB.Plate.plate_id).all()
 
     plates = [plate.pk for plate in plates]
 
@@ -194,7 +203,7 @@ class Plate(plateDB.Plate):
                           self.pk, self.plate_id))
 
             if updateSets:
-                self.updatePlate()
+                self.updatePlate(silent=silent)
 
         else:
             self.sets = []
@@ -223,7 +232,8 @@ class Plate(plateDB.Plate):
             raise TotoroExpections.TotoroError('ra and dec must be specified')
 
         mockPlate = plateDB.Plate.__new__(cls)
-        mockPlate.__init__(None, mock=True, ra=ra, dec=dec, **kwargs)
+        mockPlate.__init__(None, mock=True, ra=ra, dec=dec, silent=silent,
+                           **kwargs)
 
         mockPlate.isMock = True
 
@@ -263,7 +273,7 @@ class Plate(plateDB.Plate):
 
         return False
 
-    def updatePlate(self, force=False):
+    def updatePlate(self, silent=False, force=False):
 
         if self.isComplete:
             if not force:
@@ -280,9 +290,9 @@ class Plate(plateDB.Plate):
                       'Not updating sets.')
             return False
 
-        result = logic.updatePlate(self)
+        result = logic.updatePlate(self, silent=silent)
         if result:
-            self.update()
+            self.update(silent=silent)
 
         return True
 
@@ -343,7 +353,10 @@ class Plate(plateDB.Plate):
         completionRates[0:2] /= config['SN2thresholds']['plateBlue']
         completionRates[2:] /= config['SN2thresholds']['plateRed']
 
-        return np.min(completionRates)
+        avgCompletion = np.array([np.nanmean(completionRates[0:2]),
+                                  np.nanmean(completionRates[2:])])
+
+        return np.min(avgCompletion)
 
     def getCumulatedSN2(self, includeIncomplete=False):
 
@@ -422,14 +435,16 @@ class Plate(plateDB.Plate):
         """Reloads the plate."""
 
         kwargs.update(self._kwargs)
+        silent = kwargs.pop('silent', False)
 
         newSelf = Plate(self.pk, format='pk', silent=True, mjd=self.mjd,
                         **kwargs)
         self = newSelf
 
-        log.debug('plate_id={0} has been reloaded'.format(self.plate_id))
+        if not silent:
+            log.debug('plate_id={0} has been reloaded'.format(self.plate_id))
 
-    def getValidExposures(self):
+    def getValidExposures(self, **kwargs):
         """Returns all valid exposures, even if they belong to an incomplete
         or bad set."""
 
@@ -437,7 +452,7 @@ class Plate(plateDB.Plate):
 
         for set in self.sets:
             for exp in set.totoroExposures:
-                if exp.valid is True:
+                if exp.isValid(**kwargs)[0] is True:
                     validExposures.append(exp)
 
         return validExposures
@@ -631,13 +646,13 @@ class Plate(plateDB.Plate):
         """Returns the number of permutations for a brute-force set
         rearrangement."""
 
-        validExposures = self.getValidExposures()
+        validExposures = self.getValidExposures(silent=True)
         ditherPositions = [exp.ditherPosition for exp in validExposures]
         return logic.setArrangement.getNumberPermutations(ditherPositions)
 
     def getPermutations(self):
         """Returns the permutations for a brute-force set rearrangement."""
 
-        validExposures = self.getValidExposures()
+        validExposures = self.getValidExposures(silent=True)
         ditherPositions = [exp.ditherPosition for exp in validExposures]
         return logic.setArrangement.calculatePermutations(ditherPositions)
