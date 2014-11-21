@@ -4,6 +4,7 @@ logging:
     logFileLevel: DEBUG
     logFilePath: ~/.totoro/totoro.log
     mode: append
+    wrapperLength: 80
 
 dbConnectionProduction: &dbConnectionProduction
     user: sdssdb_admin
@@ -59,12 +60,13 @@ planner:
     efficiency: 0.9
     tilesBeingDrilled: +data/tilesBeingDrilled.dat
     platesIgnore: +data/platesIgnore.dat
+    noPlugPriority: 2
+    forcePlugPriority: 10
 
 plugger:
     efficiency: 0.9
     noPlugPriority: 2
     forcePlugPriority: 10
-    defaultPriority: 5
 
 simulation:
     blueSN2: 3.6
@@ -99,3 +101,4 @@ setArrangement:
     forceRearrangementMinExposures: 3
 
 carts: [1, 2, 3, 4]
+defaultPriority: 5

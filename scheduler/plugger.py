@@ -94,8 +94,9 @@ def getCartPriority(carts):
         cartActivePluggings = [aP for aP in activePluggings
                                if aP.plugging.cartridge.number == cart]
         if len(cartActivePluggings) == 0:
-            raise exceptions.TotoroError('no active plugging for cart #{0}'
-                                         .format(cart))
+            log.debug('no active plugging for cart #{0}'.format(cart))
+            priorities.append(10)
+            continue
 
         priority = (cartActivePluggings[0].plugging
                     .plate.plate_pointings[0].priority)
@@ -160,7 +161,8 @@ class PluggerScheduler(object):
             pass
         else:
             self.timeline.schedule([plate for plate in self.platesToSchedule
-                                    if plate not in self.timeline.plates])
+                                    if plate not in self.timeline.plates],
+                                   mode='plugger')
 
         self.allocateCarts(plates=self.timeline.plates)
 
@@ -246,8 +248,7 @@ class PluggerScheduler(object):
                           exceptions.TotoroPluggerWarning)
             forcePlugPlatesSorted = forcePlugPlatesSorted[0:len(self.carts)]
 
-        self.timeline.schedule(plates=forcePlugPlatesSorted, mode='plugger',
-                               force=True)
+        self.timeline.schedule(plates=forcePlugPlatesSorted, mode='plugger')
 
         # Manually adds all the forced plates to the timeline, whether they
         # have been observed or not.
