@@ -262,6 +262,7 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
     5: too many exposures
     6: multiple exposures with the same dither position
     7: average seeing > maximum
+    8: exposures span more than one plugging.
     10: from set status.
 
     """
@@ -342,18 +343,28 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
                               'set pk={0} has multiple exposures with '
                               'the same dither position'.format(set.pk))
 
+    # Checks if all exposures belong to the same plugging
+    pluggings = np.array(
+        [exp.getPlugging().pk if exp.getPlugging() is not None else 0
+         for exp in set.totoroExposures])
+
+    if not np.all(pluggings == pluggings[0]):
+        return flagHelper('Bad', 7,
+                          'set pk={0} has exposures from different pluggings.'
+                          .format(set.pk))
+
     # Checks if set is incomplete
     if len(setDitherPositions) < len(ditherPositions):
         return flagHelper('Incomplete', 0,
                           'set pk={0} is incomplete.'.format(set.pk))
 
     # Set is valid: assigns status
-    if np.mean(seeing) > config['set']['goodSeeing']:
-        return flagHelper('Bad', 7)
-    elif np.mean(seeing) <= config['set']['excellentSeeing']:
-        return flagHelper('Excellent', 0)
-    else:
-        return flagHelper('Good', 0)
+    # if np.mean(seeing) > config['set']['goodSeeing']:
+    #     return flagHelper('Bad', 7)
+    # elif np.mean(seeing) <= config['set']['excellentSeeing']:
+    #     return flagHelper('Excellent', 0)
+    # else:
+    return flagHelper('Good', 0)
 
 
 def setSetStatus(set, status):

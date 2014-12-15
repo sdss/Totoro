@@ -17,7 +17,7 @@ from __future__ import print_function
 import itertools
 from mangaLogic import checkExposure
 from sdss.internal.manga.Totoro.exceptions import NoMangaExposure
-from sdss.internal.manga.Totoro import TotoroDBConnection, log, config
+from sdss.internal.manga.Totoro import TotoroDBConnection, log, config, site
 from sdss.internal.manga.Totoro.utils import intervals
 from sqlalchemy import func
 from scipy.misc import factorial
@@ -311,7 +311,7 @@ def getNumberPermutations(ditherPositions):
     return int(factorial(maxNDither)**(len(repDict.keys())-1))
 
 
-def getOptimalArrangement(plate, startDate=None,
+def getOptimalArrangement(plate, LST=None,
                           permutationLimit=None,
                           forceLimit=False, **kwargs):
     """Gets the best possible arrangement for the exposures in a plate."""
@@ -338,6 +338,8 @@ def getOptimalArrangement(plate, startDate=None,
     if len(validExposures) == 0:
         log.info('no exposures to be rearranged')
         return False
+
+    log.debug('rearranging sets with LST={0}'.format(LST))
 
     ditherPositions = [exp.ditherPosition for exp in validExposures]
     nPermutations = getNumberPermutations(ditherPositions)
@@ -371,6 +373,7 @@ def getOptimalArrangement(plate, startDate=None,
     # Counts the actual number of permutations, from the iterator.
     # For testing purposes.
     permutationCounter = 0
+    setRearrangementFactor = config['set']['setRearrangementFactor']
 
     for nn, permutation in enumerate(permutations):
 
@@ -411,7 +414,9 @@ def getOptimalArrangement(plate, startDate=None,
         redCompletion = redSN2 / config['SN2thresholds']['plateRed']
         plateCompletion = np.min([blueCompletion, redCompletion])
 
-        if len(completion) == 0 or plateCompletion >= 0.9 * np.max(completion):
+        if (len(completion) == 0 or
+                plateCompletion >=
+                setRearrangementFactor * np.max(completion)):
             plates.append(mockPlate)
             completion.append(plateCompletion)
 
@@ -429,14 +434,15 @@ def getOptimalArrangement(plate, startDate=None,
     plates = np.array(plates)
 
     # Selects plates that have 0.9 the maximum completion or higher
-    validPlates = plates[completion >= 0.9 * maxCompletion]
-    validCompletion = completion[completion >= 0.9 * maxCompletion]
+    validPlates = plates[completion >= setRearrangementFactor * maxCompletion]
+    validCompletion = completion[completion >=
+                                 setRearrangementFactor * maxCompletion]
     sortCompletion = np.argsort(validCompletion)[::-1]
     del plates
 
     maxPlates = [validPlates[idx] for idx in sortCompletion]
-    log.debug('{0} plates with completion > 0.9*maxCompletion'.format(
-              len(maxPlates)))
+    log.debug('{0} plates with completion > {1:.1f}*maxCompletion'.format(
+              len(maxPlates), setRearrangementFactor))
 
     # For the selected plates, checks if they have bad sets and, in that case
     # breaks them into incomplete sets.
@@ -475,14 +481,39 @@ def getOptimalArrangement(plate, startDate=None,
                 optimumPlate = minIncompleteSetPlates[0]
             else:
                 optimumPlate = getEarliestIncompletePlate(
-                    minIncompleteSetPlates)
+                    minIncompleteSetPlates, LST=LST)
 
     return {'sets': optimumPlate.sets, 'invalid': invalidExposures}
 
 
-def getEarliestIncompletePlate(incompletePlates):
+def getEarliestIncompletePlate(incompletePlates, LST=None):
     """From a list of plates with incomplete sets, selects the one with the
     incomplete set with the earliest visibility window."""
+
+    plateRA = incompletePlates[0].ra
+
+    # Calculates the LST range of the plate and the current LST depending on
+    # the value of the LST keyword.
+    if LST is None or LST is True:
+        plateLSTRange = incompletePlates[0].getLSTRange(intersect=True)
+        LST = site.localSiderealTime()
+    elif LST is False:
+        plateLSTRange = incompletePlates[0].getLSTRange(intersect=False)
+        LST = plateLSTRange[0]
+    else:
+        plateLSTRange = incompletePlates[0].getLSTRange(intersect=False)
+        assert LST >= 0 and LST <= 24.  # Checks LST is a time.
+
+    # If the desired LST is not withing the range of the plate, we use its
+    # starting LST
+    if not intervals.isPointInInterval(LST, plateLSTRange, wrapAt=24.):
+        LST = plateLSTRange[0]
+
+    HA = LST * 15. - plateRA
+    if HA > 180:
+        HA -= 360
+    elif HA < -180:
+        HA += 360
 
     minHAs = []
     for plate in incompletePlates:
@@ -490,13 +521,22 @@ def getEarliestIncompletePlate(incompletePlates):
         for set in plate.sets:
             if set.getQuality(silent=True)[0] is not 'Incomplete':
                 continue
+
             haMid = intervals.calculateMean(set.getHA(), wrapAt=360.)
             if haMid > 180:
                 haMid -= 360.
+            elif haMid < -180:
+                haMid += 360
             HAPlate.append(haMid)
         minHAs.append(np.min(HAPlate))
 
-    return incompletePlates[np.argmin(minHAs)]
+    minHAs = np.array(minHAs)
+    afterHA = minHAs[minHAs > HA]
+
+    if len(afterHA) == 0:
+        return incompletePlates[np.argmin(minHAs)]
+    else:
+        return incompletePlates[np.argmin(afterHA)]
 
 
 def calculatePermutations(inputList):

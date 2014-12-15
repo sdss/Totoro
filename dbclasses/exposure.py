@@ -71,6 +71,7 @@ class Exposure(plateDB.Exposure):
         self._ditherPosition = None
         self._sn2Array = None
         self._seeing = None
+        self._plugging = None
 
         self.isMock = mock
         self.kwargs = kwargs
@@ -110,6 +111,7 @@ class Exposure(plateDB.Exposure):
     def createMockExposure(cls, startTime=None, expTime=None,
                            ditherPosition=None, ra=None, dec=None,
                            silent=False, **kwargs):
+        """Creates a mock exposure instance."""
 
         if ra is None or dec is None:
             raise TotoroError('ra and dec must be specified')
@@ -142,6 +144,8 @@ class Exposure(plateDB.Exposure):
         return newExposure
 
     def simulateObservedParamters(self):
+        """Simulates the SN2 of the exposure, using dust extinction and airmass
+        values."""
 
         self._seeing = 1.0
 
@@ -164,15 +168,20 @@ class Exposure(plateDB.Exposure):
         # self._valid = True
         # self.status = 'Good'
 
+        return self._sn2Array
+
     @property
     def ra(self):
+        """RA of the plate centre."""
         return self.getCoordinates()[0]
 
     @property
     def dec(self):
+        """Dec of the plate centre."""
         return self.getCoordinates()[1]
 
     def getCoordinates(self):
+        """Returns an array with the coordinates of the plate centre."""
 
         if 'ra' in self.kwargs and 'dec' in self.kwargs:
             if (self.kwargs['ra'] is not None and
@@ -228,6 +237,8 @@ class Exposure(plateDB.Exposure):
 
     @property
     def valid(self):
+        """Checks if an exposure is valid."""
+
         if self._valid is not None:
             return self._valid
         else:
@@ -235,6 +246,8 @@ class Exposure(plateDB.Exposure):
 
     @valid.setter
     def valid(self, value):
+        """Sets the validity of the exposure."""
+
         self._valid = value
 
     def isValid(self, flag=True, **kwargs):
@@ -252,6 +265,8 @@ class Exposure(plateDB.Exposure):
 
     @property
     def ditherPosition(self):
+        """Gets the dither position for this exposure."""
+
         if self._ditherPosition is None and self.isMock is False:
             return self._mangaExposure.dither_position[0].upper()
         else:
@@ -259,16 +274,22 @@ class Exposure(plateDB.Exposure):
 
     @ditherPosition.setter
     def ditherPosition(self, value):
+        """Sets the dither position for this exposure
+        (does not write to the DB)"""
+
         self._ditherPosition = value
 
     @property
     def seeing(self):
+        """Returns the seeing for this exposure."""
+
         if not self.isMock and self._seeing is None:
             return self._mangaExposure.seeing
         else:
             return self._seeing
 
     def getLST(self):
+        """Returns the LST interval for this exposure."""
 
         ha0, ha1 = self.getHA()
 
@@ -278,6 +299,9 @@ class Exposure(plateDB.Exposure):
         return np.array([lst0, lst1])
 
     def getUT(self, format=None):
+        """Returns the UT interval in which this exposure was taken. If
+        format is 'str', it returns a tuple with the UT0 and UT1 strings. If
+        None or 'datetime', a tuple with datetime instances is returned."""
 
         startTime = float(self.start_time)
         t0 = time.Time(0, format='mjd', scale='tai')
@@ -297,6 +321,7 @@ class Exposure(plateDB.Exposure):
         return (ut0, ut1)
 
     def getJD(self):
+        """Returns the JD interval in which this exposure was taken."""
 
         startTime = float(self.start_time)
         t0 = time.Time(0, format='mjd', scale='tai')
@@ -308,7 +333,22 @@ class Exposure(plateDB.Exposure):
         return (tStart.jd, tEnd.jd)
 
     def getPlatePK(self):
+        """Returns the pk of the plate associated to this plate."""
         return int(self.observation.plate_pointing.plate.pk)
 
     def getMJD(self):
+        """Gets the MJD for this exposure."""
         return self.mjd()
+
+    def getPlugging(self):
+        """Returns the Plugging instance from ModelClasses for the exposure."""
+
+        if self.isMock:
+            return None
+        else:
+            if self._plugging is not None:
+                return self._plugging
+            else:
+                # Caches the plugging information
+                self._plugging = self.observation.plugging
+                return self._plugging

@@ -15,7 +15,6 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro import log, config, readPath
-from sdss.internal.manga.Totoro.dbclasses import Fields
 from sdss.internal.manga.Totoro.scheduler.timeline import Timelines
 from sdss.internal.manga.Totoro import exceptions
 from astropy import time
@@ -29,7 +28,9 @@ expTimeEff = expTime / config['planner']['efficiency']
 class PlannerScheduler(object):
     """A class for field selection."""
 
-    def __init__(self, schedule, **kwargs):
+    def __init__(self, schedule, useFields=True, **kwargs):
+
+        from sdss.internal.manga.Totoro.dbclasses import Fields
 
         self.timelines = Timelines(schedule, **kwargs)
         log.debug('created PlannerScheduler with {0} timelines'
@@ -41,11 +42,14 @@ class PlannerScheduler(object):
                  .format(len(self.plates), len(drilling)))
 
         # Gets fields (rejectDrilled=False because we do our own rejection)
-        tmpFields = Fields(rejectDrilled=False)
-        tileIDPlates = [plate.getMangaTileID() for plate in self.plates]
+        if useFields:
+            tmpFields = Fields(rejectDrilled=False)
+            tileIDPlates = [plate.getMangaTileID() for plate in self.plates]
 
-        self.fields = [field for field in tmpFields
-                       if field.manga_tileid not in tileIDPlates]
+            self.fields = [field for field in tmpFields
+                           if field.manga_tileid not in tileIDPlates]
+        else:
+            self.fields = []
 
         nFieldsDrilled = len(tmpFields) - len(self.fields)
         if nFieldsDrilled > 0:
@@ -67,16 +71,21 @@ class PlannerScheduler(object):
                   if plate.getPlateCompletion() == 0.0
                   and plate.priority > minimumPlugPriority
                   and len(plate.getTotoroExposures()) == 0
-                  and plate.plate_id > 7800]
+                  and plate.plate_id > 7800
+                  and plate.statuses[0].label != 'Design']
 
         # Adds tiles being drilled from file
         if ('tilesBeingDrilled' in config['planner'] and
                 config['planner']['tilesBeingDrilled'].lower() != 'none'):
 
-            tilesBeingDrilled = map(
-                int, open(
-                    readPath(config['planner']['tilesBeingDrilled']),
-                    'r').read().splitlines())
+            tilesBeingDrilledRaw = open(
+                readPath(config['planner']['tilesBeingDrilled']), 'r') \
+                .read().splitlines()
+
+            if len(tilesBeingDrilledRaw) > 0 and tilesBeingDrilledRaw[0] != '':
+                tilesBeingDrilled = map(int, tilesBeingDrilledRaw)
+            else:
+                tilesBeingDrilled = []
 
             tiles = getTilingCatalogue()
 
