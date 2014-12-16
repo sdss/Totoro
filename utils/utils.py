@@ -148,7 +148,7 @@ def JDdiff(JD0, JD1):
     return (JD1 - JD0) * 86400
 
 
-def isMaNGA(plate):
+def isMaNGA_Led(plate):
     """Returns True if the plate is a MaNGA-led plate."""
 
     totoroDB = TotoroDBConnection()
@@ -168,7 +168,7 @@ def isMaNGA(plate):
             return False
 
     for survey in plate.surveys:
-        if (survey.label == 'MaNGA' and
+        if (survey.label == 'MaNGA' and plate.currentSurveyMode is not None and
                 plate.currentSurveyMode.label == 'MaNGA dither'):
             return True
 

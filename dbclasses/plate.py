@@ -269,8 +269,7 @@ class Plate(plateDB.Plate):
     def isMaNGA(self):
 
         for survey in self.surveys:
-            if (survey.label == 'MaNGA' and
-                    self.currentSurveyMode.label == 'MaNGA dither'):
+            if survey.label == 'MaNGA':
                 return True
 
         return False

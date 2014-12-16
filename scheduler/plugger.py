@@ -384,7 +384,7 @@ class PluggerScheduler(object):
         for key in self.carts:
             if self.carts[key] is None:
                 keysToRemove.append(key)
-            elif not utils.isMaNGA(self.carts[key]):
+            elif not utils.isMaNGA_Led(self.carts[key]):
                 keysToRemove.append(key)
             else:
                 pass
