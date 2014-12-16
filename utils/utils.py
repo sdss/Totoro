@@ -18,6 +18,7 @@ import numpy as np
 from sdss.internal.manga.Totoro import config
 from sdss.internal.manga.Totoro import exceptions
 import warnings
+from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
 from sdss.manga.mlhalimit import mlhalimit as mlhalimitHours
 from collections import OrderedDict
 from sdss.utilities.Site import Site
@@ -145,3 +146,30 @@ def JDdiff(JD0, JD1):
     """Returns the number of seconds between two Julian dates."""
 
     return (JD1 - JD0) * 86400
+
+
+def isMaNGA(plate):
+    """Returns True if the plate is a MaNGA-led plate."""
+
+    totoroDB = TotoroDBConnection()
+    plateDB = totoroDB.plateDB
+
+    from sdss.internal.manga.Totoro.dbclasses import Plate
+
+    if isinstance(plate, (Plate, plateDB.Plate)):
+        pass
+    else:
+        session = totoroDB.Session()
+        try:
+            with session.begin(subtransactions=True):
+                plate = session.query(plateDB.Plate).filter(
+                    plateDB.Plate.plate_id == plate).one()
+        except:
+            return False
+
+    for survey in plate.surveys:
+        if (survey.label == 'MaNGA' and
+                plate.currentSurveyMode.label == 'MaNGA dither'):
+            return True
+
+    return False

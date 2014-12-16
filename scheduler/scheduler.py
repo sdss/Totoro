@@ -16,7 +16,7 @@ from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro.exceptions import TotoroError
 from sdss.internal.manga.Totoro import log, site
-from observingPlan import ObservingPlan
+from sdss.internal.manga.Totoro.scheduler import observingPlan
 from plugger import PluggerScheduler
 from planner import PlannerScheduler
 from astropy import time
@@ -35,7 +35,7 @@ class BaseScheduler(object):
 
     def __init__(self, startDate=None, endDate=None, **kwargs):
 
-        self._observingPlan = ObservingPlan()
+        self._observingPlan = observingPlan
 
         if self._observingPlan is None:
             raise TotoroError('observing plan not found. Not possible to '
