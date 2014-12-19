@@ -1,5 +1,4 @@
+from observingPlan import ObservingPlan
+observingPlan = ObservingPlan()
 
 from scheduler import *
-from observingPlan import ObservingPlan
-
-observingPlan = ObservingPlan()

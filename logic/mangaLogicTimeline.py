@@ -85,7 +85,22 @@ def selectOptimal(plates, jdRanges, **kwargs):
                 newPlates.append(plate)
                 break
     newPlates = np.array(newPlates)
-    # print(newPlates)
+
+    # Sorts jdRanges
+    jdRanges = jdRanges[jdRanges[:, 0].argsort()]
+
+    # Selects plates that contain the earliest JD
+    minJD = jdRanges[0][0]
+    minLST = site.localSiderealTime(minJD)
+    platesMinJD = [plate for plate in newPlates
+                   if utils.isPointInInterval(minLST, plate.getLSTRange())]
+
+    # If there are such plates, uses those. Otherwise, uses all.
+    if len(platesMinJD) > 0:
+        newPlates = np.array(platesMinJD)
+    else:
+        pass
+
     # First tries to select the complete plate with the fewer number
     # of exposures
     completedPlates = [plate for plate in newPlates if plate.isComplete]

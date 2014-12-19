@@ -71,8 +71,7 @@ class PlannerScheduler(object):
                   if plate.getPlateCompletion() == 0.0
                   and plate.priority > minimumPlugPriority
                   and len(plate.getTotoroExposures()) == 0
-                  and plate.plate_id > 7800
-                  and plate.statuses[0].label != 'Design']
+                  and plate.plate_id > 7800]
 
         # Adds tiles being drilled from file
         if ('tilesBeingDrilled' in config['planner'] and
