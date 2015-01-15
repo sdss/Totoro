@@ -100,7 +100,8 @@ class Timeline(object):
             unallocatedTime += (interval[1]-interval[0])
         return unallocatedTime * 24.
 
-    def schedule(self, plates, mode='plugger', allowComplete=False, **kwargs):
+    def schedule(self, plates, mode='plugger', allowComplete=False,
+                 showUnobservedTimes=True, **kwargs):
         """Schedules a list of plates in the LST ranges not yet observed in the
         timeline."""
 
@@ -129,9 +130,10 @@ class Timeline(object):
                                  optimalPlate.getMangaTileID(),
                                  nExp))
 
-        if self.remainingTime == 0:
-            return True
-        else:
-            log.info('... unobserved times: {0}'.format(
-                     str(self.unallocatedExps)))
-            return False
+        if showUnobservedTimes:
+            if self.remainingTime == 0:
+                return True
+            else:
+                log.info('... unobserved times: {0}'.format(
+                         str(self.unallocatedExps)))
+                return False
