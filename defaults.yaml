@@ -67,7 +67,7 @@ plugger:
     efficiency: 0.9
     noPlugPriority: 2
     forcePlugPriority: 10
-    maxAltitude: 80
+    maxAltitude: 82
 
 simulation:
     blueSN2: 3.4
