@@ -57,7 +57,7 @@ dustMap:
     grid: +data/IGincrease.fits
 
 planner:
-    efficiency: 0.9
+    efficiency: 0.8
     tilesBeingDrilled: +data/tilesBeingDrilled.dat
     platesIgnore: +data/platesIgnore.dat
     maxAltitude: 75
@@ -67,10 +67,10 @@ planner:
     seed: 12345
 
 plugger:
-    efficiency: 0.9
+    efficiency: 0.8
     noPlugPriority: 2
     forcePlugPriority: 10
-    maxAltitude: 82
+    maxAltitude: 80
 
 simulation:
     blueSN2: 3.4

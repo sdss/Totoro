@@ -41,7 +41,7 @@ def removeSet(set_pk):
 
 
 def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
-                  silent=False, forceReflag=False, **kwargs):
+                  silent=False, force=False, **kwargs):
     """Checks if a given exposures meets MaNGA's quality criteria.
 
     Error codes:
@@ -91,9 +91,9 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
             return (True, 10)
         elif statusLabel.lower() in ['override bad', 'bad']:
             return (False, 10)
-        elif not forceReflag and statusLabel.lower() == 'totoro good':
+        elif not force and statusLabel.lower() == 'totoro good':
             return (True, 10)
-        elif not forceReflag and statusLabel.lower() == 'totoro bad':
+        elif not force and statusLabel.lower() == 'totoro bad':
             return (False, 10)
 
     # If the exposure is not flagged, perform the QA tests

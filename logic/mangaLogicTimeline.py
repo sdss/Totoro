@@ -26,6 +26,8 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
                     mode='plugger', **kwargs):
     """Gets the optimal plate to observe in a range of JDs."""
 
+    efficiency = kwargs.pop('efficiency', config[mode]['efficiency'])
+
     jdRanges = np.atleast_2d(jdRanges).copy()
 
     observablePlates = [plate for plate in plates
@@ -54,17 +56,19 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
                      if len(plate.getTotoroExposures()) > 0]
 
     if len(startedPlates) > 0:
-        observedFlag = simulatePlates(startedPlates, jdRanges, mode=mode)
+        observedFlag = simulatePlates(startedPlates, jdRanges, mode=mode,
+                                      efficiency=efficiency)
         if observedFlag is True:
             optimal = selectOptimal(startedPlates, jdRanges)
             cleanupPlates(startedPlates, optimal)
             return optimal
 
-    observedFlag = simulatePlates(notPlugged, jdRanges, mode=mode)
+    observedFlag = simulatePlates(notPlugged, jdRanges, mode=mode,
+                                  efficiency=efficiency)
     if observedFlag is False:
         return None
 
-    optimal = selectOptimal(notPlugged, jdRanges)
+    optimal = selectOptimal(notPlugged, jdRanges, efficiency=efficiency)
     cleanupPlates(notPlugged, optimal)
 
     return optimal
@@ -151,13 +155,16 @@ def _getOptimalFromList(plates):
     return None
 
 
-def simulatePlates(plates, jdRanges, mode='plugger'):
+def simulatePlates(plates, jdRanges, mode='plugger', efficiency=None):
     """Simulates exposures for a list of plates withing a range of JDs."""
 
     jdRanges = np.atleast_2d(jdRanges)
     observedFlag = False
 
-    expTimeEff = expTime / config[mode]['efficiency']
+    efficiency = config[mode]['efficiency'] if efficiency is None \
+        else efficiency
+
+    expTimeEff = expTime / efficiency
     maxAlt = config[mode]['maxAltitude']
 
     for plate in plates:

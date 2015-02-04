@@ -74,8 +74,8 @@ class BaseScheduler(object):
         self.endDate = endDate
         self.currentDate = time.Time.now().jd
 
-        log.info('Start date: {0}'.format(self.startDate))
-        log.info('End date: {0}'.format(self.endDate))
+        log.info('start date: {0}'.format(self.startDate))
+        log.info('end date: {0}'.format(self.endDate))
 
 
 class Planner(BaseScheduler):
@@ -88,7 +88,8 @@ class Planner(BaseScheduler):
                                       endDate=endDate, scope='planner',
                                       **kwargs)
 
-        self._plannerScheduler = PlannerScheduler(self.observingBlocks)
+        self._plannerScheduler = PlannerScheduler(self.observingBlocks,
+                                                  **kwargs)
         self._plannerScheduler.schedule(**kwargs)
 
 

@@ -124,7 +124,10 @@ class PlannerScheduler(object):
             if goodWeatherFraction is not None \
             else config['planner']['goodWeatherFraction']
 
+        efficiency = kwargs.get('efficiency', config['planner']['efficiency'])
+
         log.info('Good weather fraction: {0:.2f}'.format(goodWeatherFraction))
+        log.info('Efficiency: {0:.2f}'.format(efficiency))
 
         goodWeatherIdx = self.getGoodWeatherIndices(goodWeatherFraction,
                                                     **kwargs)

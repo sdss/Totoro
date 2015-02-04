@@ -79,19 +79,24 @@ def createSchedule(finalSchedule):
                 mangaStart = change.jd
                 mangaEnd = morTw.jd
         elif night['orEboss'] == 1:
-            change = tt + getChange(changeUT)
-            eBossStart = eveTw.jd
-            eBossEnd = change.jd
-            if night['orManga'] == 2:
-                mangaStart = change.jd
-                mangaEnd = morTw.jd
-                apogeeStart = 0
-                apogeeEnd = 0
-            elif night['orApogee2'] == 2:
-                apogeeStart = change.jd
-                apogeeEnd = morTw.jd
-                mangaStart = 0
-                mangaEnd = 0
+            if night['orManga'] == 0 and night['orApogee2'] == 0:
+                eBossStart = eveTw.jd
+                eBossEnd = morTw.jd
+                mangaStart = mangaEnd = apogeeStart = apogeeEnd = 0
+            else:
+                change = tt + getChange(changeUT)
+                eBossStart = eveTw.jd
+                eBossEnd = change.jd
+                if night['orManga'] == 2:
+                    mangaStart = change.jd
+                    mangaEnd = morTw.jd
+                    apogeeStart = 0
+                    apogeeEnd = 0
+                elif night['orApogee2'] == 2:
+                    apogeeStart = change.jd
+                    apogeeEnd = morTw.jd
+                    mangaStart = 0
+                    mangaEnd = 0
         elif night['orManga'] == 1:
             change = tt + getChange(changeUT)
             mangaStart = eveTw.jd
