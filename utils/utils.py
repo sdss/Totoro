@@ -15,6 +15,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import numpy as np
+from sdss.internal.manga.Totoro import log
 from sdss.internal.manga.Totoro import config
 from sdss.internal.manga.Totoro import exceptions
 import warnings
@@ -22,6 +23,8 @@ from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
 from sdss.manga.mlhalimit import mlhalimit as mlhalimitHours
 from collections import OrderedDict
 from sdss.utilities.Site import Site
+from itertools import combinations
+import os
 
 
 def mlhalimit(dec):
@@ -103,10 +106,17 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
         return plateComplete
 
 
-def getAPOcomplete(plates, format='plate_id', **kwargs):
+def getAPOcomplete(plates, format='plate_id',
+                   SN2_blue=None, SN2_red=None, func=np.max,
+                   createFile=False, **kwargs):
     """Returns a dictionary with the APOcomplete output."""
 
     from sdss.internal.manga.Totoro.dbclasses import Plate
+
+    SN2_blue = config['SN2thresholds']['plateBlue'] \
+        if SN2_blue is None else SN2_blue
+    SN2_red = config['SN2thresholds']['plateRed'] \
+        if SN2_red is None else SN2_red
 
     format = format.lower()
     if format.lower() not in ['pk', 'plate_id']:
@@ -118,6 +128,8 @@ def getAPOcomplete(plates, format='plate_id', **kwargs):
 
     for plate in plates:
 
+        setsToAPOcomplete = None
+
         if not isinstance(plate, Plate):
             plate = Plate(plate, format=format.lower(), **kwargs)
 
@@ -128,18 +140,100 @@ def getAPOcomplete(plates, format='plate_id', **kwargs):
 
         APOcomplete[plate.plate_id] = []
 
-        for set in plate.sets:
-            for exp in set.totoroExposures:
+        validSets = plate.getValidSets()
+        for nSets in range(1, len(validSets)+1):
+
+            combSets = list(combinations(validSets, nSets))
+            SN2 = np.array([_cumulatedSN2(sets) for sets in combSets])
+
+            overSN2 = [(combSets[ii], SN2[ii]) for ii in range(len(combSets))
+                       if SN2[ii][0] >= SN2_blue and SN2[ii][1] >= SN2_red]
+
+            if len(overSN2) > 0:
+
+                relativeSN2 = np.array(
+                    [(overSN2[ii][1][0] / SN2_blue) *
+                     (overSN2[ii][1][1] / SN2_red)
+                     for ii in range(len(overSN2))])
+
+                setsToAPOcomplete = overSN2[
+                    np.where(relativeSN2 == func(relativeSN2))[0][0]][0]
+
+                break
+
+        if setsToAPOcomplete is None:
+            setsToAPOcomplete = validSets
+
+        for ss in setsToAPOcomplete:
+            for exp in ss.totoroExposures:
 
                 mjd = exp.getMJD()
-                ss = set.pk
+                pk = ss.pk
                 dPos = exp.ditherPosition.upper()
                 nExp = exp.exposure_no
 
                 APOcomplete[plate.plate_id].append(
-                    [plate.plate_id, mjd, ss, dPos, nExp])
+                    [plate.plate_id, mjd, pk, dPos, nExp])
+
+        apoCompleteSN2 = _cumulatedSN2(setsToAPOcomplete)
+        if apoCompleteSN2[0] >= SN2_blue and apoCompleteSN2[1] >= SN2_red:
+            log.info('APOcomplete for plate_id={0} generated with '
+                     'SN2_blue={1:.1f}, SN2_red={2:.1f}.'.format(
+                         plate.plate_id, apoCompleteSN2[0], apoCompleteSN2[1]))
+        else:
+            warnings.warn('APOcomplete for plate_id={0} generated with '
+                          'SN2_blue={1:.1f}, SN2_red={2:.1f}, which is lower '
+                          'than the thresholds.'.format(
+                              plate.plate_id, apoCompleteSN2[0],
+                              apoCompleteSN2[1]), exceptions.TotoroUserWarning)
+
+    if createFile:
+        createAPOcompleteFile(APOcomplete)
 
     return APOcomplete
+
+
+def createAPOcompleteFile(APOcomplete, path=None):
+    """Writes the APOcomplete file in Yanny format."""
+
+    path = './' if path is None else path
+
+    for key in APOcomplete:
+
+        apocompPath = os.path.join(path, 'apocomp-{0:04d}.par'.format(key))
+
+        data = APOcomplete[key]
+
+        plateid = [dd[0] for dd in data]
+        mjd = [dd[1] for dd in data]
+        setno = [dd[2] for dd in data]
+        dpos = [dd[3] for dd in data]
+        expno = [dd[4] for dd in data]
+
+        strstruct = 'typedef struct {\n long plateid;\n long mjd;\n ' + \
+            'int set;\n char mgdpos[2];\n long exposure;\n} APOCOMP;\n\n'
+
+        ff = open(apocompPath, 'w')
+        ff.write(strstruct)
+
+        for ii in range(len(data)):
+            expstr = '{0} {1} {2} {3} {4} {5}\n'.format(
+                'APOCOMP', plateid[ii], mjd[ii], setno[ii],
+                dpos[ii], expno[ii])
+            ff.write(expstr)
+
+        ff.close()
+
+    return
+
+
+def _cumulatedSN2(sets):
+    """Returns the cumulated SN2 for a list of sets as [SN2_blue, SN2_red]."""
+
+    SN2array = np.array([ss.getSN2Array() for ss in sets])
+    SN2sum = np.sum(SN2array, axis=0)
+
+    return np.array([np.mean(SN2sum[0:2]), np.mean(SN2sum[2:])])
 
 
 def JDdiff(JD0, JD1):
