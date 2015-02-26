@@ -15,7 +15,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from astropy.time import Time
-from sdss.internal.manga.Totoro import log, TotoroDBConnection
+from sdss.internal.manga.Totoro import log, TotoroDBConnection, config
 from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro import logic
 import numpy as np
@@ -74,6 +74,7 @@ class Timeline(object):
                 if not exp.isValid:
                     continue
                 jdRange = exp.getJD()
+
                 if (jdRange[1] >= self.startDate and
                         jdRange[0] <= self.endDate):
                     self.unallocatedExps = utils.removeInterval(
@@ -117,7 +118,7 @@ class Timeline(object):
 
             optimalPlate = logic.getOptimalPlate(
                 plates, self.unallocatedExps,
-                prioritisePlugged=prioritisePlugged, mode=mode)
+                prioritisePlugged=prioritisePlugged, mode=mode, **kwargs)
 
             if optimalPlate is None:
                 break
@@ -131,7 +132,8 @@ class Timeline(object):
                                  nExp))
 
         if showUnobservedTimes:
-            if self.remainingTime == 0:
+            if (self.remainingTime <=
+                    config['exposure']['exposureTime'] / 3600.):
                 return True
             else:
                 log.info('... unobserved times: {0}'.format(

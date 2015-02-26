@@ -42,6 +42,7 @@ observingPlan:
 
 fields:
     tilingCatalogue: $MANGA_TILING_CATALOGUE
+    mangacore: $MANGACORE_DIR
     drilledTiles: +data/drilledMaNGATiles.dat
 
 observatory:
