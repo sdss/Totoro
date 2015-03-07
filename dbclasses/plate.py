@@ -206,7 +206,7 @@ class Plate(plateDB.Plate):
         return instance
 
     def __init__(self, input, format='pk', mock=False, silent=False,
-                 updateSets=True, mjd=None, **kwargs):
+                 updateSets=True, mjd=None, fullCheck=True, **kwargs):
 
         self._complete = None
         self.isMock = mock
@@ -222,9 +222,12 @@ class Plate(plateDB.Plate):
         self.mlhalimit = utils.mlhalimit(self.dec)
 
         if not self.isMock:
-            self.checkPlate()
-            self.sets = TotoroSet.getPlateSets(
-                self.pk, format='pk', silent=silent, **kwargs)
+
+            self.checkPlate(full=fullCheck)
+
+            self.sets = [TotoroSet.Set(set, silent=silent, **kwargs)
+                         for set in self.getMangaDBSets()]
+
             if silent is False:
                 log.debug('loaded plate with pk={0}, plateid={1}'.format(
                           self.pk, self.plate_id))
@@ -274,7 +277,27 @@ class Plate(plateDB.Plate):
     def addExposure(self, exposure):
         return logic.addExposure(exposure, self)
 
-    def checkPlate(self):
+    def getMangaDBSets(self):
+        """Returns a list of mangaDB.ModelClasses.Set instances with all the
+        sets matching exposures in this plate. Removes duplicates."""
+
+        sets = []
+        for platePointing in self.plate_pointings:
+            for observation in platePointing.observations:
+                for exposure in observation.exposures:
+                    for mangaDBExposure in exposure.mangadbExposure:
+                        set = mangaDBExposure.set
+                        if set not in sets and set is not None:
+                            sets.append(mangaDBExposure.set)
+
+        sets = sorted(sets, key=lambda set: set.pk)
+
+        return sets
+
+    def checkPlate(self, full=True):
+        """Does some sanity checks for the current plate. If full=True,
+        it checks that all the science exposures have a mangaDB counterpart.
+        This can be disabled to save time during plate bulk load."""
 
         if not hasattr(self, 'pk') or not hasattr(self, 'plate_id'):
             raise AttributeError('Plate instance has no pk or plate_id.')
@@ -282,14 +305,15 @@ class Plate(plateDB.Plate):
         if not self.isMaNGA:
             raise TotoroExpections.TotoroError('this is not a MaNGA plate!')
 
-        nMaNGAExposures = len(self.getMangadbExposures())
-        nScienceExposures = len(self.getScienceExposures())
-        if nMaNGAExposures != nScienceExposures:
-            warnings.warn('plate_id={1}: {0} plateDB.Exposures found '
-                          'but only {2} mangaDB.Exposures'.format(
-                              nScienceExposures, self.plate_id,
-                              nMaNGAExposures),
-                          TotoroExpections.NoMangaExposure)
+        if full:
+            nMaNGAExposures = len(self.getMangadbExposures())
+            nScienceExposures = len(self.getScienceExposures())
+            if nMaNGAExposures != nScienceExposures:
+                warnings.warn('plate_id={1}: {0} plateDB.Exposures found '
+                              'but only {2} mangaDB.Exposures'.format(
+                                  nScienceExposures, self.plate_id,
+                                  nMaNGAExposures),
+                              TotoroExpections.NoMangaExposure)
 
     @property
     def isMaNGA(self):

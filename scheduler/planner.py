@@ -69,7 +69,7 @@ class PlannerScheduler(object):
         from sdss.internal.manga.Totoro.dbclasses import (getAll, Plate,
                                                           getTilingCatalogue)
 
-        allPlates = getAll(updateSets=False, silent=True)
+        allPlates = getAll(updateSets=False, silent=True, fullCheck=False)
 
         # Selects only non-started plates with priority > minimum
         minimumPlugPriority = config['planner']['noPlugPriority']

@@ -94,7 +94,7 @@ def getMaNGAstats(output=None, wiki=False, quiet=False):
 
     """
 
-    allPlates = getAll(updateSets=False, silent=True)
+    allPlates = getAll(updateSets=False, silent=True, fullCheck=False)
 
     complete = [plate for plate in allPlates
                 if plate.isComplete and plate.plate_id > 7400]

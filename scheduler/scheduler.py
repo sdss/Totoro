@@ -117,7 +117,8 @@ class Plugger(object):
 
         plates = dbclasses.getAtAPO(onlyIncomplete=rejectComplete,
                                     onlyMarked=onlyMarked,
-                                    rejectLowPriority=True)
+                                    rejectLowPriority=True,
+                                    fullCheck=False)
 
         log.info('plates found: {0}'.format(len(plates)))
 
