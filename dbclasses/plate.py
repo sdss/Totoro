@@ -68,7 +68,7 @@ def getPlugged(onlyIncomplete=False, **kwargs):
                     plateDB.SurveyMode.label == 'MaNGA dither').order_by(
                         plateDB.Plate.plate_id).all()
 
-    plates = [actPlug.plugging.plate_pk for actPlug in activePluggings]
+    plates = [actPlug.plugging.plate for actPlug in activePluggings]
 
     if onlyIncomplete:
         return _getIncomplete(plates, **kwargs)
@@ -103,8 +103,6 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False, rejectLowPriority=False,
 
         plates = plates.order_by(plateDB.Plate.plate_id).all()
 
-    plates = [plate.pk for plate in plates]
-
     if onlyIncomplete:
         return _getIncomplete(plates, **kwargs)
     else:
@@ -120,8 +118,6 @@ def getAll(onlyIncomplete=False, **kwargs):
                      plateDB.SurveyMode.label == 'MaNGA dither').order_by(
                 plateDB.Plate.plate_id).all()
 
-    plates = [plate.pk for plate in plates]
-
     if onlyIncomplete:
         return _getIncomplete(plates, **kwargs)
     else:
@@ -130,7 +126,7 @@ def getAll(onlyIncomplete=False, **kwargs):
 
 def _getIncomplete(plates, **kwargs):
 
-    totoroPlates = [Plate(plate, format='pk') for plate in plates]
+    totoroPlates = [Plate(plate) for plate in plates]
 
     incompletePlates = []
     for totoroPlate in totoroPlates:
@@ -162,6 +158,8 @@ class Plates(list):
 
         if all([isinstance(ii, Plate) for ii in inp]):
             list.__init__(self, inp)
+        elif all([isinstance(ii, totoroDB.plateDB.Plate) for ii in inp]):
+            list.__init__(self, [Plate(ii, **kwargs) for ii in inp])
         else:
             list.__init__(self, [Plate(ii, format=format, **kwargs)
                                  for ii in inp])
@@ -227,7 +225,6 @@ class Plate(plateDB.Plate):
             self.checkPlate()
             self.sets = TotoroSet.getPlateSets(
                 self.pk, format='pk', silent=silent, **kwargs)
-
             if silent is False:
                 log.debug('loaded plate with pk={0}, plateid={1}'.format(
                           self.pk, self.plate_id))
