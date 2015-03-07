@@ -126,35 +126,43 @@ def selectOptimal(plates, jdRanges, **kwargs):
 def _getOptimalFromList(plates):
     """Returns the optimal plate from a list."""
 
+    if len(plates) == 0:
+        return None
+
     # If no completed plates, calculates the plate completion using only
     # complete sets
     plateCompletion = np.array(
         [plate.getPlateCompletion(includeIncompleteSets=True)
          for plate in plates])
 
-    maxPlateCompletion = plateCompletion.max()
+    platePriority = np.array([plate.priority for plate in plates])
+
+    # Determines selection priority based on plate completion
+    # and plate priority
+    masterPriority = 0.5 * (10 * plateCompletion + platePriority)
+
+    # Sorts plates based on master priority
+    sortedPlates = plates[np.argsort(masterPriority)][::-1]
+
+    # Returns the first plate.
+    return sortedPlates[0]
+
+    # maxPlateCompletion = plateCompletion.max()
 
     # Selects the plates with maximum completion
-    platesMaxCompletion = plates[np.where(
-        plateCompletion == maxPlateCompletion)]
+    # platesMaxCompletion = plates[np.where(
+    #     plateCompletion == maxPlateCompletion)]
 
-    if len(platesMaxCompletion) == 1:
-        # If only one plate with maximum completion
-        return platesMaxCompletion[0]
-    else:
-        nExposures = [
-            len(plate.getTotoroExposures(onlySets=True)) / plate.priority
-            for plate in platesMaxCompletion]
-        return platesMaxCompletion[np.argmin(nExposures)]
+    # if len(platesMaxCompletion) == 1:
+    #     # If only one plate with maximum completion
+    #     return platesMaxCompletion[0]
+    # else:
+    #     nExposures = [
+    #         len(plate.getTotoroExposures(onlySets=True)) / plate.priority
+    #         for plate in platesMaxCompletion]
+    #     return platesMaxCompletion[np.argmin(nExposures)]
 
-        # If several plates with maximum completion, returns that with the
-        # maximum overall completion (including incomplete sets).
-        # plateCompletionIncomplete = np.array(
-        #     [plate.getPlateCompletion(includeIncompleteSets=True)
-        #      for plate in platesMaxCompletion])
-        # return platesMaxCompletion[plateCompletionIncomplete.argmax()]
-
-    return None
+    # return None
 
 
 def simulatePlates(plates, jdRanges, mode='plugger', efficiency=None):
