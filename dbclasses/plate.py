@@ -18,17 +18,14 @@ from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
 from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro import exceptions as TotoroExpections
 from sdss.internal.manga.Totoro import logic
-from sdss.internal.manga.Totoro import log, config, dustMap, site, readPath
+from sdss.internal.manga.Totoro import log, config, dustMap, site
 from sdss.internal.manga.Totoro.scheduler import observingPlan
-from sdss.utilities import yanny
 import warnings
 from astropy import time
 import set as TotoroSet
 from exposure import Exposure
 import numpy as np
 from copy import deepcopy
-import os
-import glob
 
 
 __ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plates',
@@ -39,19 +36,6 @@ totoroDB = TotoroDBConnection()
 plateDB = totoroDB.plateDB
 mangaDB = totoroDB.mangaDB
 session = totoroDB.session
-
-
-mangacorePath = readPath(config['fields']['mangacore'])
-plateTargets = glob.glob(
-    os.path.join(mangacorePath, 'platedesign/platetargets/plateTargets-*.par'))
-
-mangaTileIDs = {}
-for plateTargetsFile in plateTargets:
-    pT = yanny.yanny(plateTargetsFile, np=True)['PLTTRGT']
-    for target in pT:
-        if (target['plateid'] not in mangaTileIDs and
-                target['manga_tileid'] > 0):
-            mangaTileIDs[target['plateid']] = target['manga_tileid']
 
 
 def getPlugged(onlyIncomplete=False, **kwargs):
@@ -212,7 +196,7 @@ class Plate(plateDB.Plate):
         self.isMock = mock
         self._kwargs = kwargs
         self.mjd = mjd
-        self.manga_tileid = None
+        self._manga_tileid = None
 
         if 'dust' in kwargs:
             self.dust = kwargs['dust']
@@ -680,15 +664,26 @@ class Plate(plateDB.Plate):
 
         return utils.createAPOcompleteFile(self.getAPOcomplete(), path=path)
 
-    def getMangaTileID(self):
+    @property
+    def manga_tileid(self):
+        """Returns manga_tileid for this plate."""
+        if self._manga_tileid is not None:
+            return self._manga_tileid
 
-        if hasattr(self, 'manga_tileid') and self.manga_tileid is not None:
-            return self.manga_tileid
-
-        if self.plate_id in mangaTileIDs:
-            return mangaTileIDs[self.plate_id]
-        else:
+        if self.mangadbPlate is None:
             return None
+        else:
+            self._manga_tileid = self.mangadbPlate.manga_tileid
+            return self._manga_tileid
+
+    @manga_tileid.setter
+    def manga_tileid(self, value):
+        """Sets manga_tileid for this plate. Not saved to the DB."""
+        self._manga_tileid = value
+
+    def getMangaTileID(self):
+        """Returns manga_tiled. Backwards compatibility."""
+        return self.manga_tileid
 
     def getAltitude(self, LST=None):
         """Returns the altitude of the plate at a certain LST."""
