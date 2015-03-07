@@ -22,11 +22,12 @@ import numpy as np
 from sdss.internal.manga.Totoro import utils
 
 
+db = TotoroDBConnection()
+session = db.session
+
+
 def removeSet(set_pk):
     """Removes a set."""
-
-    db = TotoroDBConnection()
-    session = db.Session()
 
     with session.begin(subtransactions=True):
         set = session.query(db.mangaDB.Set).get(set_pk)
@@ -221,9 +222,6 @@ def setExposureStatus(exposure, status, silent=False, **kwargs):
 
     from sdss.internal.manga.Totoro import dbclasses
 
-    db = TotoroDBConnection()
-    session = db.Session()
-
     if isinstance(exposure, dbclasses.Exposure):
         pk = exposure._mangaExposure.pk
     elif isinstance(exposure, db.plateDB.Exposure):
@@ -403,9 +401,6 @@ def setSetStatus(set, status):
     """Sets the status of a set."""
 
     from sdss.internal.manga.Totoro import dbclasses
-
-    db = TotoroDBConnection()
-    session = db.Session()
 
     if isinstance(set, (dbclasses.Set, db.mangaDB.Set)):
         pk = set.pk

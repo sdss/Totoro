@@ -53,7 +53,8 @@ class TotoroDBConnection(object):
 
         # Intial database connection creation and instances to be exported.
         self.db = DatabaseConnection(
-            database_connection_string=self.databaseConnectionString)
+            database_connection_string=self.databaseConnectionString,
+            expire_on_commit=False)
 
         self.engine = self.db.engine
         self.metadata = self.db.metadata
@@ -65,3 +66,4 @@ class TotoroDBConnection(object):
 
         self.plateDB = plateDB
         self.mangaDB = mangaDB
+        self.session = self.Session()

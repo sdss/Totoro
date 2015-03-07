@@ -38,6 +38,7 @@ __ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plates',
 totoroDB = TotoroDBConnection()
 plateDB = totoroDB.plateDB
 mangaDB = totoroDB.mangaDB
+session = totoroDB.session
 
 
 mangacorePath = readPath(config['fields']['mangacore'])
@@ -55,7 +56,6 @@ for plateTargetsFile in plateTargets:
 
 def getPlugged(onlyIncomplete=False, **kwargs):
 
-    session = totoroDB.Session()
     with session.begin(subtransactions=True):
         activePluggings = session.query(
             plateDB.ActivePlugging).join(
@@ -82,7 +82,6 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False, rejectLowPriority=False,
 
     minimumPriority = config['plugger']['noPlugPriority']
 
-    session = totoroDB.Session()
     with session.begin(subtransactions=True):
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode).filter(
@@ -114,7 +113,6 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False, rejectLowPriority=False,
 
 def getAll(onlyIncomplete=False, **kwargs):
 
-    session = totoroDB.Session()
     with session.begin(subtransactions=True):
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
@@ -145,7 +143,6 @@ def getComplete(**kwargs):
     """Retrieves only complete files by looking at the plugging status
     (faster than using getAll and then selecting the complete plates)."""
 
-    session = totoroDB.Session()
     with session.begin(subtransactions=True):
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode,
@@ -201,7 +198,6 @@ class Plate(plateDB.Plate):
         if isinstance(input, base):
             instance = input
         else:
-            session = totoroDB.Session()
             with session.begin(subtransactions=True):
                 instance = session.query(base).filter(
                     eval('{0}.{1} == {2}'.format(base.__name__, format, input))

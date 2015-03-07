@@ -257,13 +257,13 @@ def isMaNGA_Led(plate):
 
     totoroDB = TotoroDBConnection()
     plateDB = totoroDB.plateDB
+    session = totoroDB.session
 
     from sdss.internal.manga.Totoro.dbclasses import Plate
 
     if isinstance(plate, (Plate, plateDB.Plate)):
         pass
     else:
-        session = totoroDB.Session()
         try:
             with session.begin(subtransactions=True):
                 plate = session.query(plateDB.Plate).filter(
