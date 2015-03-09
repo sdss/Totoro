@@ -205,3 +205,18 @@ def removeInterval(master, interToRemove, wrapAt=360.):
         newMaster = newMaster[0]
 
     return newMaster
+
+
+def splitInterval(interval, wrapAt=360.):
+    """Splits an interval in a list of intervals that do not
+    wrap around wrapAt. For instance, the interval [300, 120] would be
+    returned as [[300, 360], [0, 120]]."""
+
+    assert len(interval) == 2, 'interval must have length 2'
+
+    interval = np.array(interval) % wrapAt
+
+    if interval[0] < interval[1]:
+        return interval
+
+    return np.array([[interval[0], wrapAt], [0, interval[1]]])

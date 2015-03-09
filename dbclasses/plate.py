@@ -26,6 +26,7 @@ import set as TotoroSet
 from exposure import Exposure
 import numpy as np
 from copy import deepcopy
+from sqlalchemy import or_, and_
 
 
 __ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plates',
@@ -60,7 +61,8 @@ def getPlugged(onlyIncomplete=False, **kwargs):
         return Plates(plates, **kwargs)
 
 
-def getAtAPO(onlyIncomplete=False, onlyMarked=False, rejectLowPriority=False,
+def getAtAPO(onlyIncomplete=False, onlyMarked=False,
+             rejectLowPriority=False, raRange=None,
              **kwargs):
     """Gets plates at APO with various conditions."""
 
@@ -80,6 +82,23 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False, rejectLowPriority=False,
             plates = plates.join(plateDB.PlateToPlateStatus,
                                  plateDB.PlateStatus).filter(
                 plateDB.PlateStatus.label == 'Accepted')
+
+        if raRange is not None:
+            if raRange.size == 2:
+                plates = plates.join(plateDB.PlatePointing,
+                                     plateDB.Pointing).filter(
+                    plateDB.Pointing.center_ra >= raRange[0],
+                    plateDB.Pointing.center_ra <= raRange[1])
+            elif raRange.size == 4:
+                plates = plates.join(plateDB.PlatePointing,
+                                     plateDB.Pointing).filter(
+                    or_(and_(plateDB.Pointing.center_ra >= raRange[0][0],
+                             plateDB.Pointing.center_ra <= raRange[0][1]),
+                        and_(plateDB.Pointing.center_ra >= raRange[1][0],
+                             plateDB.Pointing.center_ra <= raRange[1][1])))
+            else:
+                warnings.warn('unrecognised format for raRange',
+                              TotoroExpections.TotoroUserWarning)
 
         if rejectLowPriority:
             plates = plates.join(plateDB.PlatePointing).filter(
