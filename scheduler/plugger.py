@@ -161,7 +161,7 @@ class PluggerScheduler(object):
                                    mode='plugger')
 
         self.allocateCarts(plates=self.timeline.plates)
-        self._cleanUpNoMaNGA()  # Removes cart without MaNGA plates
+        self._cleanUp()  # Removes cart without MaNGA plates
 
         remainingTime = self.timeline.remainingTime
         if remainingTime > 0:
@@ -223,12 +223,24 @@ class PluggerScheduler(object):
     def _scheduleForced(self):
         """Schedules plates that have priority=forcePlugPriority."""
 
+        from sdss.internal.manga.Totoro.dbclasses import Plate
+
         forcePlugPriority = int(config['plugger']['forcePlugPriority'])
-        forcePlugPlates = [plate for plate in self.platesToSchedule
-                           if plate.priority >= forcePlugPriority]
+
+        # Does a query and gets all the plates with force plug priority
+        with session.begin(subtransactions=True):
+            forcePlugPlates = session.query(db.plateDB.Plate).join(
+                db.plateDB.PlateToSurvey, db.plateDB.Survey,
+                db.plateDB.SurveyMode, db.plateDB.PlatePointing
+                ).filter(db.plateDB.Survey.label == 'MaNGA',
+                         db.plateDB.SurveyMode.label.ilike('%MaNGA%'),
+                         db.plateDB.PlatePointing.priority >= forcePlugPriority
+                         ).order_by(db.plateDB.Plate.plate_id).all()
 
         if len(forcePlugPlates) == 0:
             return
+
+        forcePlugPlates = [Plate(plate) for plate in forcePlugPlates]
 
         # Sort forced plates so that the plates that are already plugged are
         # first.
@@ -383,15 +395,12 @@ class PluggerScheduler(object):
                                     cartPlateMessage[cartNumber][0],
                                     cartPlateMessage[cartNumber][1])
 
-    def _cleanUpNoMaNGA(self):
-        """Removes the key in the self.cart dictionary that contain a
-        non MaNGA plate or None."""
+    def _cleanUp(self):
+        """Removes the key in the self.cart dictionary that contain None."""
 
         keysToRemove = []
         for key in self.carts:
             if self.carts[key] is None:
-                keysToRemove.append(key)
-            elif not utils.isMaNGA_Led(self.carts[key]):
                 keysToRemove.append(key)
             else:
                 pass
