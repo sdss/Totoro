@@ -19,7 +19,6 @@ from __future__ import print_function
 from sdss.internal.manga.Totoro import log, config, TotoroDBConnection
 from sdss.internal.manga.Totoro.scheduler.timeline import Timeline
 from sdss.internal.manga.Totoro import exceptions
-from sdss.internal.manga.Totoro import utils
 from collections import OrderedDict
 import warnings
 import numpy as np
@@ -381,7 +380,7 @@ class PluggerScheduler(object):
                 cartPlateMessage[cartNumber] = (plate, 'unplug')
                 continue
             else:
-                if statusLabel != 'noMaNGAplate':
+                if statusLabel != 'noMaNGAplate' and plate is not None:
                     # If this is a MaNGA plate, keeps it.
                     self.carts[cartNumber] = plate.plate_id
                     cartPlateMessage[cartNumber] = (plate, 'unchanged')
