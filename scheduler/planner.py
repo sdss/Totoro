@@ -17,6 +17,7 @@ from __future__ import print_function
 from sdss.internal.manga.Totoro import log, config, readPath
 from sdss.internal.manga.Totoro.scheduler.timeline import Timelines
 from sdss.internal.manga.Totoro import exceptions
+from astropy import table
 from astropy import time
 import warnings
 import numpy as np
@@ -31,8 +32,6 @@ class PlannerScheduler(object):
 
     def __init__(self, schedule, useFields=True, **kwargs):
 
-        from sdss.internal.manga.Totoro.dbclasses import Fields
-
         self.timelines = Timelines(schedule, **kwargs)
         log.debug('created PlannerScheduler with {0} timelines'
                   .format(len(self.timelines)))
@@ -46,20 +45,57 @@ class PlannerScheduler(object):
 
         # Gets fields (rejectDrilled=False because we do our own rejection)
         if useFields:
-            tmpFields = Fields(rejectDrilled=False)
-            tileIDPlates = [plate.getMangaTileID() for plate in allPlates]
-
-            self.fields = [field for field in tmpFields
-                           if field.manga_tileid not in tileIDPlates]
+            self.createFields(allPlates)
         else:
             self.fields = []
+
+        del allPlates  # Not needed anymore
+
+    def createFields(self, allPlates):
+        """Creates a field list from a tiling catalogue."""
+
+        try:
+            scienceCatalogue = table.Table.read(
+                readPath(config['fields']['scienceCatalogue']))
+            if 'MANGA_TILEID' not in scienceCatalogue.columns:
+                warnings.warn('science catalogue does not contain '
+                              'MANGA_TILEID. Won\'t check for number of '
+                              'targets', exceptions.TotoroPlannerWarning)
+                scienceCatalogue = None
+        except:
+            scienceCatalogue = None
+            warnings.warn('science catalogue cannot be found. '
+                          'Won\'t check for number of targets',
+                          exceptions.TotoroPlannerWarning)
+
+        from sdss.internal.manga.Totoro.dbclasses import Fields
+
+        tmpFields = Fields(rejectDrilled=False)
+        tileIDPlates = [plate.getMangaTileID() for plate in allPlates]
+
+        self.fields = []
+
+        for field in tmpFields:
+
+            if field.manga_tileid in tileIDPlates:
+                continue
+
+            if scienceCatalogue is not None:
+
+                scienceCatRows = scienceCatalogue[
+                    scienceCatalogue['MANGA_TILEID'] == field.manga_tileid]
+
+                if len(scienceCatRows) == 0:
+                    log.debug('no targets for manga_tileid={0}. Skipping.'
+                              .format(field.manga_tileid))
+                    continue
+
+            self.fields.append(field)
 
         nFieldsDrilled = len(tmpFields) - len(self.fields)
         if nFieldsDrilled > 0:
             log.info('rejected {0} fields because they have already '
-                     'been drilled'.format(nFieldsDrilled))
-
-        del allPlates  # Not needed anymore
+                     'been drilled or have no targets.'.format(nFieldsDrilled))
 
     @staticmethod
     def getPlates(**kwargs):
@@ -83,11 +119,11 @@ class PlannerScheduler(object):
         completed = [plate for plate in allPlates if plate.isComplete is True]
 
         # Adds tiles being drilled from file
-        if ('tilesBeingDrilled' in config['planner'] and
-                config['planner']['tilesBeingDrilled'].lower() != 'none'):
+        if ('tilesBeingDrilled' in config['fields'] and
+                config['fields']['tilesBeingDrilled'].lower() != 'none'):
 
             tilesBeingDrilledRaw = open(
-                readPath(config['planner']['tilesBeingDrilled']), 'r') \
+                readPath(config['fields']['tilesBeingDrilled']), 'r') \
                 .read().strip().splitlines()
 
             if len(tilesBeingDrilledRaw) > 0 and tilesBeingDrilledRaw[0] != '':
@@ -98,16 +134,23 @@ class PlannerScheduler(object):
             tiles = getTilingCatalogue()
 
             for tile in tilesBeingDrilled:
+
                 if tile not in tiles['ID']:
                     warnings.warn('tile being drilled not identified, '
                                   'manga_tileid={0}'.format(tile),
-                                  exceptions.TotoroUserWarning)
+                                  exceptions.TotoroPlannerWarning)
                     continue
-                row = tiles[tiles['ID'] == tile]
+
+                tileRow = tiles[tiles['ID'] == tile]
+
                 mockPlate = Plate.createMockPlate(
-                    ra=row['RA'][0], dec=row['DEC'][0], silent=True)
+                    ra=tileRow['RA'][0], dec=tileRow['DEC'][0],
+                    manga_tileid=tile, silent=True)
+
                 mockPlate.manga_tileid = tile
+
                 plates.append(mockPlate)
+                allPlates.append(mockPlate)
 
         # Plates to be rejected.
         if ('platesIgnore' in config['planner'] and
@@ -174,7 +217,7 @@ class PlannerScheduler(object):
             if nAssigned > nCarts:
                 warnings.warn('more plates ({0}) scheduled than carts '
                               'available ({1})'.format(nAssigned, nCarts),
-                              exceptions.TotoroWarning)
+                              exceptions.TotoroPlannerWarning)
 
     def getGoodWeatherIndices(self, goodWeatherFraction, seed=None, **kwargs):
         """Returns random indices with good weather."""

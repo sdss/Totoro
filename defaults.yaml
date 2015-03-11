@@ -43,7 +43,8 @@ observingPlan:
 fields:
     tilingCatalogue: $MANGA_TILING_CATALOGUE
     mangacore: $MANGACORE_DIR
-    drilledTiles: +data/drilledMaNGATiles.dat
+    tilesBeingDrilled: +data/tilesBeingDrilled.dat
+    scienceCatalogue: $MANGASAMPLE_SCIENCE_CATALOGUE
 
 observatory:
     longitude: 254.179722   # In East degrees
@@ -59,17 +60,17 @@ dustMap:
 
 planner:
     efficiency: 0.8
-    tilesBeingDrilled: +data/tilesBeingDrilled.dat
+
     platesIgnore: +data/platesIgnore.dat
     maxAltitude: 75
-    noPlugPriority: 2
+    noPlugPriority: 1
     forcePlugPriority: 10
     goodWeatherFraction: 0.45
     seed: 12345
 
 plugger:
     efficiency: 0.8
-    noPlugPriority: 2
+    noPlugPriority: 1
     forcePlugPriority: 10
     maxAltitude: 80,
     onlyVisiblePlates: true
