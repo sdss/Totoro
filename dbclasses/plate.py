@@ -746,3 +746,10 @@ class Plate(plateDB.Plate):
         validExposures = self.getValidExposures(silent=True)
         ditherPositions = [exp.ditherPosition for exp in validExposures]
         return logic.setArrangement.calculatePermutations(ditherPositions)
+
+    def getLocation(self):
+        """Returns the location label of the plate."""
+
+        if self.location is None:
+            return None
+        return self.location.label

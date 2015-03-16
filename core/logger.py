@@ -14,6 +14,7 @@ from logging.handlers import TimedRotatingFileHandler
 import warnings
 from colourPrint import colourPrint
 import shutil
+import re
 from textwrap import TextWrapper
 from sdss.internal.manga.Totoro.exceptions import TotoroError
 
@@ -24,6 +25,8 @@ log = None
 # Adds custom log level for important messages
 IMPORTANT = 25
 logging.addLevelName(IMPORTANT, 'IMPORTANT')
+
+ansi_escape = re.compile(r'\x1b[^m]*m')
 
 
 def important(self, message, *args, **kws):
@@ -79,6 +82,8 @@ class MyFormatter(logging.Formatter):
 
         elif record.levelno == IMPORTANT:
             self._fmt = MyFormatter.info_fmt
+
+        record.msg = ansi_escape.sub('', record.msg)
 
         # Call the original formatter class to do the grunt work
         result = logging.Formatter.format(self, record)

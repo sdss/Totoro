@@ -17,6 +17,7 @@ from __future__ import print_function
 from sdss.internal.manga.Totoro import log, config, readPath
 from sdss.internal.manga.Totoro.scheduler.timeline import Timelines
 from sdss.internal.manga.Totoro import exceptions
+from sdss.internal.manga.Totoro.core.colourPrint import _color_text
 from astropy import table
 from astropy import time
 import warnings
@@ -105,18 +106,35 @@ class PlannerScheduler(object):
         from sdss.internal.manga.Totoro.dbclasses import (getAll, Plate,
                                                           getTilingCatalogue)
 
+        useDesigns = kwargs.pop('useDesigns', True)
+
         allPlates = getAll(rejectSpecial=True,
                            updateSets=False, silent=True, fullCheck=False)
 
+        # Selects plates with valid statuses
+        validPlates = []
+        for plate in allPlates:
+            validPlate = True
+            for status in plate.statuses:
+                if status.label not in ['Design', 'Accepted', 'Measured',
+                                        'Shipped', 'Drilled']:
+                    validPlate = False
+                if (not useDesigns and
+                        plate.getLocation() not in ['APO', 'Cosmic']):
+                    validPlate = False
+            if validPlate:
+                validPlates.append(plate)
+
         # Selects only non-started plates with priority > minimum
         minimumPlugPriority = config['planner']['noPlugPriority']
-        plates = [plate for plate in allPlates
+        plates = [plate for plate in validPlates
                   if plate.getPlateCompletion() == 0.0
                   and plate.priority > minimumPlugPriority
                   and len(plate.getTotoroExposures()) == 0
                   and plate.plate_id > 7800]
 
-        completed = [plate for plate in allPlates if plate.isComplete is True]
+        completed = [plate for plate in validPlates
+                     if plate.isComplete is True]
 
         # Adds tiles being drilled from file
         if ('tilesBeingDrilled' in config['fields'] and
@@ -190,7 +208,10 @@ class PlannerScheduler(object):
                              startDate.iso.split()[0], totalTime))
 
             if nn not in goodWeatherIdx:
-                log.info('... skipping timeline because of bad weather.')
+                log.info(
+                    _color_text(
+                        '... skipping timeline because of bad weather.',
+                        'cyan'))
                 timeline.observed = False
                 continue
 
@@ -205,7 +226,7 @@ class PlannerScheduler(object):
             nAssigned += len(timeline.plates)
 
             if remainingTime > expTimeEff / 3600. and useFields:
-                log.info('now scheduling fields')
+                log.info(_color_text('now scheduling fields', 'yellow'))
                 timeline.schedule(self.fields, mode='planner', **kwargs)
                 nFields = len(timeline.plates) - nAssigned
                 remainingTime = timeline.remainingTime

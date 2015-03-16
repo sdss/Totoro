@@ -72,7 +72,7 @@ plugger:
     efficiency: 0.8
     noPlugPriority: 1
     forcePlugPriority: 10
-    maxAltitude: 80,
+    maxAltitude: 80
     onlyVisiblePlates: true
 
 simulation:
