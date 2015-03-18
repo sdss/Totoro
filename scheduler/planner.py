@@ -41,8 +41,13 @@ class PlannerScheduler(object):
             updateSets=False, silent=True, **kwargs)
 
         drilling = [plate for plate in self.plates if plate.isMock]
-        log.info('Plates found: {0} ({1} in process of being drilled)'
-                 .format(len(self.plates), len(drilling)))
+
+        if len(drilling) > 0:
+            txtDrilling = _color_text(
+                '({0} in process of being drilled)'.format(len(drilling)),
+                'red')
+
+        log.info('Plates found: {0} {1}'.format(len(self.plates), txtDrilling))
 
         # Gets fields (rejectDrilled=False because we do our own rejection)
         if useFields:
@@ -166,6 +171,7 @@ class PlannerScheduler(object):
                     manga_tileid=tile, silent=True)
 
                 mockPlate.manga_tileid = tile
+                mockPlate.drilled = False
 
                 plates.append(mockPlate)
                 allPlates.append(mockPlate)

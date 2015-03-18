@@ -43,7 +43,7 @@ observingPlan:
 fields:
     tilingCatalogue: $MANGA_TILING_CATALOGUE
     mangacore: $MANGACORE_DIR
-    tilesBeingDrilled: +data/tilesBeingDrilled.dat
+    tilesBeingDrilled: ~/.totoro/tiles_drilling.dat
     scienceCatalogue: $MANGASAMPLE_SCIENCE_CATALOGUE
 
 observatory:
