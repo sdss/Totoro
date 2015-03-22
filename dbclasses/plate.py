@@ -39,7 +39,7 @@ mangaDB = totoroDB.mangaDB
 session = totoroDB.session
 
 
-def getPlugged(onlyIncomplete=False, **kwargs):
+def getPlugged(**kwargs):
 
     with session.begin(subtransactions=True):
         activePluggings = session.query(
@@ -55,10 +55,7 @@ def getPlugged(onlyIncomplete=False, **kwargs):
 
     plates = [actPlug.plugging.plate for actPlug in activePluggings]
 
-    if onlyIncomplete:
-        return _getIncomplete(plates, **kwargs)
-    else:
-        return Plates(plates, **kwargs)
+    return Plates(plates, **kwargs)
 
 
 def getAtAPO(onlyIncomplete=False, onlyMarked=False,
@@ -106,18 +103,26 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
 
         plates = plates.order_by(plateDB.Plate.plate_id).all()
 
+        validPlates = []
         if rejectSpecial:
-            plates = [plate for plate in plates
-                      if plate.mangadbPlate is None or
-                      plate.mangadbPlate.special_plate is False]
+            for plate in plates:
+                if plate.mangadbPlate is None:
+                    continue
+                if (plate.mangadbPlate.all_sky_plate is True or
+                        plate.mangadbPlate.commissioning_plate is True or
+                        plate.mangadbPlate.neverobserve is True):
+                    continue
+                validPlates.append(plate)
+        else:
+            validPlates = plates
 
     if onlyIncomplete:
-        return _getIncomplete(plates, **kwargs)
+        return _getIncomplete(validPlates, **kwargs)
     else:
-        return Plates(plates, **kwargs)
+        return Plates(validPlates, **kwargs)
 
 
-def getAll(onlyIncomplete=False, rejectSpecial=False, **kwargs):
+def getAll(onlyIncomplete=False, **kwargs):
 
     with session.begin(subtransactions=True):
         plates = session.query(plateDB.Plate).join(
@@ -126,16 +131,7 @@ def getAll(onlyIncomplete=False, rejectSpecial=False, **kwargs):
                      plateDB.SurveyMode.label == 'MaNGA dither').order_by(
                 plateDB.Plate.plate_id)
 
-    if rejectSpecial:
-        plates = plates.join(mangaDB.Plate).filter(
-            mangaDB.Plate.special_plate == 'False')
-
     plates = plates.order_by(plateDB.Plate.plate_id).all()
-
-    if rejectSpecial:
-        plates = [plate for plate in plates
-                  if plate.mangadbPlate is None or
-                  plate.mangadbPlate.special_plate is False]
 
     if onlyIncomplete:
         return _getIncomplete(plates, **kwargs)
@@ -145,13 +141,14 @@ def getAll(onlyIncomplete=False, rejectSpecial=False, **kwargs):
 
 def _getIncomplete(plates, **kwargs):
 
-    totoroPlates = [Plate(plate) for plate in plates]
+    totoroPlates = Plates(plates, **kwargs)
 
     incompletePlates = []
     for totoroPlate in totoroPlates:
-        if not utils.isPlateComplete(totoroPlate):
+        if not totoroPlate.isComplete:
             incompletePlates.append(totoroPlate)
-    return Plates(incompletePlates)
+
+    return incompletePlates
 
 
 def getComplete(**kwargs):
@@ -426,12 +423,11 @@ class Plate(plateDB.Plate):
         totalSN = self.getCumulatedSN2(
             includeIncomplete=includeIncompleteSets)
 
-        completionRates = totalSN.copy()
-        completionRates[0:2] /= config['SN2thresholds']['plateBlue']
-        completionRates[2:] /= config['SN2thresholds']['plateRed']
+        totalSN[0:2] /= config['SN2thresholds']['plateBlue']
+        totalSN[2:] /= config['SN2thresholds']['plateRed']
 
-        avgCompletion = np.array([np.nanmean(completionRates[0:2]),
-                                  np.nanmean(completionRates[2:])])
+        avgCompletion = np.array([np.nanmean(totalSN[0:2]),
+                                  np.nanmean(totalSN[2:])])
 
         return np.min(avgCompletion)
 
