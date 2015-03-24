@@ -91,6 +91,11 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
     else:
         plateComplete = False
 
+    if np.isnan(plate.getCumulatedSN2(includeIncomplete=False)).any():
+        log.info('not all cameras have been correctly reduced. '
+                 'Setting plateComplete=False.')
+        plateComplete = False
+
     if plugComplete is not None:
         if plugComplete is not plateComplete:
             warnings.warn('plate={0}: plugging status is {1} but calculated '

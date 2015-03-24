@@ -222,14 +222,15 @@ class Plate(plateDB.Plate):
         return instance
 
     def __init__(self, input, format='pk', mock=False, silent=False,
-                 updateSets=True, mjd=None, fullCheck=True, **kwargs):
+                 updateSets=True, mjd=None, fullCheck=True,
+                 manga_tileid=None, **kwargs):
 
         self._complete = None
         self._drilled = None
         self.isMock = mock
         self._kwargs = kwargs
         self.mjd = mjd
-        self._manga_tileid = kwargs.pop('manga_tileid', None)
+        self._manga_tileid = manga_tileid
 
         if 'dust' in kwargs:
             self.dust = kwargs['dust']
@@ -431,7 +432,14 @@ class Plate(plateDB.Plate):
 
         return np.min(avgCompletion)
 
-    def getCumulatedSN2(self, includeIncomplete=False):
+    def getSN2Array(self, **kwargs):
+        """Same as getCumulatedSN2. Added for consistency with Set and
+        Exposure."""
+        return self.getCumulatedSN2(**kwargs)
+
+    def getCumulatedSN2(self, includeIncomplete=False, **kwargs):
+        """Returns the cumulated SN2 from all valid sets.
+        If includeIncomplete=True, incomplete sets SN2 are also included."""
 
         validStatuses = ['Good', 'Excellent']
         if includeIncomplete:
