@@ -75,7 +75,9 @@ class TotoroConfig(dict):
         if userData is None:
             userData = {}
 
-        dict.__init__(self, self.merge(userData, self))
+        newConfig = self.merge(userData, self)
+        dict.__init__(self, newConfig)
+        self._checkDBConnection()
 
     def merge(self, user, default):
         """Merges two dictionaries recursively."""

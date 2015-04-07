@@ -54,8 +54,21 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
 
     notPlugged = incompletePlates
 
-    startedPlates = [plate for plate in notPlugged
-                     if len(plate.getTotoroExposures(onlySets=True)) > 0]
+    # Determines the number of valid exposures for each plate, excluding those
+    # in bad or unplugged sets. If a plate is composed only of exposures in
+    # unplugged sets, we want to consider it as not started.
+    nValidExposures = []
+    for plate in notPlugged:
+        nExposures = 0
+        for set in plate.sets:
+            if set.getQuality()[0] in ['Good', 'Excellent', 'Incomplete']:
+                nExposures += len(set.totoroExposures)
+        nValidExposures.append(nExposures)
+
+    # Select started plates as those with at least one valid exposure, as
+    # defined above.
+    startedPlates = [plates[ii] for ii in range(len(notPlugged))
+                     if nValidExposures[ii] > 0]
 
     if len(startedPlates) > 0:
         observedFlag = simulatePlates(startedPlates, jdRanges, mode=mode,
