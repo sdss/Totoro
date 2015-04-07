@@ -82,8 +82,8 @@ simulation:
     alphaRed: 0.65
 
 SN2thresholds:
-    plateRed: 60
-    plateBlue: 25
+    plateRed: 36
+    plateBlue: 20
     exposureRed: 0.5
     exposureBlue: 0.5
 
