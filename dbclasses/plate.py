@@ -469,7 +469,14 @@ class Plate(plateDB.Plate):
         for this plate."""
 
         scienceExps = self.getScienceExposures()
-        mangaExposures = [exp.mangadbExposure[0] for exp in scienceExps]
+        mangaExposures = []
+        for exp in scienceExps:
+            if exp.mangadbExposure is None or len(exp.mangadbExposure) == 0:
+                raise TotoroExpections.TotoroError(
+                    'platedb exposure_no={0} has no mangadb counterpart'
+                    .format(exp.exposure_no))
+            else:
+                mangaExposures.append(exp.mangadbExposure[0])
 
         return mangaExposures
 

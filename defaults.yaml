@@ -43,7 +43,7 @@ observingPlan:
 fields:
     tilingCatalogue: $MANGA_TILING_CATALOGUE
     mangacore: $MANGACORE_DIR
-    tilesBeingDrilled: ~/.totoro/tiles_drilling.dat
+    tilesBeingDrilled: None
     scienceCatalogue: $MANGASAMPLE_SCIENCE_CATALOGUE
 
 observatory:
@@ -92,6 +92,7 @@ exposure:
     minExpTime: 899
     maxSeeing: 2.5
     transparency: 0.2
+    maxSunAltitude: -15
     validDitherPositions: ['N', 'S', 'E']
 
 set:

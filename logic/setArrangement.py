@@ -65,7 +65,7 @@ def updatePlate(plate, nExposuresMax=None, **kwargs):
         else:
             results = []
             for exp in newExposures:
-                results.append(addExposure(exp, plate))
+                results.append(addExposure(exp, plate, **kwargs))
             if any(results):
                 removeOrphanSets()
                 updateStatus = True
@@ -96,7 +96,8 @@ def checkBadSets(plate, **kwargs):
     return False
 
 
-def getValidSet(totoroExp, plate, setQuality=None):
+def getValidSet(totoroExp, plate, setQuality=None, ignoreUnplugged=False,
+                **kwargs):
     """Gets the best possible set for an exposure"""
 
     from sdss.internal.manga.Totoro import dbclasses
@@ -105,7 +106,9 @@ def getValidSet(totoroExp, plate, setQuality=None):
         return False
 
     if setQuality is None:
-        setQuality = [set.getQuality(silent=True)[0] for set in plate.sets]
+        setQuality = [set.getQuality(silent=True,
+                                     ignoreUnplugged=ignoreUnplugged)[0]
+                      for set in plate.sets]
 
     incompleteSets = [set for nn, set in enumerate(plate.sets)
                       if setQuality[nn].lower() == 'incomplete']
@@ -120,7 +123,8 @@ def getValidSet(totoroExp, plate, setQuality=None):
     for set in incompleteSetsSorted:
         mockSet = dbclasses.Set.fromExposures(
             set.totoroExposures + [totoroExp], silent=True)
-        mockSetQuality.append(mockSet.getQuality(silent=True)[0])
+        mockSetQuality.append(mockSet.getQuality(silent=True,
+                                                 ignoreUnplugged=ignoreUnplugged)[0])
         if mockSetQuality[-1] in ['Good', 'Excellent']:
             return set
 
@@ -131,8 +135,10 @@ def getValidSet(totoroExp, plate, setQuality=None):
         return None
 
 
-def addExposure(exp, plate):
+def addExposure(exp, plate, **kwargs):
     """Adds an exposure to a plate."""
+
+    ignoreUnplugged = kwargs.get('ignoreUnplugged', False)
 
     from sdss.internal.manga.Totoro import dbclasses
 
@@ -141,7 +147,7 @@ def addExposure(exp, plate):
     else:
         totoroExp = exp
 
-    validSet = getValidSet(exp, plate)
+    validSet = getValidSet(exp, plate, **kwargs)
     if validSet is False:
         return False
     elif validSet is None:
@@ -165,7 +171,9 @@ def addExposure(exp, plate):
     if validSet.pk is not None:
         log.info('adding mangaDB exposure pk={0} to set {1} -> {2} set.'
                  .format(totoroExp._mangaExposure.pk, validSet.pk,
-                         validSet.getQuality(silent=True, flag=False)[0]))
+                         validSet.getQuality(
+                            silent=True, flag=False,
+                            ignoreUnplugged=ignoreUnplugged)[0]))
 
     return True
 
@@ -242,7 +250,8 @@ def rearrangeSets(plate, mode='optimal', **kwargs):
         for ss in plate.sets:
             removeSet(ss.pk)
 
-        return plate.update(silent=True, nExposuresMax=False)
+        return plate.update(silent=True, nExposuresMax=False,
+                            ignoreUnplugged=True)
 
 
 def removeSet(set_pk, orphan=False):

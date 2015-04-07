@@ -67,10 +67,25 @@ class TotoroConfig(dict):
         defaultConfig.save()
 
     def updateFromFile(self, file):
+        """Updates the current YAML configuration by merging it with another
+        YAML file."""
 
-        newRawData = open(file).read()
-        self._rawData += newRawData
-        self._initFromRaw()
+        userRaw = self._rawData + open(file, 'r').read()
+        userData = yaml.load(userRaw)
+        if userData is None:
+            userData = {}
+
+        dict.__init__(self, self.merge(userData, self))
+
+    def merge(self, user, default):
+        """Merges two dictionaries recursively."""
+        if isinstance(user, dict) and isinstance(default, dict):
+            for kk, vv in default.iteritems():
+                if kk not in user:
+                    user[kk] = vv
+                else:
+                    user[kk] = self.merge(user[kk], vv)
+        return user
 
     def _checkDBConnection(self):
 
