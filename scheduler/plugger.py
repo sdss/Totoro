@@ -16,9 +16,10 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from sdss.internal.manga.Totoro import log, config, TotoroDBConnection
+from sdss.internal.manga.Totoro import log, config, TotoroDBConnection, site
 from sdss.internal.manga.Totoro.scheduler.timeline import Timeline
 from sdss.internal.manga.Totoro import exceptions
+from sdss.internal.manga.Totoro.utils import intervals
 from collections import OrderedDict
 import warnings
 import numpy as np
@@ -134,17 +135,55 @@ def prioritiseCarts(cartStatus, activePluggings):
     return empty + noMaNGA + complete + noStarted + unknown + started
 
 
-class PluggerScheduler(object):
+class Plugger(object):
     """A class to schedule plugging requests."""
 
-    def __init__(self, plates, jd0, jd1, **kwargs):
+    def __init__(self, jd0=None, jd1=None, **kwargs):
 
-        log.debug('creating PluggerScheduler instance with JD0={0:.5f}, '
-                  'JD1={1:.5f}'.format(jd0, jd1))
+        if jd0 is None and jd1 is None:
+            self._initNoManga()
+        elif ((jd0 is None and jd1 is not None) or
+                (jd0 is not None and jd1 is None)):
+            raise exceptions.TotoroPluggerError(
+                'either jd0=jd1=None or both dates need to be defined.')
+        else:
+            self._initFromDates(jd0, jd1, **kwargs)
 
-        self.timeline = Timeline(jd0, jd1, **kwargs)
+    def _initNoManga(self):
+        """Inits a Plugger instance when no MaNGA time is scheduled. The cart
+        assignement contains only those plugged MaNGA plates that are not
+        complete."""
 
-        self.platesToSchedule = self.selectPlates(plates)
+        from sdss.internal.manga.Totoro.dbclasses import getPlugged
+
+        warnings.warn(
+            'no JD1, JD2 values provided. Plugger will only return plugged, '
+            'non-completed plates.', exceptions.TotoroPluggerWarning)
+
+        pluggedPlates = getPlugged()
+
+        self.carts = OrderedDict([(key, None) for key in config['carts']])
+
+        for plate in pluggedPlates:
+            if not plate.isComplete:
+                cart = plate.getActiveCartNumber()
+                self.carts[cart] = plate.plate_id
+
+    def _initFromDates(self, jd0, jd1, **kwargs):
+        """Initialites the Plugger instance from two JD dates."""
+
+        assert jd0 < jd1
+
+        self.startDate = jd0
+        self.endDate = jd1
+        log.info('Start date: {0}'.format(self.startDate))
+        log.info('End date: {0}'.format(self.endDate))
+        log.info('Scheduling {0:.2f} hours'.format(
+                 (self.endDate - self.startDate)*24.))
+
+        self.timeline = Timeline(self.startDate, self.endDate, **kwargs)
+
+        self.platesToSchedule = self.selectPlates(**kwargs)
         log.info('scheduling {0} plates'.format(len(self.platesToSchedule)))
 
         self.carts = OrderedDict([(key, None) for key in config['carts']])
@@ -168,9 +207,46 @@ class PluggerScheduler(object):
         else:
             log.debug('all time has been allocated.')
 
-    def selectPlates(self, plates):
+    def getOutput(self, **kwargs):
+        """Returns the plugging request as a cart dictionary."""
+
+        return self.carts
+
+    def selectPlates(self, onlyIncomplete=True, onlyMarked=False, **kwargs):
         """Selects plates to schedule, rejecting those which are invalid or
         must not be scheduled."""
+
+        from sdss.internal.manga.Totoro import dbclasses
+
+        onlyVisiblePlates = kwargs.pop('onlyVisiblePlates',
+                                       config['plugger']['onlyVisiblePlates'])
+
+        assert isinstance(onlyVisiblePlates, int), \
+            'onlyVisiblePlates must be a boolean'
+
+        log.info('getting plates at APO with onlyIncomplete={0}, '
+                 'onlyMarked={1}'.format(onlyIncomplete, onlyMarked))
+
+        if onlyVisiblePlates:
+            lstRange = site.localSiderealTime([self.startDate, self.endDate])
+            window = config['plateVisibilityMaxHalfWindowHours']
+            raRange = np.array([(lstRange[0] - window) * 15.,
+                                (lstRange[1] + window) * 15.])
+
+            log.info('selecting plates with RA in range {0}'
+                     .format(str(raRange % 360)))
+
+            raRange = intervals.splitInterval(raRange, 360.)
+
+        else:
+            raRange = None
+
+        plates = dbclasses.getAtAPO(onlyIncomplete=onlyIncomplete,
+                                    onlyMarked=onlyMarked,
+                                    rejectLowPriority=True,
+                                    fullCheck=False, raRange=raRange)
+
+        log.info('plates found: {0}'.format(len(plates)))
 
         prioPlug = int(config['plugger']['forcePlugPriority'])
 

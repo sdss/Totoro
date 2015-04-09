@@ -92,6 +92,7 @@ exposure:
     minExpTime: 899
     maxSeeing: 2.5
     transparency: 0.2
+    checkTwilight: False
     maxSunAltitude: -15
     validDitherPositions: ['N', 'S', 'E']
 

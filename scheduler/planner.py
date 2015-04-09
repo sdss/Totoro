@@ -110,7 +110,8 @@ class PlannerScheduler(object):
                      'been drilled or have no targets.'.format(nFieldsDrilled))
 
     @staticmethod
-    def getPlates(usePlatesNotAtAPO=True, **kwargs):
+    def getPlates(usePlatesNotAtAPO=True, usePlatesBeingDrilled=True,
+                  **kwargs):
         """Gets plates that are already drilled or in process of being so,
         with some filtering."""
 
@@ -126,10 +127,9 @@ class PlannerScheduler(object):
             validPlate = True
             for status in plate.statuses:
                 if status.label in ['Rejected', 'Unobservable']:
-                    print(plate)
                     validPlate = False
             if (not usePlatesNotAtAPO and
-                    plate.getLocation() not in ['APO', 'Cosmic']):
+                    plate.getLocation() != 'APO'):
                 validPlate = False
             if validPlate:
                 validPlates.append(plate)
@@ -137,7 +137,7 @@ class PlannerScheduler(object):
         # Adds tiles being drilled from file
         if ('tilesBeingDrilled' in config['fields'] and
                 config['fields']['tilesBeingDrilled'].lower() != 'none' and
-                usePlatesNotAtAPO):
+                usePlatesBeingDrilled):
 
             tilesPath = readPath(config['fields']['tilesBeingDrilled'])
 
@@ -152,8 +152,8 @@ class PlannerScheduler(object):
                 tilesBeingDrilledRaw = open(tilesPath, 'r') \
                     .read().strip().splitlines()
 
-                if (len(tilesBeingDrilledRaw) > 0
-                        and tilesBeingDrilledRaw[0] != ''):
+                if (len(tilesBeingDrilledRaw) > 0 and
+                        tilesBeingDrilledRaw[0] != ''):
                     tilesBeingDrilled = map(int, tilesBeingDrilledRaw)
                 else:
                     tilesBeingDrilled = []

@@ -24,6 +24,11 @@ class EmptySet(TotoroError):
     pass
 
 
+class TotoroPluggerError(TotoroError):
+    """Exception for the Plugger class."""
+    pass
+
+
 class TotoroWarning(Warning):
     """Base warning for Totoro."""
     pass
