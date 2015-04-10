@@ -348,8 +348,8 @@ class Plate(plateDB.Plate):
 
         if self.isComplete:
             if not force:
-                log.info('plate_id={0} is marked complete. Not updating sets.'
-                         .format(self.plate_id))
+                log.debug('plate_id={0} is marked complete. Not updating sets.'
+                          .format(self.plate_id))
                 return False
             else:
                 log.info('plate_id={0} is marked complete but force=True.'

@@ -132,22 +132,23 @@ def prioritiseCarts(cartStatus, activePluggings):
     started = sorted(started, key=lambda xx: xx[4])
 
     # Returns carts in the desired order.
-    return empty + noMaNGA + complete + noStarted + unknown + started
+    return empty + complete + noMaNGA + noStarted + unknown + started
 
 
 class Plugger(object):
     """A class to schedule plugging requests."""
 
-    def __init__(self, jd0=None, jd1=None, **kwargs):
+    def __init__(self, startDate=None, endDate=None, **kwargs):
 
-        if jd0 is None and jd1 is None:
+        if startDate is None and endDate is None:
             self._initNoManga()
-        elif ((jd0 is None and jd1 is not None) or
-                (jd0 is not None and jd1 is None)):
+        elif ((startDate is None and endDate is not None) or
+                (startDate is not None and endDate is None)):
             raise exceptions.TotoroPluggerError(
-                'either jd0=jd1=None or both dates need to be defined.')
+                'either startDate=endDate=None or '
+                'both dates need to be defined.')
         else:
-            self._initFromDates(jd0, jd1, **kwargs)
+            self._initFromDates(startDate, endDate, **kwargs)
 
     def _initNoManga(self):
         """Inits a Plugger instance when no MaNGA time is scheduled. The cart
