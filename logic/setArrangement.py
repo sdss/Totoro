@@ -91,7 +91,7 @@ def checkBadSets(plate, **kwargs):
         nBadSets = len([True for ss in setQuality if ss == 'Bad'])
         log.debug('plate_id={0}: found {1} bad sets. Fixing them.'.format(
                   plate.plate_id, nBadSets))
-        # plate = fixBadSets(plate, setQuality=setQuality)
+        plate = fixBadSets(plate, setQuality=setQuality)
         return True
     return False
 
@@ -123,8 +123,9 @@ def getValidSet(totoroExp, plate, setQuality=None, ignoreUnplugged=False,
     for set in incompleteSetsSorted:
         mockSet = dbclasses.Set.fromExposures(
             set.totoroExposures + [totoroExp], silent=True)
-        mockSetQuality.append(mockSet.getQuality(silent=True,
-                                                 ignoreUnplugged=ignoreUnplugged)[0])
+        mockSetQuality.append(
+            mockSet.getQuality(silent=True,
+                               ignoreUnplugged=ignoreUnplugged)[0])
         if mockSetQuality[-1] in ['Good', 'Excellent']:
             return set
 
@@ -251,7 +252,7 @@ def rearrangeSets(plate, mode='optimal', **kwargs):
             removeSet(ss.pk)
 
         return plate.update(silent=True, nExposuresMax=False,
-                            ignoreUnplugged=True)
+                            ignoreUnplugged=True, force=True, **kwargs)
 
 
 def removeSet(set_pk, orphan=False):
