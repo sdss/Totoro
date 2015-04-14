@@ -73,6 +73,8 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
             ).join(plateDB.PlateLocation).filter(
                 plateDB.PlateLocation.label == 'APO')
 
+        _checkNumberPlatesAtAPO(plates)
+
         if onlyMarked is False:
             plates = plates
         else:
@@ -131,6 +133,10 @@ def getAll(onlyIncomplete=False, **kwargs):
                      plateDB.SurveyMode.label == 'MaNGA dither').order_by(
                 plateDB.Plate.plate_id)
 
+    platesAtAPO = plates.join(plateDB.PlateLocation).filter(
+                plateDB.PlateLocation.label == 'APO')
+    _checkNumberPlatesAtAPO(platesAtAPO)
+
     plates = plates.order_by(plateDB.Plate.plate_id).all()
 
     if onlyIncomplete:
@@ -166,6 +172,20 @@ def getComplete(**kwargs):
                     plateDB.Plate.plate_id).all()
 
     return Plates(plates, **kwargs)
+
+
+def _checkNumberPlatesAtAPO(plates):
+    """Raises a warning if the number of plates at APO is reaching the limit
+    we can store there."""
+
+    nPlatesAPO = config['numberPlatesAllowedAtAPO']
+    nPlates = plates.count()
+    if nPlates >= 0.9 * nPlatesAPO:
+        warnings.warn('MaNGA has {0} plates at APO when the maximum is {1}'
+                      .format(nPlates, nPlatesAPO),
+                      TotoroExpections.TotoroUserWarning)
+
+    return
 
 
 class Plates(list):
@@ -301,14 +321,20 @@ class Plate(plateDB.Plate):
         """Returns a list of mangaDB.ModelClasses.Set instances with all the
         sets matching exposures in this plate. Removes duplicates."""
 
+        setPKs = []
         sets = []
         for platePointing in self.plate_pointings:
             for observation in platePointing.observations:
                 for exposure in observation.exposures:
                     for mangaDBExposure in exposure.mangadbExposure:
                         set = mangaDBExposure.set
-                        if set not in sets and set is not None:
-                            sets.append(mangaDBExposure.set)
+                        if set is not None and set.pk not in setPKs:
+                            setPKs.append(mangaDBExposure.set.pk)
+
+        with session.begin():
+            for setPK in setPKs:
+                set = session.query(mangaDB.Set).get(setPK)
+                sets.append(set)
 
         sets = sorted(sets, key=lambda set: set.pk)
 
@@ -419,10 +445,10 @@ class Plate(plateDB.Plate):
     def copy(self):
         return deepcopy(self)
 
-    def getPlateCompletion(self, includeIncompleteSets=False):
+    def getPlateCompletion(self, includeIncompleteSets=False, useMock=True):
 
         totalSN = self.getCumulatedSN2(
-            includeIncomplete=includeIncompleteSets)
+            includeIncomplete=includeIncompleteSets, useMock=useMock)
 
         totalSN[0:2] /= config['SN2thresholds']['plateBlue']
         totalSN[2:] /= config['SN2thresholds']['plateRed']
@@ -437,9 +463,12 @@ class Plate(plateDB.Plate):
         Exposure."""
         return self.getCumulatedSN2(**kwargs)
 
-    def getCumulatedSN2(self, includeIncomplete=False, **kwargs):
+    def getCumulatedSN2(self, includeIncomplete=False, useMock=True,
+                        **kwargs):
         """Returns the cumulated SN2 from all valid sets.
-        If includeIncomplete=True, incomplete sets SN2 are also included."""
+        If includeIncomplete=True, incomplete sets SN2 are also included.
+        If useMock=False, mock sets are ignored.
+        """
 
         validStatuses = ['Good', 'Excellent']
         if includeIncomplete:
@@ -448,12 +477,14 @@ class Plate(plateDB.Plate):
         validSets = []
         for set in self.sets:
             if set.getQuality()[0] in validStatuses:
-                validSets.append(set)
+                if not set.isMock or (set.isMock and useMock):
+                    validSets.append(set)
 
         if len(validSets) == 0:
             return np.array([0.0, 0.0, 0.0, 0.0])
         else:
-            return np.sum([set.getSN2Array() for set in validSets], axis=0)
+            return np.sum([set.getSN2Array(useMock=useMock)
+                           for set in validSets], axis=0)
 
     def getActiveCartNumber(self):
 
@@ -771,6 +802,26 @@ class Plate(plateDB.Plate):
         if self.location is None:
             return None
         return self.location.label
+
+    def getOrphaned(self, includeUnplugged=True, useMock=True):
+        """Returns orphaned exposures in sets. Exposures must be valid
+        and belong to a valid set. If `useMock=False`, only real sets will
+        be considered. If `includeUnplugged=True`, orphaned exposures in
+        unplugged sets will be included."""
+
+        orphaned = []
+        validStatuses = ['Incomplete']
+        if includeUnplugged:
+            validStatuses.append('Unplugged')
+
+        for set in self.sets:
+            if set.getQuality()[0] in validStatuses:
+                for exp in set.totoroExposures:
+                    if (exp.isValid and
+                            (not exp.isMock or (exp.isMock and useMock))):
+                        orphaned.append(exp)
+
+        return orphaned
 
     @property
     def drilled(self):

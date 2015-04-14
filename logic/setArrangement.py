@@ -57,11 +57,12 @@ def updatePlate(plate, nExposuresMax=None, **kwargs):
 
         if nExposuresMax is not False and len(newExposures) >= nExposuresMax:
             log.info('plate_id={0}: more than {1} new exposures found. '
-                     'Triggering a complete set rearrangement.'
+                     'Triggering a complete set rearrangement '
+                     'using mode=sequential.'
                      .format(plate.plate_id,
                              config['setArrangement']
                              ['forceRearrangementMinExposures']))
-            updateStatus = rearrangeSets(plate, **kwargs)
+            updateStatus = rearrangeSets(plate, mode='sequential', **kwargs)
         else:
             results = []
             for exp in newExposures:

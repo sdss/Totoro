@@ -241,7 +241,7 @@ class Set(mangaDB.Set):
 
         return setDitherPositions
 
-    def getSN2Array(self, **kwargs):
+    def getSN2Array(self, useMock=True, **kwargs):
         """Returns an array with the cumulated SN2 of the valid exposures in
         the set. The return format is [b1SN2, b2SN2, r1SN2, r2SN2]."""
 
@@ -249,7 +249,9 @@ class Set(mangaDB.Set):
             return np.array([0.0, 0.0, 0.0, 0.0])
         else:
             return np.sum([exp.getSN2Array()
-                           for exp in self.totoroExposures], axis=0)
+                           for exp in self.totoroExposures
+                           if (not exp.isMock or (exp.isMock and useMock))],
+                          axis=0)
 
     def getSN2Range(self):
         """Returns the SN2 range in which new exposures may be taken."""
