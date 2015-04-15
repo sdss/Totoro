@@ -331,7 +331,7 @@ class Plate(plateDB.Plate):
                         if set is not None and set.pk not in setPKs:
                             setPKs.append(mangaDBExposure.set.pk)
 
-        with session.begin():
+        with session.begin(subtransactions=True):
             for setPK in setPKs:
                 set = session.query(mangaDB.Set).get(setPK)
                 sets.append(set)
