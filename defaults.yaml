@@ -108,7 +108,10 @@ setArrangement:
     permutationLimit: 600000
     forceRearrangementMinExposures: 3
 
-carts: [1, 2, 3, 4, 5, 6]
+mangaCarts: [1, 2, 3, 4, 5, 6]
+apogeeCarts: [7, 8, 9]
+offlineCarts: []
+
 defaultPriority: 5
 plateVisibilityMaxHalfWindowHours: 3
 numberPlatesAllowedAtAPO: 100
