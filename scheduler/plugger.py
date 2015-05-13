@@ -168,7 +168,8 @@ class Plugger(object):
 
         pluggedPlates = getPlugged()
 
-        self.carts = OrderedDict([(key, None) for key in config['carts']])
+        self.carts = OrderedDict()
+        self._nNewExposures = dict()
 
         for plate in pluggedPlates:
             if not plate.isComplete:
