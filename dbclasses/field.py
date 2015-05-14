@@ -23,6 +23,9 @@ import numpy as np
 from numbers import Integral
 
 
+__all__ = ['Fields', 'Field', 'getTilingCatalogue']
+
+
 def getTilingCatalogue(tilingCatalogue=None):
     tilingCatalogue = Totoro.readPath(
         Totoro.config['fields']['tilingCatalogue']) \

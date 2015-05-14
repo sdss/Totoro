@@ -109,7 +109,7 @@ class TotoroConfig(dict):
 
     def _assignDBConnection(self, value):
 
-        if value.lower() in ['production', 'tunnel', 'dev', 'local']:
+        if value.lower() in ['production', 'tunnel', 'dev', 'local', 'test']:
             self['dbConnection'] = self['dbConnection' + value.title()]
             return True
         else:

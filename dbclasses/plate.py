@@ -15,22 +15,22 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
-from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro import exceptions as TotoroExpections
-from sdss.internal.manga.Totoro import logic
 from sdss.internal.manga.Totoro import log, config, dustMap, site
+from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro.scheduler import observingPlan
+from sdss.internal.manga.Totoro.dbclasses import Set as TotoroSet
+from sdss.internal.manga.Totoro.dbclasses import Exposure as TotoroExposure
+from sdss.internal.manga.Totoro.dbclasses import plate_utils as plateUtils
 import warnings
 from astropy import time
-import set as TotoroSet
-from exposure import Exposure
 import numpy as np
 from copy import deepcopy
 from sqlalchemy import or_, and_
 
 
-__ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plates',
-           'Plate', 'fromPlateID']
+__all__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plate',
+           'fromPlateID']
 
 
 totoroDB = TotoroDBConnection()
@@ -217,6 +217,7 @@ class Plates(list):
 
 
 def fromPlateID(plateid, **kwargs):
+    """Convenience function that returns a `Plate` instance from a plate_id."""
     return Plate(plateid, format='plate_id', **kwargs)
 
 
@@ -241,7 +242,7 @@ class Plate(plateDB.Plate):
 
         return instance
 
-    def __init__(self, input, format='pk', mock=False, silent=False,
+    def __init__(self, input, format='pk', mock=False,
                  updateSets=True, mjd=None, fullCheck=True,
                  manga_tileid=None, **kwargs):
 
@@ -260,18 +261,13 @@ class Plate(plateDB.Plate):
         self.mlhalimit = utils.mlhalimit(self.dec)
 
         if not self.isMock:
-
             self.checkPlate(full=fullCheck)
 
-            self.sets = [TotoroSet.Set(set, silent=silent, **kwargs)
+            self.sets = [TotoroSet(set, **kwargs)
                          for set in self.getMangaDBSets()]
 
-            if silent is False:
-                log.debug('loaded plate with pk={0}, plateid={1}'.format(
-                          self.pk, self.plate_id))
-
             if updateSets:
-                self.updatePlate(silent=silent, **kwargs)
+                self.updatePlate(**kwargs)
 
         else:
             self.sets = []
@@ -283,39 +279,35 @@ class Plate(plateDB.Plate):
                         self.getPlateCompletion()))
 
     @classmethod
-    def fromSets(cls, sets, silent=False, **kwargs):
+    def fromSets(cls, sets, **kwargs):
 
         newPlate = plateDB.Plate.__new__(cls)
         newPlate.__init__(None, mock=True, **kwargs)
         newPlate.sets = sets
 
-        if not silent:
-            log.debug('created mock plate from sets pk={0}'.format(
-                ', '.join(map(str, sets))))
+        log.debug('created mock plate from sets pk={0}'.format(
+            ', '.join(map(str, sets))))
 
         return newPlate
 
     @classmethod
-    def createMockPlate(cls, ra=None, dec=None, silent=False, **kwargs):
+    def createMockPlate(cls, ra=None, dec=None, **kwargs):
 
         if ra is None or dec is None:
             raise TotoroExpections.TotoroError('ra and dec must be specified')
 
         mockPlate = plateDB.Plate.__new__(cls)
-        mockPlate.__init__(None, mock=True, ra=ra, dec=dec, silent=silent,
-                           **kwargs)
+        mockPlate.__init__(None, mock=True, ra=ra, dec=dec, **kwargs)
 
         mockPlate.isMock = True
 
-        if not silent:
-            log.debug(
-                'created mock plate with ra={0:.3f} and dec={0:.3f}'.format(
-                    mockPlate.coords[0], mockPlate.coords[1]))
+        log.debug('created mock plate with ra={0:.3f} and dec={0:.3f}'.format(
+                  mockPlate.coords[0], mockPlate.coords[1]))
 
         return mockPlate
 
     def addExposure(self, exposure):
-        return logic.addExposure(exposure, self)
+        return plateUtils.addExposure(exposure, self)
 
     def getMangaDBSets(self):
         """Returns a list of mangaDB.ModelClasses.Set instances with all the
@@ -370,7 +362,7 @@ class Plate(plateDB.Plate):
 
         return False
 
-    def updatePlate(self, silent=False, force=False, **kwargs):
+    def updatePlate(self, force=False, **kwargs):
 
         if self.isComplete:
             if not force:
@@ -387,17 +379,14 @@ class Plate(plateDB.Plate):
                       'Not updating sets.')
             return False
 
-        result = logic.updatePlate(self, silent=silent, **kwargs)
-        if result:
-            self.update(silent=silent)
+        result = plateUtils.updatePlate(self, **kwargs)
 
-        return True
+        return result
 
-    def rearrangeSets(self, LST=None, mode='optimal', **kwargs):
-        result = logic.setArrangement.rearrangeSets(
-            self, LST=LST, mode=mode, **kwargs)
-        if result is True:
-            self.update()
+    def rearrangeSets(self, LST=None, mode='optimal', scope='all', **kwargs):
+        result = plateUtils.rearrangeSets(self, LST=LST, scope=scope,
+                                          mode=mode, **kwargs)
+
         return result
 
     @property
@@ -476,9 +465,16 @@ class Plate(plateDB.Plate):
 
         validSets = []
         for set in self.sets:
-            if set.getQuality()[0] in validStatuses:
-                if not set.isMock or (set.isMock and useMock):
-                    validSets.append(set)
+            # Creates a mock set with the appropriate exposures.
+            if useMock:
+                mockSet = set
+            else:
+                if set.isMock:
+                    continue
+                mockSet = TotoroSet.fromExposures(
+                    [exp for exp in set.totoroExposures if not exp.isMock])
+            if mockSet.getQuality()[0] in validStatuses:
+                validSets.append(mockSet)
 
         if len(validSets) == 0:
             return np.array([0.0, 0.0, 0.0, 0.0])
@@ -487,6 +483,8 @@ class Plate(plateDB.Plate):
                            for set in validSets], axis=0)
 
     def getActiveCartNumber(self):
+        """Returns the cart number of the active plugging. Raises an error if
+        no active pluggings are found."""
 
         for plugging in self.pluggings:
             if len(plugging.activePlugging) > 0:
@@ -494,6 +492,15 @@ class Plate(plateDB.Plate):
 
         raise TotoroExpections.PlateNotPlugged(
             'plate_id={0} is not currently plugged'.format(self.plate_id))
+
+    def getActivePlugging(self):
+        """Returns the active plugging or None if none found."""
+
+        for plugging in self.pluggings:
+            if len(plugging.activePlugging) > 0:
+                return plugging
+
+        return None
 
     def getMangadbExposures(self):
         """Returns a list of mangaDB.Exposure objects with all the exposures
@@ -522,7 +529,7 @@ class Plate(plateDB.Plate):
 
         return scienceExps
 
-    def getTotoroExposures(self, onlySets=False, silent=True):
+    def getTotoroExposures(self, onlySets=False):
         """Returns a list of Totoro dbclasses.Exposure instances for this
         Plate insance."""
 
@@ -535,7 +542,7 @@ class Plate(plateDB.Plate):
 
         # Some exposures not in sets may be missing.
         allExposures = self.getMangadbExposures()
-        totoroExposures += [Exposure(exp.pk, parent='mangadb', silent=silent)
+        totoroExposures += [TotoroExposure(exp.pk, parent='mangadb')
                             for exp in allExposures if exp.set_pk is None]
 
         return totoroExposures
@@ -552,18 +559,15 @@ class Plate(plateDB.Plate):
 
         return validSets
 
-    def update(self, **kwargs):
-        """Reloads the plate."""
+    # def update(self, **kwargs):
+    #     """Reloads the plate."""
 
-        kwargs.update(self._kwargs)
-        silent = kwargs.pop('silent', False)
+    #     kwargs.update(self._kwargs)
 
-        newSelf = Plate(self.pk, format='pk', silent=True, mjd=self.mjd,
-                        **kwargs)
-        self = newSelf
+    #     newSelf = Plate(self.pk, format='pk', mjd=self.mjd, **kwargs)
+    #     self = newSelf
 
-        if not silent:
-            log.debug('plate_id={0} has been reloaded'.format(self.plate_id))
+    #     log.debug('plate_id={0} has been reloaded'.format(self.plate_id))
 
     def getValidExposures(self, **kwargs):
         """Returns all valid exposures, even if they belong to an incomplete
@@ -663,27 +667,36 @@ class Plate(plateDB.Plate):
         return True if secIntersectionLength >= minLength else False
 
     def addMockExposure(self, exposure=None, startTime=None, set=None,
-                        expTime=None, silent=False, **kwargs):
+                        expTime=None, **kwargs):
         """Creates a mock expusure in the best possible way."""
 
         ra, dec = self.coords
 
         if exposure is None:
-            exposure = Exposure.createMockExposure(
-                startTime=startTime, expTime=expTime, ra=ra, dec=dec,
-                silent=silent, **kwargs)
+            exposure = TotoroExposure.createMockExposure(
+                startTime=startTime, expTime=expTime, ra=ra, dec=dec, **kwargs)
 
-        if exposure.isValid(silent=silent)[0] is False:
-            if not silent:
-                log.debug('mock exposure is invalid. Removing it.')
-            return False
-
-        validSet = logic.getValidSet(exposure, self)
+        validSet = plateUtils.getOptimalSet(self, exposure)
 
         if validSet is not None:
-            validSet.totoroExposures.append(exposure)
+            # Gets a valid dither position for the exposure in this set.
+            dither = plateUtils.getValidDither(validSet)
+            exposure.ditherPosition = dither
+            newSet = False
+
         else:
-            self.sets.append(TotoroSet.Set.fromExposures([exposure]))
+            # This is a new set. We give the exposure a random dither position.
+            exposure.ditherPosition = 'N'
+            validSet = TotoroSet(mock=True, **kwargs)
+            newSet = True
+
+        if exposure.isValid()[0] is False:
+            log.debug('mock exposure is invalid. Removing it.')
+            return False
+
+        if newSet:
+            self.sets.append(validSet)
+        validSet.totoroExposures.append(exposure)
 
         return exposure
 
@@ -702,7 +715,7 @@ class Plate(plateDB.Plate):
         for set in incompleteSets:
 
             lstRange = set.getLSTRange()
-            intersectionLength = logic.getIntervalIntersectionLength(
+            intersectionLength = utils.getIntervalIntersectionLength(
                 (LST0, LST1), lstRange, wrapAt=24)
 
             if intersectionLength * 3600 > expTime:
@@ -785,16 +798,16 @@ class Plate(plateDB.Plate):
         """Returns the number of permutations for a brute-force set
         rearrangement."""
 
-        validExposures = self.getValidExposures(silent=True)
+        validExposures = self.getValidExposures()
         ditherPositions = [exp.ditherPosition for exp in validExposures]
-        return logic.setArrangement.getNumberPermutations(ditherPositions)
+        return plateUtils.getNumberPermutations(ditherPositions)
 
     def getPermutations(self):
         """Returns the permutations for a brute-force set rearrangement."""
 
-        validExposures = self.getValidExposures(silent=True)
+        validExposures = self.getValidExposures()
         ditherPositions = [exp.ditherPosition for exp in validExposures]
-        return logic.setArrangement.calculatePermutations(ditherPositions)
+        return plateUtils.calculatePermutations(ditherPositions)
 
     def getLocation(self):
         """Returns the location label of the plate."""
@@ -815,11 +828,18 @@ class Plate(plateDB.Plate):
             validStatuses.append('Unplugged')
 
         for set in self.sets:
-            if set.getQuality()[0] in validStatuses:
-                for exp in set.totoroExposures:
-                    if (exp.isValid and
-                            (not exp.isMock or (exp.isMock and useMock))):
-                        orphaned.append(exp)
+            # Creates a mock set with the appropriate exposures
+            if not useMock:
+                if set.isMock:
+                    continue
+                mockSet = TotoroSet.fromExposures(
+                    [exp for exp in set.totoroExposures if not exp.isMock])
+            else:
+                mockSet = set
+
+            # Checks if set is incomplete. If so, the exposures are orphaned.
+            if mockSet.getQuality()[0] in validStatuses:
+                orphaned += mockSet.totoroExposures
 
         return orphaned
 

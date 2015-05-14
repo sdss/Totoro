@@ -9,6 +9,8 @@ Licensed under a 3-clause BSD license.
 Revision history:
     3 Aug 2014 J. Sánchez-Gallego
       Initial version
+    6 May 2015 J. Sánchez-Gallego
+      Some changes to the logic and structure
 
 """
 
@@ -32,6 +34,7 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
 
     observablePlates = [plate for plate in plates
                         if isObservable(plate, jdRanges)]
+
     incompletePlates = [plate for plate in observablePlates
                         if plate.isComplete is False]
 
@@ -52,13 +55,13 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
             if optimalPlate is not None:
                 return optimalPlate
 
-    notPlugged = incompletePlates
+    platesToBeConsidered = incompletePlates
 
     # Determines the number of valid exposures for each plate, excluding those
     # in bad or unplugged sets. If a plate is composed only of exposures in
     # unplugged sets, we want to consider it as not started.
     nValidExposures = []
-    for plate in notPlugged:
+    for plate in platesToBeConsidered:
         nExposures = 0
         for set in plate.sets:
             if set.getQuality()[0] in ['Good', 'Excellent', 'Incomplete']:
@@ -67,7 +70,7 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
 
     # Select started plates as those with at least one valid exposure, as
     # defined above.
-    startedPlates = [plates[ii] for ii in range(len(notPlugged))
+    startedPlates = [plates[ii] for ii in range(len(platesToBeConsidered))
                      if nValidExposures[ii] > 0]
 
     if len(startedPlates) > 0:
@@ -78,13 +81,13 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
             cleanupPlates(startedPlates, optimal)
             return optimal
 
-    observedFlag = simulatePlates(notPlugged, jdRanges, mode=mode,
+    observedFlag = simulatePlates(platesToBeConsidered, jdRanges, mode=mode,
                                   efficiency=efficiency)
     if observedFlag is False:
         return None
 
-    optimal = selectOptimal(notPlugged, jdRanges)
-    cleanupPlates(notPlugged, optimal)
+    optimal = selectOptimal(platesToBeConsidered, jdRanges)
+    cleanupPlates(platesToBeConsidered, optimal)
 
     return optimal
 
@@ -147,37 +150,33 @@ def _getOptimalFromList(plates):
     # If no completed plates, calculates the plate completion using only
     # complete sets
     plateCompletion = np.array(
-        [plate.getPlateCompletion(includeIncompleteSets=True)
+        [plate.getPlateCompletion(includeIncompleteSets=False)
          for plate in plates])
 
-    platePriority = np.array([plate.priority for plate in plates])
+    # Checks how many plates with maximum completion there are.
+    maxCompletionPlates = plates[plateCompletion == np.max(plateCompletion)]
 
-    # Determines selection priority based on plate completion
-    # and plate priority
+    # If only one, returns it.
+    if len(maxCompletionPlates) == 1:
+        return maxCompletionPlates[0]
+
+    # Otherwise, recalculates the completion for the plates with maximum
+    # completion using also incomplete sets.
+    plateCompletion = np.array(
+        [plate.getPlateCompletion(includeIncompleteSets=True)
+         for plate in maxCompletionPlates])
+
+    # Determines plate priorities
+    platePriority = np.array([plate.priority for plate in maxCompletionPlates])
+
+    # Creates master priority based on plate completion and plate priority
     masterPriority = 0.5 * (10 * plateCompletion + platePriority)
 
     # Sorts plates based on master priority
-    sortedPlates = plates[np.argsort(masterPriority)][::-1]
+    sortedPlates = maxCompletionPlates[np.argsort(masterPriority)][::-1]
 
     # Returns the first plate.
     return sortedPlates[0]
-
-    # maxPlateCompletion = plateCompletion.max()
-
-    # Selects the plates with maximum completion
-    # platesMaxCompletion = plates[np.where(
-    #     plateCompletion == maxPlateCompletion)]
-
-    # if len(platesMaxCompletion) == 1:
-    #     # If only one plate with maximum completion
-    #     return platesMaxCompletion[0]
-    # else:
-    #     nExposures = [
-    #         len(plate.getTotoroExposures(onlySets=True)) / plate.priority
-    #         for plate in platesMaxCompletion]
-    #     return platesMaxCompletion[np.argmin(nExposures)]
-
-    # return None
 
 
 def simulatePlates(plates, jdRanges, mode='plugger', efficiency=None):
@@ -188,6 +187,8 @@ def simulatePlates(plates, jdRanges, mode='plugger', efficiency=None):
 
     efficiency = config[mode]['efficiency'] if efficiency is None \
         else efficiency
+
+    SN2Factor = config[mode]['simulationFactor']
 
     expTimeEff = expTime / efficiency
     maxAlt = config[mode]['maxAltitude']
@@ -217,7 +218,7 @@ def simulatePlates(plates, jdRanges, mode='plugger', efficiency=None):
                 else:
                     result = plate.addMockExposure(
                         set=None, startTime=jd, expTime=expTimeEff,
-                        silent=True)
+                        factor=SN2Factor)
                     if result is not False:
                         observedFlag = True
                         result._tmp = True

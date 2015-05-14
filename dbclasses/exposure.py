@@ -16,7 +16,6 @@ from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro.exceptions import TotoroError, NoMangaExposure
 from sdss.internal.manga.Totoro import TotoroDBConnection
-from sdss.internal.manga.Totoro import logic
 from sdss.internal.manga.Totoro import log, config, site, dustMap
 from sdss.internal.manga.Totoro import utils
 import numpy as np
@@ -24,10 +23,10 @@ from astropy import time
 import warnings
 
 
-totoroDB = TotoroDBConnection()
-plateDB = totoroDB.plateDB
-mangaDB = totoroDB.mangaDB
-session = totoroDB.session
+db = TotoroDBConnection()
+plateDB = db.plateDB
+mangaDB = db.mangaDB
+session = db.session
 
 
 class Exposure(plateDB.Exposure):
@@ -64,8 +63,7 @@ class Exposure(plateDB.Exposure):
 
         return instance
 
-    def __init__(self, input, format='pk', mock=False, silent=False,
-                 *args, **kwargs):
+    def __init__(self, input, format='pk', mock=False, *args, **kwargs):
 
         self._valid = None
         self._ditherPosition = None
@@ -78,10 +76,6 @@ class Exposure(plateDB.Exposure):
 
         self._haRange = None
 
-        if not silent:
-            log.debug('Loaded exposure plateDB.Exposure.pk={0}'
-                      .format(self.pk))
-
         self.mlhalimit = utils.mlhalimit(self.dec)
 
         self._mangaExposure = (self.mangadbExposure[0]
@@ -93,14 +87,14 @@ class Exposure(plateDB.Exposure):
 
     def __repr__(self):
         return ('<Totoro Exposure (mangaDB.Exposure.pk={0}, exposure_no={1}, '
-                'ditherPos={2})>'
+                'ditherPos={2}, valid={3})>'
                 .format(self._mangaExposure.pk, self.exposure_no,
-                        self.ditherPosition))
+                        self.ditherPosition, self.valid))
 
     def update(self, **kwargs):
         """Reloads the exposure."""
 
-        newSelf = Exposure(self.pk, fromat='pk', silent=True, mock=self.isMock,
+        newSelf = Exposure(self.pk, fromat='pk', mock=self.isMock,
                            **self.kwargs)
         self = newSelf
 
@@ -110,14 +104,13 @@ class Exposure(plateDB.Exposure):
     @classmethod
     def createMockExposure(cls, startTime=None, expTime=None,
                            ditherPosition=None, ra=None, dec=None,
-                           silent=False, **kwargs):
+                           plugging=None, **kwargs):
         """Creates a mock exposure instance."""
 
         if ra is None or dec is None:
             raise TotoroError('ra and dec must be specified')
 
-        newExposure = Exposure(None, mock=True, ra=ra, dec=dec, silent=silent,
-                               **kwargs)
+        newExposure = Exposure(None, mock=True, ra=ra, dec=dec, **kwargs)
         newExposure.pk = None if 'pk' not in kwargs else kwargs['pk']
 
         if startTime is None:
@@ -131,23 +124,26 @@ class Exposure(plateDB.Exposure):
         tt = time.Time(startTime, format='jd', scale='tai')
         t0 = time.Time(0, format='mjd', scale='tai')
         startTimePlateDB = (tt - t0).sec
+
         newExposure.start_time = startTimePlateDB
-
         newExposure.exposure_time = expTime
+        newExposure._plugging = plugging
 
-        newExposure.simulateObservedParamters()
+        newExposure.simulateObservedParamters(**kwargs)
 
-        if not silent:
-            log.debug('Created mock exposure with ra={0:.3f} and dec={0:.3f}'
-                      .format(newExposure.ra, newExposure.dec))
+        log.debug('Created mock exposure with ra={0:.3f} and dec={0:.3f}'
+                  .format(newExposure.ra, newExposure.dec))
 
         return newExposure
 
-    def simulateObservedParamters(self):
+    def simulateObservedParamters(self, factor=None, **kwargs):
         """Simulates the SN2 of the exposure, using dust extinction and airmass
         values."""
 
         self._seeing = 1.0
+
+        if factor is None:
+            factor = config['simulation']['factor']
 
         if dustMap is not None:
             self._dust = dustMap(self.ra, self.dec)
@@ -158,10 +154,15 @@ class Exposure(plateDB.Exposure):
         ha = utils.calculateMean(haRange)
         self._airmass = utils.computeAirmass(self.dec, ha)
 
-        sn2Red = config['simulation']['redSN2'] / self._airmass ** \
-            config['simulation']['alphaRed'] / self._dust['iIncrease'][0]
-        sn2Blue = config['simulation']['blueSN2'] / self._airmass ** \
-            config['simulation']['alphaBlue'] / self._dust['gIncrease'][0]
+        nominalRed = config['simulation']['redSN2'] * factor
+        nominalBlue = config['simulation']['blueSN2'] * factor
+        alphaRed = config['simulation']['alphaRed']
+        alphaBlue = config['simulation']['alphaBlue']
+
+        sn2Red = (nominalRed / self._airmass ** alphaRed /
+                  self._dust['iIncrease'][0])
+        sn2Blue = (nominalBlue / self._airmass ** alphaBlue /
+                   self._dust['gIncrease'][0])
 
         self._sn2Array = np.array([sn2Blue, sn2Blue, sn2Red, sn2Red])
 
@@ -251,17 +252,22 @@ class Exposure(plateDB.Exposure):
         self._valid = value
 
     def isValid(self, flag=True, **kwargs):
-        """Checks if an exposure is valid."""
+        """Checks if an exposure is valid and the error code."""
 
         if self._valid is not None:
             return (self._valid, -1)
 
-        status = logic.checkExposure(self, flag=flag, **kwargs)
+        status = checkExposure(self, flag=flag, **kwargs)
 
         # if self.isMock:
         #     self._valid = status[0]
 
         return status
+
+    def checkExposure(self, **kwargs):
+        """Alias for `isValid`"""
+
+        return self.isValid(**kwargs)
 
     @property
     def ditherPosition(self):
@@ -343,12 +349,274 @@ class Exposure(plateDB.Exposure):
     def getPlugging(self):
         """Returns the Plugging instance from ModelClasses for the exposure."""
 
-        if self.isMock:
+        if self._plugging is not None:
+            return self._plugging
+
+        if self.pk is None:
             return None
         else:
-            if self._plugging is not None:
-                return self._plugging
+            # Caches the plugging information
+            self._plugging = self.observation.plugging
+            return self._plugging
+
+    def getCurrentPlugging(self):
+        """Gets the pk of the current plugging for a plate from one of its
+        exposures."""
+
+        if self.pk is None:
+            return None
+
+        plate = self.observation.plate_pointing.plate
+
+        for plugging in plate.pluggings:
+            if len(plugging.activePlugging) > 0:
+                return plugging
+
+        return None
+
+
+def flagExposure(exposure, status, errorCode, flag=True, message=None):
+    """Helper function to log and flag exposures."""
+
+    if message is not None:
+        log.debug(message)
+
+    if flag:
+        statusLabel = 'Totoro Good' if status else 'Totoro Bad'
+        setExposureStatus(exposure, statusLabel)
+
+    return (status, errorCode)
+
+
+def setExposureStatus(exposure, status):
+    """ Sets the status of an exposure.
+
+    Parameters
+    ----------
+    exposure : `Totoro.dbclasses.Exposure`, `plateDB.Exposure`,
+               `mangaDB.Exposure` or integer.
+        The exposure that will receive the new status. Either a
+        Totoro.Exposure, plateDB.Exposure or mangaDB.Exposure instance.
+        Alternatively, the pk of the mangaDB.Exposure can be used.
+    status : string
+        The status to be set. It must be one of the values in
+        mangaDB.ExposureStatus.label.
+
+    Returns
+    -------
+    result : bool
+        Returns True if the status has been set correctly.
+
+    Example
+    -------
+    To set the value of exposure pk=43 to "Totoro Good" ::
+      >> setExposureStatus(43, 'Totoro Good')
+
+    """
+
+    if isinstance(exposure, Exposure):
+        pk = exposure._mangaExposure.pk
+    elif isinstance(exposure, db.plateDB.Exposure):
+        pk = exposure.mangadbExposure[0].pk
+    elif isinstance(exposure, db.mangaDB.Exposure):
+        pk = exposure.pk
+    else:
+        pk = exposure
+
+    # Gets the status_pk for the desired status and flags the exposure.
+    with session.begin(subtransactions=True):
+
+        try:
+            queryStatus = session.query(db.mangaDB.ExposureStatus).filter(
+                db.mangaDB.ExposureStatus.label == status).one()
+            statusPK = queryStatus.pk
+        except:
+            raise TotoroError('status {0} not found in mangaDB.ExposureStatus'
+                              .format(status))
+
+        try:
+            exp = session.query(db.mangaDB.Exposure).get(pk)
+            exp.exposure_status_pk = statusPK
+        except:
+            raise TotoroError('failed while trying to set exposure_status for '
+                              'mangaDB.Exposure={0}'.format(pk))
+
+        # If status is Totoro Bad, removes set_pk
+        if status == 'Totoro Bad':
+            exp.set_pk = None
+
+    log.debug('mangaDB.Exposure.pk={0} set to {1}'.format(pk, status))
+
+    return True
+
+
+def checkExposure(exposure, flag=True, force=False, **kwargs):
+    """Checks if a given exposures meets MaNGA's quality criteria.
+
+    This function checks the validity of a MaNGA exposure and sets the
+    appropriate status in mangaDB. If the exposure is mock, no flagging in the
+    database is done, but the function still returns the status of the
+    exposure. If the exposure has already been flagged with a status different
+    than `Good`, the function returns that status, unless `force=True`.
+
+    Parameters
+    ----------
+    exposure : `Totoro.dbclasses.Exposure`
+        The Totoro exposure object to be checked and flagged.
+
+    flag : bool
+        If True and `exposure` is not mock, the status of `exposure` will
+        be set to `Totoro Good` or `Totoro Bad` depending on the result of the
+        check.
+
+    force : bool
+        If True, the exposure will be reflagged even if a status has been
+        previously assigned.
+
+    Returns
+    -------
+    result : tuple
+        A tuple in which the first element is True if the exposure is valid and
+        False otherwise; the second element is the code error that caused the
+        exposure to fail.
+
+    Error codes
+    -----------
+
+    0: no error.
+    1: wrong dither position.
+    2: exposure time too short.
+    3: seeing too large.
+    4: SN2 too low.
+    5: HA range outside the range of visibility of the plate.
+    6: exposure not completely reduced
+    7: low transparency
+    8: exposure taken during twilight
+    10: status read from DB.
+    """
+
+    # Checks that exposure is a Totoro exposure.
+    assert isinstance(exposure, Exposure), 'input is not a Totoro exposure.'
+
+    pk = exposure._mangaExposure.pk
+
+    # The following only applies to real exposure.
+    if not exposure.isMock:
+        # Gets the status of this exposure in plateDB and mangaDB
+        if exposure._mangaExposure.status is None:
+            mangaDBstatus = None
+        else:
+            mangaDBstatus = exposure._mangaExposure.status.label
+
+        plateDBstatus = exposure.status.label
+
+        # Now it does some checking to make sure these values are consistent.
+        if plateDBstatus in ['Bad', 'Override Bad']:
+            # Overrides Totoro status to bad, if needed
+            if mangaDBstatus != 'Totoro Bad' or force:
+                message = ('exposure is marked {0} in plateDB'
+                           .format(plateDBstatus))
+                return flagExposure(exposure, False, 10, flag=flag,
+                                    message=message)
             else:
-                # Caches the plugging information
-                self._plugging = self.observation.plugging
-                return self._plugging
+                return (False, 10)
+
+        if mangaDBstatus is not None and not force:
+            if mangaDBstatus == 'Totoro Good':
+                return (True, 10)
+            elif mangaDBstatus == 'Totoro Bad':
+                return (False, 10)
+            else:
+                pass
+
+    # If the exposure is mock, we set flag to False
+    if exposure.isMock:
+        flag = False
+
+    # Checks dither position
+    validDitherPositions = config['exposure']['validDitherPositions']
+    if exposure.ditherPosition not in validDitherPositions:
+        message = ('Invalid exposure. plateDB.Exposure.pk={0} '
+                   'has dither position {1}'.format(pk,
+                                                    exposure.ditherPosition))
+        return flagExposure(exposure, False, 1, flag=flag, message=message)
+
+    # Checks transparency
+    transparency = exposure._mangaExposure.transparency
+    minTransparency = config['exposure']['transparency']
+    if transparency is not None and transparency < minTransparency:
+        message = ('Invalid exposure. plateDB.Exposure.pk={0} '
+                   'has low transparency.'.format(pk))
+        return flagExposure(exposure, False, 7, flag=flag, message=message)
+
+    # Checks exposure time
+    minExpTime = config['exposure']['minExpTime']
+    expTime = exposure.exposure_time
+    if expTime < minExpTime:
+        message = ('Invalid exposure. plateDB.Exposure.pk={0} has an '
+                   'exposure time shorter than the minimum acceptable.'
+                   .format(pk))
+        return flagExposure(exposure, False, 2, flag=flag, message=message)
+
+    # Checks seeing
+    maxSeeing = config['exposure']['maxSeeing']
+    seeing = exposure.seeing
+    if seeing > maxSeeing:
+
+        message = ('Invalid exposure. plateDB.Exposure.pk={0} '
+                   'has a seeing larger than the maximum acceptable.'
+                   .format(pk))
+        return flagExposure(exposure, False, 3, flag=flag, message=message)
+
+    # Checks visibility window
+    buffer = config['exposure']['exposureBuffer']
+    exposureHA = exposure.getHA()
+    visibilityWindow = np.array([-exposure.mlhalimit - buffer,
+                                 exposure.mlhalimit + buffer])
+    if not utils.isIntervalInsideOther(exposureHA, visibilityWindow,
+                                       onlyOne=False, wrapAt=360):
+        message = ('Invalid exposure. plateDB.Exposure.pk={0} '
+                   'has HA range [{1}, {2}] that is outside the '
+                   'visibility window of the plate [{3}, {4}]'
+                   .format(pk, exposureHA[0], exposureHA[1],
+                           visibilityWindow[0], visibilityWindow[1]))
+        return flagExposure(exposure, False, 5, flag=flag, message=message)
+
+    # Checks altitude of the object. Skipped if exposure is mock.
+    if config['exposure']['checkTwilight'] is True and not exposure.isMock:
+        # Avoids this check for mock exposures as it slows down simulations.
+        maxSunAltitude = config['exposure']['maxSunAltitude']
+        exposureDate = time.Time(exposure.getJD(), format='jd', scale='tai')
+        sunAltitude = site.getSunAltitude(exposureDate)
+
+        if np.any(sunAltitude > maxSunAltitude):
+            message = ('Invalid exposure. plateDB.Exposure.pk={0}: '
+                       'altitude the Sun at the time of the exposure '
+                       '< {1:.1f} deg'.format(pk, maxSunAltitude))
+            return flagExposure(exposure, False, 8, flag=flag, message=message)
+
+    # Checks whether at least one camera for each arm has been reduced
+    exposureSN2 = exposure.getSN2Array(useNaN=False)
+    blue = exposureSN2[0:2]
+    red = exposureSN2[2:]
+
+    # If one of the arms has no SN2 value, returns False and does not flag
+    # the exposure
+    if not all(exposureSN2):
+        return (False, 6)
+
+    # Checks SN2
+    minSN2red = config['SN2thresholds']['exposureRed']
+    minSN2blue = config['SN2thresholds']['exposureBlue']
+
+    blueSN2comp = blue < minSN2blue
+    redSN2comp = red < minSN2red
+
+    # If any of the cameras has a SN2 lower than the minimum, flag it as bad
+    if any(blueSN2comp) or any(redSN2comp):
+        message = ('Invalid exposure. plateDB.Exposure.pk={0} '
+                   'has SN2 lower than the minimum acceptable.'.format(pk))
+        return flagExposure(exposure, False, 4, flag=flag, message=message)
+
+    # At this point, all the checks are done, so the exposure is valid.
+    return flagExposure(exposure, True, 0, flag=flag)

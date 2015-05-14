@@ -17,19 +17,22 @@ from __future__ import print_function
 from exposure import Exposure
 from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
 from sdss.internal.manga.Totoro import log, config, site
-from sdss.internal.manga.Totoro.exceptions import TotoroError, EmptySet
-from sdss.internal.manga.Totoro import logic
+from sdss.internal.manga.Totoro import exceptions
 from sdss.internal.manga.Totoro import utils
 # from sdss.internal.manga.Totoro import scheduler
 import numpy as np
+import warnings
 from copy import copy
 from astropy import time
 
 
-totoroDB = TotoroDBConnection()
-plateDB = totoroDB.plateDB
-mangaDB = totoroDB.mangaDB
-session = totoroDB.session
+db = TotoroDBConnection()
+plateDB = db.plateDB
+mangaDB = db.mangaDB
+session = db.session
+
+
+__all__ = ['Set']
 
 
 def getPlateSets(inp, format='plate_id', **kwargs):
@@ -67,10 +70,10 @@ class Set(mangaDB.Set):
 
         return instance
 
-    def __init__(self, inp=None, format='pk', mock=False,
-                 silent=False, mjd=None, *args, **kwargs):
+    def __init__(self, inp=None, format='pk', mock=False, mjd=None,
+                 *args, **kwargs):
 
-        self._quality = None
+        self._status = None
 
         self.isMock = mock
         if inp is None:
@@ -80,17 +83,13 @@ class Set(mangaDB.Set):
         self.mjd = mjd
 
         if not self.isMock:
-            self.totoroExposures = self.loadExposures(silent=silent)
+            self.totoroExposures = self.loadExposures()
         else:
             self.totoroExposures = []
 
         # Checks that the set has exposures.
         if not self.isMock:
             self._checkHasExposures()
-
-        if not silent and not self.isMock:
-            log.debug('Loaded set pk={0} (plate_id={1})'.format(
-                      self.pk, self.plate.plate_id))
 
     def __repr__(self):
         return '<Totoro Set (pk={0}, status={1})>'.format(
@@ -99,7 +98,7 @@ class Set(mangaDB.Set):
     def update(self, **kwargs):
         """Reloads the set."""
 
-        newSelf = Set(self.pk, fromat='pk', silent=True, mock=self.isMock,
+        newSelf = Set(self.pk, fromat='pk', mock=self.isMock,
                       mjd=self.mjd, **self._kwargs)
         self = newSelf
 
@@ -111,36 +110,41 @@ class Set(mangaDB.Set):
         """Creates a mock set for a list of Totoro.Exposures."""
 
         newSet = Set(mock=True, **kwargs)
-        newSet.totoroExposures = list(exposures)
+        # print(exposures)
+        if isinstance(exposures, Exposure):
+            newSet.totoroExposures = [exposures]
+        else:
+            for exp in exposures:
+                assert isinstance(exp, Exposure), \
+                    '{0} not an instance of Totoro.Exposure'.format(exp)
+            newSet.totoroExposures = list(exposures)
 
         return newSet
 
-    def loadExposures(self, silent=False):
+    def loadExposures(self):
 
-        return [Exposure(mangaExp, silent=silent)
-                for mangaExp in self.exposures]
+        return [Exposure(mangaExp) for mangaExp in self.exposures]
 
     def _checkHasExposures(self):
         if len(self.totoroExposures) == 0:
-            raise EmptySet('set pk={0} has no exposures.'.format(self.pk))
+            raise exceptions.EmptySet(
+                'set pk={0} has no exposures.'.format(self.pk))
 
     @classmethod
-    def createMockSet(cls, ra=None, dec=None, silent=False, **kwargs):
+    def createMockSet(cls, ra=None, dec=None, **kwargs):
 
         if ra is None or dec is None:
-            raise TotoroError('ra and dec must be specified')
+            raise exceptions.TotoroError('ra and dec must be specified')
 
-        newSet = Set(mock=True, silent=silent, ra=ra, dec=dec, **kwargs)
-
-        if not silent:
-            log.debug('Created mock set.'.format(newSet.pk))
+        newSet = Set(mock=True, ra=ra, dec=dec, **kwargs)
 
         return newSet
 
     def addMockExposure(self, **kwargs):
 
         if self.complete is True:
-            raise TotoroError('set is complete; not exposures can be added.')
+            raise exceptions.TotoroError(
+                'set is complete; not exposures can be added.')
 
         if 'ditherPosition' not in kwargs or kwargs['ditherPosition'] is None:
             kwargs['ditherPosition'] = self.getMissingDitherPositions()[0]
@@ -241,7 +245,7 @@ class Set(mangaDB.Set):
 
         return setDitherPositions
 
-    def getSN2Array(self, useMock=True, **kwargs):
+    def getSN2Array(self, **kwargs):
         """Returns an array with the cumulated SN2 of the valid exposures in
         the set. The return format is [b1SN2, b2SN2, r1SN2, r2SN2]."""
 
@@ -249,9 +253,7 @@ class Set(mangaDB.Set):
             return np.array([0.0, 0.0, 0.0, 0.0])
         else:
             return np.sum([exp.getSN2Array()
-                           for exp in self.totoroExposures
-                           if (not exp.isMock or (exp.isMock and useMock))],
-                          axis=0)
+                           for exp in self.totoroExposures], axis=0)
 
     def getSN2Range(self):
         """Returns the SN2 range in which new exposures may be taken."""
@@ -295,18 +297,23 @@ class Set(mangaDB.Set):
 
         return np.array([seeingRangeMin, seeingRangeMax])
 
-    def getQuality(self, silent=True, **kwargs):
-        """Returns the quality of the set."""
+    def getQuality(self, **kwargs):
+        """Alias for getStatus."""
 
-        if self._quality is not None:
-            return self._quality
+        return self.getStatus(**kwargs)
 
-        quality = logic.checkSet(self, silent=silent, **kwargs)
+    def getStatus(self, **kwargs):
+        """Returns the status of the set."""
+
+        if self._status is not None:
+            return self._status
+
+        status = checkSet(self, **kwargs)
 
         # if self.isMock and quality[0] != 'Incomplete':
         #     self._quality = quality
 
-        return quality
+        return status
 
     def getValidExposures(self, **kwargs):
 
@@ -382,3 +389,251 @@ class Set(mangaDB.Set):
             return True
         else:
             return False
+
+
+def flagSet(set, statusLabel, errorCode, flag=True, message=None,
+            silent=False, **kwargs):
+    """Helper function to log and flag sets."""
+
+    if message is not None and not silent:
+        log.debug(message)
+
+    if flag:
+        # Avoids calling setSetStatus if there is nothing to flag
+        if (statusLabel in ['Incomplete', 'Unplugged', 'Bad'] and
+                set.set_status_pk is None):
+            pass
+        else:
+            setSetStatus(set, statusLabel)
+
+    return (statusLabel, errorCode)
+
+
+def setSetStatus(set, status):
+    """ Sets the status of an exposure.
+
+    Parameters
+    ----------
+    set : `Totoro.dbclasses.Set` or `mangaDB.Set` instance, or integer.
+        The set that will receive the new status. Either a
+        Totoro.dbclasses.Set, mangaDB.Set, or the pk of the mangaDB.Set.
+    status : string
+        The status to be set. It must be one of the values in
+        mangaDB.SetStatus.label.
+
+    Returns
+    -------
+    result : bool
+        Returns True if the status has been set correctly.
+
+    """
+
+    # from sdss.internal.manga.Totoro.dbclasses import Set
+
+    if isinstance(set, (Set, db.mangaDB.Set)):
+        pk = set.pk
+    else:
+        pk = set
+
+    with session.begin(subtransactions=True):
+        try:
+            queryStatus = session.query(db.mangaDB.SetStatus).filter(
+                db.mangaDB.SetStatus.label == status).one()
+            statusPK = queryStatus.pk
+        except:
+            # If the status is not found, we remove the status.
+            statusPK = None
+
+        ss = session.query(db.mangaDB.Set).get(pk)
+
+        if ss.set_status_pk is None and statusPK is None:
+            pass
+        elif ss.set_status_pk is not None and statusPK is None:
+            warnings.warn('changing set pk={0} from status {1} to None'
+                          .format(pk, ss.status.label),
+                          exceptions.TotoroUserWarning)
+        else:
+            ss.set_status_pk = statusPK
+
+    log.debug('mangaDB.Set.pk={0} set to {1}'.format(pk, status))
+
+    return True
+
+
+def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
+             **kwargs):
+    """Checks if a set meets MaNGA's quality criteria.
+
+    Checks the input Totoro.dbclasses.Set objects to confirm that it meets all
+    the requirements set by MaNGA. If the set passes all checks, it is flagged
+    in the DB with status `Good` or `Excellent` depending on its average
+    seeing.
+
+    Parameters
+    ----------
+    set : `Totoro.dbclasses.Set`
+        The Totoro set object to be checked and flagged.
+
+    flag : bool
+        If True and `set` is not mock, the status of `set` will flagged `Good`
+        or `Excellent` in the DB depending on the result of the check.
+
+    flagExposures : bool or None
+        The `flag` parameter to pass to `checkExposure` for each exposure in
+        `set`. If None, the same value as in `flag` will be used.
+
+    force : bool
+        If True, the set will be reflagged even if a status has been previously
+        assigned.
+
+    Returns
+    -------
+    result : tuple
+        A tuple in which the first element is the set status. This value can be
+        one of `Incomplete`, `Good`, `Excellent`, `Bad`, `Unplugged`.
+        The second element is the code error that caused the set to fail,
+        if any.
+
+    Error codes
+    -----------
+
+    0: no error.
+    1: one or more exposures are invalid.
+    2: HA range is greater than maximum allowed.
+    3: seeing values out of range
+    4: SN2 values out of range
+    5: too many exposures
+    6: multiple exposures with the same dither position
+    7: average seeing > maximum
+    8: exposures span more than one plugging.
+    9: set is incomplete but the plugging is no longer current.
+    10: from set status.
+
+    """
+
+    assert isinstance(set, Set), ('input set is not an instance of '
+                                  'Totoro.dbclasses.Set')
+
+    pk = set.pk
+
+    if set.isMock or any([exp.isMock for exp in set.totoroExposures]):
+        flag = False
+
+    if flagExposures is None:
+        flagExposures = flag
+
+    # If the exposure is not mock and it is already flagged, we use that value
+    # unless force=True.
+    # if set.isMock is False and set.set_status_pk is not None and not force:
+    #     return (set.status.label, 10)
+
+    # Empty set
+    if len(set.totoroExposures) == 0:
+        return ('Incomplete', 0)
+
+    # Check if exposures are valid
+    for exposure in set.totoroExposures:
+        exposureCheck = exposure.checkExposure(flag=flagExposures)
+        if exposureCheck[0] is False:
+            message = ('set pk={0}: one or more exposures are invalid.'
+                       .format(pk))
+            return flagSet(set, 'Bad', 1, flag=flag, message=message,
+                           silent=silent)
+
+    # Checks range of observations
+    HA = set.getHA()
+    HALength = (HA[1] - HA[0]) % 360.
+    maxHARange = config['set']['maxHARange']
+    if HALength > maxHARange:
+        message = ('set pk={0}: HA range is larger than {1} deg.'
+                   .format(pk, maxHARange))
+        return flagSet(set, 'Bad', 2, flag=flag, message=message,
+                       silent=silent)
+
+    # Checks seeing
+    seeing = np.array([exp.seeing for exp in set.totoroExposures])
+    maxSeeingRange = config['set']['maxSeeingRange']
+    if np.max(seeing) - np.min(seeing) > maxSeeingRange:
+        message = ('set pk={0} fails the seeing uniformity criteria'
+                   .format(pk))
+        return flagSet(set, 'Bad', 3, flag=flag, message=message,
+                       silent=silent)
+
+    # Checks SN2 uniformity
+    sn2 = np.array([exp.getSN2Array() for exp in set.totoroExposures])
+    maxSN2Factor = config['set']['maxSN2Factor']
+    for ii in range(len(sn2)):
+        for jj in range(ii, len(sn2)):
+            sn2Ratio = sn2[ii] / sn2[jj]
+            sn2Ratio[np.isnan(sn2Ratio)] = config['set']['maxSN2Factor']
+            if (np.any(sn2Ratio > maxSN2Factor) or
+                    np.any(sn2Ratio < (1. / maxSN2Factor))):
+                message = ('set pk={0} fails the SN2 uniformity criteria'
+                           .format(pk))
+                return flagSet(set, 'Bad', 4, flag=flag, message=message,
+                               silent=silent)
+
+    # Checks dithers
+    ditherPositions = config['set']['ditherPositions']
+    setDitherPositions = np.array(set.getDitherPositions())
+
+    if len(setDitherPositions) > len(ditherPositions):
+        message = ('set pk={0} has {1} exposures!'
+                   .format(pk, len(setDitherPositions)))
+        return flagSet(set, 'Bad', 5, flag=flag, message=message,
+                       silent=silent)
+
+    # Checks if exposure dithers are unique
+    if np.unique(setDitherPositions).size < setDitherPositions.size:
+        message = ('set pk={0} has multiple exposures with '
+                   'the same dither position'.format(pk))
+        return flagSet(set, 'Bad', 6, flag=flag, message=message,
+                       silent=silent)
+
+    # Checks if all exposures belong to the same plugging. For mock exposures,
+    # we use the active plugging.
+    expPluggings = np.array([exp.getPlugging()
+                             if exp.getPlugging() is not None else 0
+                             for exp in set.totoroExposures])
+
+    # Now compares the plugging pks.
+    if len(expPluggings) > 0 and not np.all(expPluggings == expPluggings[0]):
+        message = ('set pk={0} has exposures from different pluggings.'
+                   .format(pk))
+        return flagSet(set, 'Bad', 8, flag=flag, message=message,
+                       silent=silent)
+
+    # Checks if set is incomplete.
+    if len(setDitherPositions) < len(ditherPositions):
+
+        # Gets the current plugging
+        currentPlugging = None
+        for exp in set.totoroExposures:
+            if exp.getCurrentPlugging() is not None:
+                currentPlugging = exp.getCurrentPlugging()
+                break
+
+        # If the plugging of the exposures in the set is not the current
+        # one, this set is unplugged
+        testPlugging = set.totoroExposures[0].getPlugging()
+
+        if testPlugging != currentPlugging:
+            message = 'set pk={0} is from an inactive plugging.'.format(pk)
+            return flagSet(set, 'Unplugged', 9, flag=flag, message=message,
+                           silent=silent)
+
+        # Otherwise, the set is incomplete
+        return flagSet(set, 'Incomplete', 0, flag=False, silent=silent)
+
+    # Set is valid: assigns status
+    goodSeeingLimit = config['set']['goodSeeing']
+    # excellentSeeingLimit = config['set']['excellentSeeing']
+    if np.mean(seeing) > goodSeeingLimit:
+        message = ('set pk={0} has average seeing > {1:.1f}'
+                   .format(pk, goodSeeingLimit))
+        return flagSet(set, 'Bad', 7, flag=flag, message=message,
+                       silent=silent)
+    # elif np.mean(seeing) <= excellentSeeingLimit:
+    #     return flagHelper('Excellent', 0)
+    else:
+        return flagSet(set, 'Good', 0, flag=flag, silent=silent)

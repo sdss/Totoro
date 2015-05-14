@@ -14,16 +14,15 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-import numpy as np
 from sdss.internal.manga.Totoro import log
 from sdss.internal.manga.Totoro import config
 from sdss.internal.manga.Totoro import exceptions
-import warnings
 from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
 from sdss.manga.mlhalimit import mlhalimit as mlhalimitHours
 from collections import OrderedDict
-from sdss.utilities.Site import Site
 from itertools import combinations
+import numpy as np
+import warnings
 import os
 
 
@@ -67,7 +66,7 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
     forceCheckCompletion is False and the plugging is marked as complete,
     no plateCompletion check is performed (this saves some time)."""
 
-    from sdss.internal.manga.Totoro.dbclasses import Plate
+    from sdss.internal.manga.Totoro.dbclasses.plate import Plate
 
     if not isinstance(plate, Plate):
         if format.lower() not in ['pk', 'plate_id']:

@@ -20,6 +20,13 @@ dbConnectionLocal: &dbConnectionLocal
     port: 5432
     database: apodb
 
+dbConnectionTest: &dbConnectionTest
+    user: sdssdb_admin
+    password: 4-photometry
+    host: localhost
+    port: 5432
+    database: apodb_test
+
 dbConnectionDev: &dbConnectionDev
     user: sdssdb_admin
     password: 4-photometry
@@ -60,12 +67,12 @@ dustMap:
 
 planner:
     efficiency: 0.8
-    platesIgnore: +data/platesIgnore.dat
-    maxAltitude: 75
+    maxAltitude: 80
     noPlugPriority: 1
     forcePlugPriority: 10
     goodWeatherFraction: 0.45
     seed: 12345
+    simulationFactor: 1.0
 
 plugger:
     efficiency: 0.8
@@ -73,12 +80,14 @@ plugger:
     forcePlugPriority: 10
     maxAltitude: 80
     onlyVisiblePlates: true
+    simulationFactor: 1.15
 
 simulation:
-    blueSN2: 3.9
+    blueSN2: 3.32
     alphaBlue: 1.25
     redSN2: 6.64
     alphaRed: 0.65
+    factor: 1.0
 
 SN2thresholds:
     plateRed: 36
@@ -93,6 +102,7 @@ exposure:
     transparency: 0.2
     checkTwilight: False
     maxSunAltitude: -15
+    exposureBuffer: 1.25
     validDitherPositions: ['N', 'S', 'E']
 
 set:
@@ -105,12 +115,13 @@ set:
     ditherPositions: ['N', 'S', 'E']
 
 setArrangement:
-    permutationLimit: 600000
+    permutationLimitPlate: 600000
+    permutationLimitIncomplete: 14400
     forceRearrangementMinExposures: 3
 
 mangaCarts: [1, 2, 3, 4, 5, 6]
-apogeeCarts: [7, 8, 9]
 offlineCarts: []
+apogeeCarts: [7, 8, 9]
 
 defaultPriority: 5
 plateVisibilityMaxHalfWindowHours: 3

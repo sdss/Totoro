@@ -25,6 +25,8 @@ import warnings
 import numpy as np
 
 
+__all__ = ['Plugger']
+
 db = TotoroDBConnection()
 session = db.session
 
