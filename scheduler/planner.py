@@ -262,7 +262,7 @@ class Planner(object):
                          .format(nFields, remainingTime))
                 nAssigned += nFields
 
-            nCarts = len(config['carts'])
+            nCarts = len(config['mangaCarts']) - len(config['offlineCarts'])
             if nAssigned > nCarts:
                 warnings.warn('more plates ({0}) scheduled than carts '
                               'available ({1})'.format(nAssigned, nCarts),

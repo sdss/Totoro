@@ -590,9 +590,8 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
         return flagSet(set, 'Bad', 6, flag=flag, message=message,
                        silent=silent)
 
-    # Checks if all exposures belong to the same plugging. For mock exposures,
-    # we use the active plugging.
-    expPluggings = np.array([exp.getPlugging()
+    # Checks if all exposures belong to the same plugging.
+    expPluggings = np.array([exp.getPlugging().pk
                              if exp.getPlugging() is not None else 0
                              for exp in set.totoroExposures])
 
@@ -607,17 +606,15 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
     if len(setDitherPositions) < len(ditherPositions):
 
         # Gets the current plugging
-        currentPlugging = None
+        activePlugging = None
         for exp in set.totoroExposures:
-            if exp.getCurrentPlugging() is not None:
-                currentPlugging = exp.getCurrentPlugging()
+            if exp.getActivePlugging() is not None:
+                activePlugging = exp.getActivePlugging().pk
                 break
 
-        # If the plugging of the exposures in the set is not the current
-        # one, this set is unplugged
-        testPlugging = set.totoroExposures[0].getPlugging()
+        allMock = all([exp.isMock for exp in set.totoroExposures])
 
-        if testPlugging != currentPlugging:
+        if not allMock and expPluggings[0] != activePlugging:
             message = 'set pk={0} is from an inactive plugging.'.format(pk)
             return flagSet(set, 'Unplugged', 9, flag=flag, message=message,
                            silent=silent)

@@ -71,7 +71,8 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
                 plateDB.Survey.label == 'MaNGA',
                 plateDB.SurveyMode.label == 'MaNGA dither'
             ).join(plateDB.PlateLocation).filter(
-                plateDB.PlateLocation.label == 'APO')
+                plateDB.PlateLocation.label == 'APO').join(
+                    plateDB.PlatePointing, plateDB.Pointing)
 
         _checkNumberPlatesAtAPO(plates)
 
@@ -84,13 +85,11 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
 
         if raRange is not None:
             if raRange.size == 2:
-                plates = plates.join(plateDB.PlatePointing,
-                                     plateDB.Pointing).filter(
+                plates = plates.filter(
                     plateDB.Pointing.center_ra >= raRange[0],
                     plateDB.Pointing.center_ra <= raRange[1])
             elif raRange.size == 4:
-                plates = plates.join(plateDB.PlatePointing,
-                                     plateDB.Pointing).filter(
+                plates = plates.filter(
                     or_(and_(plateDB.Pointing.center_ra >= raRange[0][0],
                              plateDB.Pointing.center_ra <= raRange[0][1]),
                         and_(plateDB.Pointing.center_ra >= raRange[1][0],
@@ -100,7 +99,7 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
                               TotoroExpections.TotoroUserWarning)
 
         if rejectLowPriority:
-            plates = plates.join(plateDB.PlatePointing).filter(
+            plates = plates.filter(
                 plateDB.PlatePointing.priority > minimumPriority)
 
         plates = plates.order_by(plateDB.Plate.plate_id).all()
@@ -667,7 +666,7 @@ class Plate(plateDB.Plate):
         return True if secIntersectionLength >= minLength else False
 
     def addMockExposure(self, exposure=None, startTime=None, set=None,
-                        expTime=None, **kwargs):
+                        expTime=None, silent=False, **kwargs):
         """Creates a mock expusure in the best possible way."""
 
         ra, dec = self.coords
@@ -691,7 +690,8 @@ class Plate(plateDB.Plate):
             newSet = True
 
         if exposure.isValid()[0] is False:
-            log.debug('mock exposure is invalid. Removing it.')
+            if not silent:
+                log.debug('mock exposure is invalid. Removing it.')
             return False
 
         if newSet:
@@ -732,6 +732,15 @@ class Plate(plateDB.Plate):
         order = np.argsort(startTime)
 
         return exposures[order[-1]]
+
+    def getLastSet(self):
+        """Returns the set containing the last exposure."""
+
+        lastExposure = self.getLastExposure()
+
+        for ss in self.sets:
+            if lastExposure in ss.totoroExposures:
+                return ss
 
     @property
     def priority(self):

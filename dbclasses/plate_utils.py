@@ -234,7 +234,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
         raise exceptions.TotoroError('scope={0} is invalid'.format(scope))
 
     # Rejects invalid exposures:
-    exposures = [exp for exp in exposures if exp.valid]
+    exposures = [exp for exp in exposures if exp.isPlateDBValid()]
 
     # Does some logging.
     logMode('plate_id={0}: rearranging sets, mode=\'{1}\', '
@@ -250,8 +250,10 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
         # and triggers a plate update.
         with session.begin(subtransactions=True):
             for exposure in exposures:
-                session.delete(exposure.mangadbExposure[0].set)
+                if exposure.mangadbExposure[0].set_pk is not None:
+                    session.delete(exposure.mangadbExposure[0].set)
                 exposure.mangadbExposure[0].set_pk = None
+                exposure.mangadbExposure[0].exposure_status_pk = None
 
         plate.sets = []
         updatePlate(plate, rearrangeIncomplete=False)

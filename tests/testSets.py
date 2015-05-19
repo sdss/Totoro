@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-unitTestSets.py
+testSets.py
 
 Created by José Sánchez-Gallego on 27 Aug 2014.
 Licensed under a 3-clause BSD license.
@@ -16,9 +16,10 @@ from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro.dbclasses import Plate, Exposure, Set
 import numpy as np
+import unittest
 
 
-class testSets():
+class testSets(unittest.TestCase):
 
     def testSetLoad(self):
         """Tests set loading."""
@@ -26,7 +27,7 @@ class testSets():
         plateID = 7815
         plate = Plate(plateID, format='plate_id')
 
-        assert(len(plate.sets) > 0)
+        self.assertGreater(len(plate.sets), 0)
 
     def testSetCoordinates(self):
         """Tests set coordinates."""
@@ -34,8 +35,8 @@ class testSets():
         plateID = 7815
         plate = Plate(plateID, format='plate_id')
 
-        np.testing.assert_almost_equal(plate.ra, plate.sets[0].ra)
-        np.testing.assert_almost_equal(plate.dec, plate.sets[0].dec)
+        self.assertAlmostEqual(plate.ra, plate.sets[0].ra)
+        self.assertAlmostEqual(plate.dec, plate.sets[0].dec)
 
     def testUnplugged(self):
         """Tests behaviour of unplugged sets and mock sets."""
@@ -51,9 +52,9 @@ class testSets():
                 nSet = nn
                 break
 
-        assert nSet is not None, 'could not find set to perform test'
+        self.assertNotEqual(nSet, None)
 
-        assert plate8484.sets[nSet].getStatus()[0] == 'Unplugged'
+        self.assertEqual(plate8484.sets[nSet].getStatus()[0], 'Unplugged')
 
         # Tests creating a new mock exposure and adding it to an unplugged set.
         # The status of the new set should be bad because the pluggings are
@@ -64,7 +65,7 @@ class testSets():
         exposures = plate8484.sets[nSet].totoroExposures + [newExp]
         newSet = Set.fromExposures(exposures)
 
-        assert newSet.getStatus()[0] == 'Bad'
+        self.assertEqual(newSet.getStatus()[0], 'Bad')
 
         # Repeats the same test but now the mock exposure is created with the
         # plugging of one of the exposures in the unplugged set.
@@ -82,4 +83,32 @@ class testSets():
         exposures = plate8484.sets[nSet].totoroExposures + [newExp2]
         newSet2 = Set.fromExposures(exposures)
 
-        assert newSet2.getStatus()[0] == 'Good'
+        self.assertEqual(newSet2.getStatus()[0], 'Good')
+
+        # Now let's use a plate with active pluggings to check the status
+        # of new mock exposures.
+
+        plate8486 = Plate(8486, format='plate_id')
+
+        self.assertEqual(len(plate8486.sets), 2)
+        for ss in plate8486.sets:
+            self.assertEqual(ss.getStatus()[0], 'Good')
+
+        plate8486.addMockExposure(startTime=2457137.9535648148)
+        self.assertEqual(len(plate8486.sets), 3)
+        self.assertEqual(plate8486.sets[2].getStatus()[0], 'Incomplete')
+
+        plate8486.addMockExposure(startTime=2457137.9535648148,
+                                  plugging=plate8486.getActivePlugging())
+        self.assertEqual(len(plate8486.sets), 4)
+        self.assertEqual(plate8486.sets[3].getStatus()[0], 'Incomplete')
+
+        plate8486.addMockExposure(startTime=2457137.9535648148,
+                                  plugging=plate8486.getActivePlugging())
+        self.assertEqual(len(plate8486.sets), 4)
+        self.assertEqual(plate8486.sets[3].getStatus()[0], 'Incomplete')
+        self.assertEqual(len(plate8486.sets[3].totoroExposures), 2)
+
+
+if __name__ == '__main__':
+    unittest.main()

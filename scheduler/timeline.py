@@ -14,7 +14,6 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from astropy.time import Time
 from sdss.internal.manga.Totoro import log, config
 from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro.scheduler import scheduler_utils as logic
@@ -55,50 +54,46 @@ class Timeline(object):
         self.endDate = endDate
         self.plates = []
 
-        self.unallocatedPlateWindow = np.array([self.startDate, self.endDate])
-        self.unallocatedExps = self.unallocatedPlateWindow.copy()
+        self.unallocatedRange = np.array([self.startDate, self.endDate])
 
-    def allocateJDs(self, plates=None, **kwargs):
+    def allocateJDs(self, exposures, **kwargs):
         """Allocates observed JDs for a list of plates."""
 
-        plates = self.plates if plates is None else plates
+        for exp in exposures:
+            expJD = exp.getJD()
+            self.unallocatedRange = utils.removeInterval(
+                self.unallocatedRange, expJD, wrapAt=None)
 
-        nominalMJD = Time((self.startDate+self.endDate)/2., format='jd',
-                          scale='tai').mjd
+        return
 
-        nExp = 0  # number of new exposures
+    def calculatePlateCompletion(self, plate, rejectExposures=[],
+                                 useMock=True):
+        """Calculates plate completion after rejecting exposures."""
 
-        for plate in plates:
-            for exp in plate.getTotoroExposures(onlySets=True):
-                if not exp.isValid:
-                    continue
-                if not exp.isMock:
-                    continue
-                jdRange = exp.getJD()
+        from sdss.internal.manga.Totoro.dbclasses import Plate, Set
 
-                if (jdRange[1] >= self.startDate and
-                        jdRange[0] <= self.endDate):
-                    self.unallocatedExps = utils.removeInterval(
-                        self.unallocatedExps, jdRange, wrapAt=None)
-                    nExp += 1
+        if len(rejectExposures) == 0:
+            return plate.getPlateCompletion(useMock=useMock)
 
-            dateRangePlate = plate.getUTRange(mjd=nominalMJD,
-                                              returnType='date')
-            jdRangePlate = [dateRangePlate[0].jd, dateRangePlate[1].jd]
+        mockPlate = Plate.createMockPlate(ra=plate.ra, dec=plate.dec)
+        for ss in plate.sets:
+            newSetExps = []
+            for exp in ss.totoroExposures:
+                if exp not in rejectExposures:
+                    newSetExps.append(exp)
+            if len(newSetExps) > 0:
+                mockPlate.sets.append(Set.fromExposures(newSetExps))
 
-            self.unallocatedPlateWindow = utils.removeInterval(
-                self.unallocatedPlateWindow, jdRangePlate, wrapAt=None)
-
-            return nExp
+        return mockPlate.getPlateCompletion(useMock=useMock)
 
     @property
     def remainingTime(self):
         """Returns the amount of unallocated time, in hours."""
-        unallocatedExps = np.atleast_2d(self.unallocatedExps)
-        if unallocatedExps.size == 0:
+        unallocatedRange = np.atleast_2d(self.unallocatedRange)
+        if unallocatedRange.size == 0:
             return 0
         unallocatedTime = 0.0
-        for interval in unallocatedExps:
+        for interval in unallocatedRange:
             unallocatedTime += (interval[1]-interval[0])
         return unallocatedTime * 24.
 
@@ -113,23 +108,30 @@ class Timeline(object):
         prioritisePlugged = True if mode == 'plugger' else False
 
         log.debug('scheduling LST range {0} using {1} plates, mode={2}'
-                  .format(self.unallocatedExps.tolist(), len(plates), mode))
+                  .format(self.unallocatedRange.tolist(), len(plates), mode))
 
         if not allowComplete:
             plates = [plate for plate in plates if not plate.isComplete]
 
         while self.remainingTime > 0:
+            jdRange = self.unallocatedRange.copy()
+            if len(jdRange.shape) == 2:
+                jdRange = jdRange[0]
 
-            optimalPlate = logic.getOptimalPlate(
-                plates, self.unallocatedExps,
-                prioritisePlugged=prioritisePlugged, mode=mode, **kwargs)
+            optimalPlate, newExposures = logic.getOptimalPlate(
+                plates, jdRange, prioritisePlugged=prioritisePlugged,
+                mode=mode, **kwargs)
 
             if optimalPlate is None:
                 break
             else:
 
+                if optimalPlate in self.plates:
+                    # Removes old version of optimalPlate in self.plates.
+                    self.plates.remove(optimalPlate)
                 self.plates.append(optimalPlate)
-                nExp = self.allocateJDs(plates=[optimalPlate])
+
+                self.allocateJDs(newExposures)
 
                 # Defines some flags to be logged if plate is in Cosmic, being
                 # drilled or not on the mountain.
@@ -150,11 +152,19 @@ class Timeline(object):
                         flags = _color_text('** in Cosmic **', 'red')
 
                 # Calculates completion before and after the simulation.
-                completionPre = optimalPlate.getPlateCompletion(useMock=False)
-                completionPost = optimalPlate.getPlateCompletion(useMock=True)
+                completionPre = self.calculatePlateCompletion(
+                    optimalPlate, rejectExposures=newExposures, useMock=True)
+                completionPost = self.calculatePlateCompletion(
+                    optimalPlate, useMock=True)
+                nExps = len(newExposures)
 
                 # Gets number of orphaned exposures after the simulation
-                nOrphanedPost = len(optimalPlate.getOrphaned(useMock=True))
+                nOrphanedPost = 0
+                for ss in optimalPlate.sets:
+                    if ss.getStatus()[0] in ['Incomplete', 'Unplugged']:
+                        for exp in ss.totoroExposures:
+                            if exp.isMock:
+                                nOrphanedPost += 1
 
                 # Logs the result of the simulation. Format changed depending
                 # on whether this is plate or a field.
@@ -164,7 +174,7 @@ class Timeline(object):
                              '{3:.2f} -> {4:.2f} complete) {5}'
                              .format(optimalPlate.plate_id,
                                      optimalPlate.getMangaTileID(),
-                                     nExp, completionPre, completionPost,
+                                     nExps, completionPre, completionPost,
                                      flags))
 
                     if nOrphanedPost > 0 and mode == 'plugger':
@@ -178,7 +188,7 @@ class Timeline(object):
                     log.info('...... manga_tiledid={0} ({1} new exps, '
                              '{2:.2f} -> {3:.2f} complete) {4}'
                              .format(optimalPlate.getMangaTileID(),
-                                     nExp, completionPre, completionPost,
+                                     nExps, completionPre, completionPost,
                                      flags))
 
         if showUnobservedTimes:
@@ -187,5 +197,5 @@ class Timeline(object):
                 return True
             else:
                 log.info('... unobserved times: {0}'.format(
-                         str(self.unallocatedExps)))
+                         str(self.unallocatedRange)))
                 return False

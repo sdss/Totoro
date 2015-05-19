@@ -104,7 +104,7 @@ class Exposure(plateDB.Exposure):
     @classmethod
     def createMockExposure(cls, startTime=None, expTime=None,
                            ditherPosition=None, ra=None, dec=None,
-                           plugging=None, **kwargs):
+                           plugging=None, silent=False, **kwargs):
         """Creates a mock exposure instance."""
 
         if ra is None or dec is None:
@@ -131,8 +131,9 @@ class Exposure(plateDB.Exposure):
 
         newExposure.simulateObservedParamters(**kwargs)
 
-        log.debug('Created mock exposure with ra={0:.3f} and dec={0:.3f}'
-                  .format(newExposure.ra, newExposure.dec))
+        if not silent:
+            log.debug('Created mock exposure with ra={0:.3f} and dec={0:.3f}'
+                      .format(newExposure.ra, newExposure.dec))
 
         return newExposure
 
@@ -359,7 +360,7 @@ class Exposure(plateDB.Exposure):
             self._plugging = self.observation.plugging
             return self._plugging
 
-    def getCurrentPlugging(self):
+    def getActivePlugging(self):
         """Gets the pk of the current plugging for a plate from one of its
         exposures."""
 
@@ -373,6 +374,13 @@ class Exposure(plateDB.Exposure):
                 return plugging
 
         return None
+
+    def isPlateDBValid(self):
+        """Returns True if the exposure is Good or Override Good in plateDB."""
+
+        if self.status.label in ['Good', 'Override Good']:
+            return True
+        return False
 
 
 def flagExposure(exposure, status, errorCode, flag=True, message=None):
