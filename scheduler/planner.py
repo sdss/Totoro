@@ -51,12 +51,12 @@ class Planner(object):
 
         assert self.startDate < self.endDate, 'startDate > endDate'
 
-        schedule = observingPlan.getObservingBlocks(self.startDate,
-                                                    self.endDate)
+        self.blocks = observingPlan.getObservingBlocks(self.startDate,
+                                                       self.endDate)
 
-        assert len(schedule) >= 1, 'no observing blocks selected'
+        assert len(self.blocks) >= 1, 'no observing blocks selected'
 
-        self.timelines = Timelines(schedule, **kwargs)
+        self.timelines = Timelines(self.blocks, **kwargs)
         log.debug('created PlannerScheduler with {0} timelines'
                   .format(len(self.timelines)))
 
@@ -155,50 +155,69 @@ class Planner(object):
             if validPlate:
                 validPlates.append(plate)
 
+        # Now we open the dateAtAPO file and add the date to the corresponging
+        # plates. This is useful when, even if the plate is at APO, you want to
+        # delay its scheduling until a certain time.
+        if config['dateAtAPO'].lower() != 'none':
+
+            dateAtAPO_Path = readPath(config['dateAtAPO'])
+
+            if not os.path.exists(dateAtAPO_Path):
+                warnings.warn('dateAtAPO file does not exists.',
+                              exceptions.TotoroPlannerWarning)
+
+            else:
+                dateAtAPO_Table = table.Table.read(
+                    dateAtAPO_Path, format='ascii.commented_header',
+                    delimiter=',')
+
+                for plate_id, dateAtAPO in dateAtAPO_Table:
+                    for plate in validPlates:
+                        if plate.plate_id == plate_id:
+                            plate.dateAtAPO = dateAtAPO
+
         # Adds tiles being drilled from file
-        if ('tilesBeingDrilled' in config['fields'] and
-                config['fields']['tilesBeingDrilled'].lower() != 'none' and
+        if (config['fields']['tilesBeingDrilled'].lower() != 'none' and
                 usePlatesBeingDrilled):
 
             tilesPath = readPath(config['fields']['tilesBeingDrilled'])
 
             if not os.path.exists(tilesPath):
-
                 warnings.warn(
                     'tilesBeingDrilled path does not exists. Skipping '
                     'additional tiles.', exceptions.TotoroPlannerWarning)
 
             else:
 
-                tilesBeingDrilledRaw = open(tilesPath, 'r') \
-                    .read().strip().splitlines()
+                tilesBeingDrilled = table.Table.read(
+                    tilesPath, format='ascii.commented_header', delimiter=',')
 
-                if (len(tilesBeingDrilledRaw) > 0 and
-                        tilesBeingDrilledRaw[0] != ''):
-                    tilesBeingDrilled = map(int, tilesBeingDrilledRaw)
-                else:
-                    tilesBeingDrilled = []
+                if len(tilesBeingDrilled) > 0:
 
-                tiles = getTilingCatalogue()
+                    tiles = getTilingCatalogue()
 
-                for tile in tilesBeingDrilled:
+                    for manga_tileid, dateAtAPO in tilesBeingDrilled:
 
-                    if tile not in tiles['ID']:
-                        warnings.warn('tile being drilled not identified, '
-                                      'manga_tileid={0}'.format(tile),
-                                      exceptions.TotoroPlannerWarning)
-                        continue
+                        if manga_tileid not in tiles['ID']:
+                            warnings.warn('manga_tileid={0}: tile being '
+                                          'drilled not in tiling '
+                                          'catalogue.'.format(manga_tileid),
+                                          exceptions.TotoroPlannerWarning)
+                            continue
 
-                    tileRow = tiles[tiles['ID'] == tile]
+                        tileRow = tiles[tiles['ID'] == manga_tileid]
 
-                    mockPlate = Plate.createMockPlate(
-                        ra=tileRow['RA'][0], dec=tileRow['DEC'][0],
-                        manga_tileid=tile, silent=True)
+                        mockPlate = Plate.createMockPlate(
+                            ra=tileRow['RA'][0], dec=tileRow['DEC'][0],
+                            manga_tileid=manga_tileid, silent=True)
 
-                    mockPlate.manga_tileid = tile
-                    mockPlate.drilled = False
+                        mockPlate.manga_tileid = manga_tileid
+                        mockPlate.drilled = False
 
-                    validPlates.append(mockPlate)
+                        if dateAtAPO is not np.ma.masked:
+                            mockPlate.dateAtAPO = dateAtAPO
+
+                        validPlates.append(mockPlate)
 
         return validPlates
 
@@ -245,7 +264,13 @@ class Planner(object):
 
             timeline.observed = True
 
-            timeline.schedule(self.plates, mode='planner', **kwargs)
+            # The plates to schedule here are all the drilled plates plus the
+            # fields we have already started to observe.
+            platesToSchedule = self.plates
+            platesToSchedule += [field for field in self.fields
+                                 if len(field.getTotoroExposures()) > 0]
+
+            timeline.schedule(platesToSchedule, mode='planner', **kwargs)
 
             remainingTime = timeline.remainingTime
             log.info('... plates observed: {0} (Unused time {1:.2f}h)'
@@ -254,12 +279,21 @@ class Planner(object):
             nAssigned += len(timeline.plates)
 
             if remainingTime > expTimeEff / 2. / 3600. and useFields:
+                # Now we use the fields that we have not yet observed
+
                 log.info(_color_text('now scheduling fields', 'yellow'))
+
+                fieldsToSchedule = [field for field in self.fields
+                                    if len(field.getTotoroExposures()) == 0]
+
                 timeline.schedule(self.fields, mode='planner', **kwargs)
+
                 nFields = len(timeline.plates) - nAssigned
                 remainingTime = timeline.remainingTime
+
                 log.info('... fields observed: {0} (unused time {1:.2f}h)'
                          .format(nFields, remainingTime))
+
                 nAssigned += nFields
 
             nCarts = len(config['mangaCarts']) - len(config['offlineCarts'])

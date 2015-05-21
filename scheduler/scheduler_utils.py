@@ -101,6 +101,18 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
     if len(plates) == 0:
         return None
 
+    # Tries to select only plates at APO
+    platesAtAPO = [plate for plate in plates if plate.getLocation() == 'APO']
+    if len(platesAtAPO) > 0:
+        plates = platesAtAPO
+
+    # Now tries to select only plates that have been marked.
+    markedPlates = [plate for plate in plates
+                    if 'Accepted' in [status.label
+                                      for status in plate.statuses]]
+    if len(markedPlates) > 0:
+        plates = markedPlates
+
     # We record the real completion before and after. We will normalise the
     # other completions based on our scheduling logic.
     for plate in plates:
@@ -218,6 +230,7 @@ def simulatePlates(plates, jdRange, mode, efficiency=None, SN2Factor=None,
                    maxAltitude=None, **kwargs):
     """Simulates exposures for a list of plates within a range of JDs."""
 
+    mode = mode.lower()
     efficiency = efficiency if efficiency else config[mode]['efficiency']
     SN2Factor = SN2Factor if SN2Factor else config[mode]['simulationFactor']
     maxAltitude = maxAltitude if maxAltitude else config[mode]['maxAltitude']
@@ -250,7 +263,8 @@ def simulatePlates(plates, jdRange, mode, efficiency=None, SN2Factor=None,
             lstMean = site.localSiderealTime(jd+expTimeEff/2./86400.)
 
             if (not utils.isPointInInterval(lst, plateLST, wrapAt=24)):
-                pass
+                if mode == 'planner':
+                    break
             elif plate.getAltitude(lstMean) > maxAltitude:
                 break
             else:
@@ -264,6 +278,8 @@ def simulatePlates(plates, jdRange, mode, efficiency=None, SN2Factor=None,
                 if result is not False:
                     result._tmp = True
                     success = True
+                else:
+                    break
 
             jd += expTimeEff / 86400.
 
@@ -309,7 +325,6 @@ def cleanupPlates(plates, optimalPlate, jdRange):
 
     # We start by removing everything from non-optimal plates
     for plate in plates:
-
         if plate is optimalPlate:
             continue
         for ss in plate.sets:
@@ -359,7 +374,7 @@ def cleanupPlates(plates, optimalPlate, jdRange):
 
             # If the time is > 1 hour, it might be that we can do something
             # more useful with that time, so we remove the exposures.
-            if timeLeftAfterRemoval * 24. > 1:
+            if timeLeftAfterRemoval * 24. > 0.75:
                 for exp in exposuresToRemove:
                     lastSet.totoroExposures.remove(exp)
 
