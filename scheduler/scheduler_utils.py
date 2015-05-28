@@ -24,6 +24,7 @@ from numbers import Number
 
 
 expTime = config['exposure']['exposureTime']
+minSchedulingTime = config['plugger']['minSchedulingTimeHours']
 
 
 def getOptimalPlate(plates, jdRange, prioritisePlugged=True,
@@ -72,6 +73,7 @@ def getOptimalPlate(plates, jdRange, prioritisePlugged=True,
             simulatePlates(pluggedPlates, jdRange, mode, **kwargs)
             optimalPlate = selectPlate(pluggedPlates, jdRange, scope='plugged',
                                        normalise=True)
+
             if optimalPlate:
                 newExps = cleanupPlates(observablePlates, optimalPlate,
                                         jdRange)
@@ -100,6 +102,18 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
 
     if len(plates) == 0:
         return None
+
+    # If we are scheduling only plugged plates, we rather plug a new plate
+    # unless we can observe a plugged plate at least for a whole set.
+
+    availableTime = (jdRange[1] - jdRange[0]) * 24.
+    completionIncrease = np.array([plate._after['completion'] -
+                                   plate._before['completion']
+                                   for plate in plates])
+
+    if scope == 'plugged' and availableTime > minSchedulingTime:
+        if np.all(completionIncrease == 0):
+            return None
 
     # Tries to select only plates at APO
     platesAtAPO = [plate for plate in plates if plate.getLocation() == 'APO']
@@ -181,7 +195,8 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
         return completePlates[np.argmin(nNewExposures)]
 
     # We add the priority into the mix
-    _completionFactor(plates, [plate.priority for plate in plates])
+    platePriorities = np.array([plate.priority for plate in plates])
+    _completionFactor(plates, 1 + 0.25 * platePriorities)
 
     # If no complete plates exist, selects the ones that have the largest
     # increase in completion
@@ -250,11 +265,13 @@ def simulatePlates(plates, jdRange, mode, efficiency=None, SN2Factor=None,
             # If MaNGA is observing at the beginning of the night the cart is
             # already loaded, so we can assume that the efficiency of the first
             # exposure is 100%.
-            row = observingPlan[observingPlan['JD'] == int(jd)][0]
-            if row['Position'] == 1 and jd == row['JD0']:
-                expTimeEff = expTime
-            else:
-                expTimeEff = expTime / efficiency
+            row = observingPlan[observingPlan['JD'] == int(jd)]
+            if len(row) > 0:
+                row = row[0]
+                if row['Position'] == 1 and jd == row['JD0']:
+                    expTimeEff = expTime
+                else:
+                    expTimeEff = expTime / efficiency
 
             if plate.isComplete:
                 break
@@ -374,7 +391,7 @@ def cleanupPlates(plates, optimalPlate, jdRange):
 
             # If the time is > 1 hour, it might be that we can do something
             # more useful with that time, so we remove the exposures.
-            if timeLeftAfterRemoval * 24. > 0.75:
+            if timeLeftAfterRemoval * 24. > minSchedulingTime:
                 for exp in exposuresToRemove:
                     lastSet.totoroExposures.remove(exp)
 

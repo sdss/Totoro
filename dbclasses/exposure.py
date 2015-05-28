@@ -608,10 +608,15 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     blue = exposureSN2[0:2]
     red = exposureSN2[2:]
 
-    # If one of the arms has no SN2 value, returns False and does not flag
-    # the exposure
+    # If the exposure is partially reduced
     if not all(exposureSN2):
-        return (False, 6)
+        # If at least one camera in each spectrograph is reduced, does not flag
+        # the exposure but returs True
+        if np.any(blue) and np.any(red):
+            return (True, 6)
+        else:
+            # Otherwise, returns False
+            return (False, 6)
 
     # Checks SN2
     minSN2red = config['SN2thresholds']['exposureRed']
