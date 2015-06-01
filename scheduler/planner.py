@@ -274,9 +274,9 @@ class Planner(object):
 
             remainingTime = timeline.remainingTime
             log.info('... plates observed: {0} (Unused time {1:.2f}h)'
-                     .format(len(timeline.plates), remainingTime))
+                     .format(len(timeline.scheduled), remainingTime))
 
-            nAssigned += len(timeline.plates)
+            nAssigned += len(timeline.scheduled)
 
             if remainingTime > expTimeEff / 2. / 3600. and useFields:
                 # Now we use the fields that we have not yet observed
@@ -286,9 +286,10 @@ class Planner(object):
                 fieldsToSchedule = [field for field in self.fields
                                     if len(field.getTotoroExposures()) == 0]
 
-                timeline.schedule(self.fields, mode='planner', **kwargs)
+                timeline.schedule(fieldsToSchedule,
+                                  mode='planner', **kwargs)
 
-                nFields = len(timeline.plates) - nAssigned
+                nFields = len(timeline.scheduled) - nAssigned
                 remainingTime = timeline.remainingTime
 
                 log.info('... fields observed: {0} (unused time {1:.2f}h)'

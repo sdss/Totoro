@@ -209,7 +209,7 @@ class Plugger(object):
 
         self._scheduleForced(**kwargs)
 
-        if (len(self.timeline.plates) >= len(self.carts) or
+        if (len(self.timeline.scheduled) >= len(self.carts) or
                 self.timeline.remainingTime <= 0):
             pass
         else:
@@ -220,9 +220,9 @@ class Plugger(object):
         # We'll use this later when we prioritise carts.
         self._nNewExposures = dict(
             [(plate.plate_id, len(plate.getMockExposures()))
-             for plate in self.timeline.plates])
+             for plate in self.timeline.scheduled])
 
-        self.allocateCarts(self.timeline.plates)
+        self.allocateCarts(self.timeline.scheduled)
         self._cleanUp()  # Removes cart without MaNGA plates
 
         remainingTime = self.timeline.remainingTime
@@ -361,8 +361,8 @@ class Plugger(object):
         forcePlugPlates = [Plate(plate) for plate in forcePlugPlates]
 
         # Manually adds all the forced plates to the timeline.
-        self.timeline.plates += [plate for plate in forcePlugPlates
-                                 if plate not in self.timeline.plates]
+        self.timeline.scheduled += [plate for plate in forcePlugPlates
+                                    if plate not in self.timeline.scheduled]
 
     def _logCartAllocation(self, cartNumber, plate, messages=''):
         """Convenience function to log the cart allocation."""
