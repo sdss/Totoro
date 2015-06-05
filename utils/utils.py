@@ -200,7 +200,7 @@ def getAPOcomplete(plates, format='plate_id',
                               apoCompleteSN2[1]), exceptions.TotoroUserWarning)
 
     if createFile:
-        createAPOcompleteFile(APOcomplete)
+        createAPOcompleteFile(APOcomplete, **kwargs)
 
     return APOcomplete
 
