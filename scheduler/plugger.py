@@ -181,7 +181,7 @@ class Plugger(object):
                 cart = plate.getActiveCartNumber()
                 self.carts[cart] = plate
 
-        self.addCartOrder()
+        self.addCartOrder(metric='completion')
 
     def _initFromDates(self, jd0, jd1, **kwargs):
         """Initialites the Plugger instance from two JD dates."""
@@ -502,20 +502,29 @@ class Plugger(object):
         # Now we add a list with the priority order of the allocated carts.
         # This is useful if APOGEE needs to take over some of our carts.
         # In this way, they'll first use our carts with lower priority.
-        self.addCartOrder()
+        self.addCartOrder(metric='scheduled')
 
-    def addCartOrder(self):
+    def addCartOrder(self, metric='scheduled'):
         """Adds a key `cart_order` to self.carts with the priority of the carts
 
-        Priority (from low to high) goes as it follows:
+        If ``metric='scheduled'``, priority (from low to high) goes as it
+        follows:
 
-        - Completed plates. Note that there should be no completed plates
-        in self.carts, but this is just to double-check.
-        - Other plates, sorted by the number of exposures needed to fill out
-        the night.
-        - Force plug plates (plates with priority 10)
+        (1) Completed plates. Note that there should be no completed plates
+            in self.carts, but this is just to double-check.
+        (2) Other plates, sorted by the number of exposures needed to fill out
+            the night.
+        (3) Force plug plates (plates with priority 10)
+
+        If ``metric='completion'``, (2) is replaced with the number of
+        incomplete sets. Plates with incomplete sets are given the highest
+        priority. This is used when `addCartOrder` is called for a `Plugger`
+        object initialised without dates, and not scheduling is performed.
 
         """
+
+        assert metric in ['scheduled', 'completion'], \
+            'metric must be \'scheduled\' or \'completion\''
 
         forcePlugPriority = int(config['plugger']['forcePlugPriority'])
 
@@ -534,13 +543,45 @@ class Plugger(object):
             else:
                 scheduled.append((cart, plate))
 
-        # Retrieves how many scheduled (mock) exposures are in each plate.
-        nExposures = [self._nNewExposures[plate.plate_id]
-                      if plate.plate_id in self._nNewExposures else 0
-                      for cart, plate in scheduled]
+        if metric == 'scheduled':
 
-        # Sorts scheduled exposures from few to many scheduled exposures.
-        scheduledOrdered = [scheduled[ii] for ii in np.argsort(nExposures)]
+            # Retrieves how many scheduled (mock) exposures are in each plate.
+            nExposures = [self._nNewExposures[plate.plate_id]
+                          if plate.plate_id in self._nNewExposures else 0
+                          for cart, plate in scheduled]
+
+            # Sorts scheduled exposures from few to many scheduled exposures.
+            scheduledOrdered = [scheduled[ii] for ii in np.argsort(nExposures)]
+
+        elif metric == 'completion':
+
+            # Finds out what plates have incomplete sets.
+            platesWithIncompleteSets = []
+            platesWithoutIncompleteSets = []
+
+            for ii in range(len(scheduled)):
+                if scheduled[ii][1].hasIncompleteSets():
+                    platesWithIncompleteSets.append(scheduled[ii])
+                else:
+                    platesWithoutIncompleteSets.append(scheduled[ii])
+
+            # Calculates completion for each plate. For plates with incomplete
+            # sets we take them into account.
+            completionWithIncompleteSets = [
+                plate.getPlateCompletion(includeIncompleteSets=True)
+                for cart, plate in platesWithIncompleteSets]
+
+            completionWithoutIncompleteSets = [
+                plate.getPlateCompletion()
+                for cart, plate in platesWithoutIncompleteSets]
+
+            # Sorts the scheduled plates according to completion, with plates
+            # without incomplete sets always first.
+            scheduledOrdered = [
+                platesWithoutIncompleteSets[ii]
+                for ii in np.argsort(completionWithoutIncompleteSets)] + \
+                [platesWithIncompleteSets[jj]
+                 for jj in np.argsort(completionWithIncompleteSets)]
 
         # Creates master ordered list
         orderedCarts = completed + scheduledOrdered + forcePlug
@@ -551,7 +592,7 @@ class Plugger(object):
         return
 
     def _cleanUp(self):
-        """Removes the key in the self.cart dictionary that contain None."""
+        """Removes keys in self.cart whose value is None."""
 
         keysToRemove = []
         for key in self.carts:
