@@ -880,6 +880,15 @@ class Plate(plateDB.Plate):
 
         return result
 
+    def hasIncompleteSets(self):
+        """Returns True if the plate has at least one incomplete set."""
+
+        for ss in self.sets:
+            if ss.getStatus()[0] == 'Incomplete':
+                return True
+
+        return False
+
     @property
     def drilled(self):
         """Property to record if a plate has already been drilled."""
