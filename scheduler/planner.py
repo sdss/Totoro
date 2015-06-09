@@ -61,10 +61,10 @@ class Planner(object):
                   .format(len(self.timelines)))
 
         # Selects all valid plates, including complete ones.
-        allPlates = self.getPlates(**kwargs)
+        self._allPlates = self.getPlates(**kwargs)
 
         # Selects only plates that are incomplete and have enough priority
-        self.plates = [plate for plate in allPlates
+        self.plates = [plate for plate in self._allPlates
                        if len(plate.getTotoroExposures()) == 0 and
                        plate.priority > minimumPlugPriority]
 
@@ -80,7 +80,7 @@ class Planner(object):
 
         # Gets fields (rejectDrilled=False because we do our own rejection)
         if useFields:
-            self.createFields(allPlates)
+            self.createFields(self._allPlates)
         else:
             self.fields = []
 
@@ -264,38 +264,17 @@ class Planner(object):
 
             timeline.observed = True
 
-            # The plates to schedule here are all the drilled plates plus the
-            # fields we have already started to observe.
-            platesToSchedule = self.plates
-            platesToSchedule += [field for field in self.fields
-                                 if len(field.getTotoroExposures()) > 0]
-
-            timeline.schedule(platesToSchedule, mode='planner', **kwargs)
+            timeline.schedule(self.plates + self.fields, mode='planner',
+                              **kwargs)
 
             remainingTime = timeline.remainingTime
-            log.info('... plates observed: {0} (Unused time {1:.2f}h)'
-                     .format(len(timeline.scheduled), remainingTime))
+            colour = 'red' if remainingTime > 0.1 else 'default'
+            log.info(
+                _color_text(
+                    '... plates observed: {0} (Unused time {1:.2f}h)'
+                    .format(len(timeline.scheduled), remainingTime), colour))
 
             nAssigned += len(timeline.scheduled)
-
-            if remainingTime > expTimeEff / 2. / 3600. and useFields:
-                # Now we use the fields that we have not yet observed
-
-                log.info(_color_text('now scheduling fields', 'yellow'))
-
-                fieldsToSchedule = [field for field in self.fields
-                                    if len(field.getTotoroExposures()) == 0]
-
-                timeline.schedule(fieldsToSchedule,
-                                  mode='planner', **kwargs)
-
-                nFields = len(timeline.scheduled) - nAssigned
-                remainingTime = timeline.remainingTime
-
-                log.info('... fields observed: {0} (unused time {1:.2f}h)'
-                         .format(nFields, remainingTime))
-
-                nAssigned += nFields
 
             nCarts = len(config['mangaCarts']) - len(config['offlineCarts'])
             if nAssigned > nCarts:

@@ -22,6 +22,8 @@ from sdss.internal.manga.Totoro.exceptions import TotoroUserWarning
 import numpy as np
 import warnings
 
+expTimeJD = config['exposure']['exposureTime'] / 86400.
+
 
 class Timelines(list):
     """A list of Timelines."""
@@ -97,40 +99,38 @@ class Timeline(object):
             unallocatedTime += (interval[1]-interval[0])
         return unallocatedTime * 24.
 
-    def schedule(self, plates, mode='plugger', allowComplete=False,
-                 showUnobservedTimes=True, useDateAtAPO=True, **kwargs):
+    def schedule(self, plates, mode='plugger', showUnobservedTimes=True,
+                 useDateAtAPO=True, **kwargs):
         """Schedules a list of plates in the LST ranges not yet observed in the
         timeline."""
 
         from sdss.internal.manga.Totoro.dbclasses import Field
 
         mode = mode.lower()
-        prioritisePlugged = True if mode == 'plugger' else False
 
         log.debug('scheduling LST range {0} using {1} plates, mode={2}'
                   .format(self.unallocatedRange.tolist(), len(plates), mode))
 
-        if not allowComplete:
-            plates = [plate for plate in plates if not plate.isComplete]
+        jd0 = self.startDate
 
-        while self.remainingTime > 0:
-            jdRange = self.unallocatedRange.copy()
-            if len(jdRange.shape) == 2:
-                jdRange = jdRange[0]
+        while jd0 <= self.endDate:
 
             if useDateAtAPO:
                 platesToSchedule = [plate for plate in plates
                                     if plate.dateAtAPO is None or
-                                    plate.dateAtAPO <= jdRange[0]]
+                                    plate.dateAtAPO <= jd0]
             else:
                 platesToSchedule = plates
 
             optimalPlate, newExposures = logic.getOptimalPlate(
-                platesToSchedule, jdRange, prioritisePlugged=prioritisePlugged,
-                mode=mode, **kwargs)
+                platesToSchedule, [jd0, self.endDate], mode=mode, **kwargs)
 
             if optimalPlate is None:
-                break
+                if jd0 < self.endDate - 2 * expTimeJD:
+                    jd0 += expTimeJD
+                    continue
+                else:
+                    break
             else:
 
                 if optimalPlate in self.scheduled:
@@ -139,6 +139,7 @@ class Timeline(object):
                 self.scheduled.append(optimalPlate)
 
                 self.allocateJDs(newExposures)
+                jd0 = np.max([exp.getJD()[1] for exp in newExposures])
 
                 # Defines some flags to be logged if plate is in Cosmic, being
                 # drilled or not on the mountain.
@@ -190,15 +191,16 @@ class Timeline(object):
                                       TotoroUserWarning)
 
                 else:
-                    log.info('...... manga_tiledid={0} ({1} new exps, '
-                             '{2:.2f} -> {3:.2f} complete) {4}'
-                             .format(optimalPlate.getMangaTileID(),
-                                     nExps, completionPre, completionPost,
-                                     flags))
+                    log.info(_color_text(
+                                '...... manga_tiledid={0} ({1} new exps, '
+                                '{2:.2f} -> {3:.2f} complete) {4}'
+                                .format(optimalPlate.getMangaTileID(),
+                                        nExps, completionPre, completionPost,
+                                        flags),
+                                'yellow'))
 
         if showUnobservedTimes:
-            if (self.remainingTime <=
-                    (2 * config['exposure']['exposureTime'] / 3600.)):
+            if self.remainingTime <= expTimeJD:
                 return True
             else:
                 log.info('... unobserved times: {0}'.format(

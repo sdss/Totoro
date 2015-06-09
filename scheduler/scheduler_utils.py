@@ -27,8 +27,7 @@ expTime = config['exposure']['exposureTime']
 minSchedulingTime = config['plugger']['minSchedulingTimeHours']
 
 
-def getOptimalPlate(plates, jdRange, prioritisePlugged=True,
-                    mode='plugger', **kwargs):
+def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
     """Gets the optimal plate to observe in a range of JDs."""
 
     assert len(jdRange) == 2
@@ -39,8 +38,7 @@ def getOptimalPlate(plates, jdRange, prioritisePlugged=True,
     # plate.isComplete uses the plate completion so that it can account for
     # mock exposures (useful when the function is called with plates already)
     # simulated.
-    incompletePlates = [plate for plate in plates
-                        if plate.getPlateCompletion(useMock=True) < 1.]
+    incompletePlates = [plate for plate in plates if not plate.isComplete]
 
     # Selects plates that overlap with the beginning of the JD range
     # and intersect with the observing window for at least one exposure.
@@ -62,28 +60,39 @@ def getOptimalPlate(plates, jdRange, prioritisePlugged=True,
             plate.getTotoroExposures(onlySets=True))
 
     # Now selects the optimal plate
-    # If mode is plugger. We try using the plates that are plugged. Note that
-    # we use normalise=True here because we want to take into account the
-    # observing windows of the plates already plugged.
+
+    # If mode is plugger. We try using the plates that are plugged. If mode is
+    # planner we prioritise plates with signal.
     if mode == 'plugger':
-        pluggedPlates = [plate for plate in observablePlates
-                         if plate.isPlugged]
+        priorityPlates = [plate for plate in observablePlates
+                          if plate.isPlugged]
+    else:
+        priorityPlates = [plate for plate in observablePlates
+                          if not plate.isMock or
+                          len(plate.getTotoroExposures()) > 0]
 
-        if len(pluggedPlates) > 0:
-            simulatePlates(pluggedPlates, jdRange, mode, **kwargs)
-            optimalPlate = selectPlate(pluggedPlates, jdRange, scope='plugged',
-                                       normalise=True)
+    # Tries finding an optimal plate among the priority plates. Note that
+    # we use normalise=True here because we want to take into account the
+    # observing windows of the plates already plugged/started.
+    if len(priorityPlates) > 0:
+        simulatePlates(priorityPlates, jdRange, mode,
+                       **kwargs)
+        optimalPlate = selectPlate(priorityPlates, jdRange, scope='plugged',
+                                   normalise=True)
 
-            if optimalPlate:
-                newExps = cleanupPlates(observablePlates, optimalPlate,
-                                        jdRange)
-                return optimalPlate, newExps
-            else:
-                cleanupPlates(pluggedPlates, None, jdRange)
-                observablePlates = [plate for plate in observablePlates
-                                    if plate not in pluggedPlates]
+        if optimalPlate:
+            newExps = cleanupPlates(observablePlates, optimalPlate,
+                                    jdRange)
+            return optimalPlate, newExps
+        else:
+            cleanupPlates(priorityPlates, None, jdRange)
+            observablePlates = [plate for plate in observablePlates
+                                if plate not in priorityPlates]
 
-    # If that is not the case.
+    # If that is not the case, we use all the observable plates. Note that in
+    # this case we use rearrange=False to speed up the simulation a bit. In
+    # this manner, exposures in incomplete sets are not rearranged after a new
+    # mock exposure is added.
     simulatePlates(observablePlates, jdRange, mode, **kwargs)
     optimalPlate = selectPlate(observablePlates, jdRange)
 
@@ -254,6 +263,10 @@ def simulatePlates(plates, jdRange, mode, efficiency=None, SN2Factor=None,
     # simulated.
     success = False
 
+    # Defines if we are going to rearrange exposures in incomplete sets after
+    # each new mock exposure is added to a plate
+    rearrange = True if mode == 'plugger' else False
+
     for plate in plates:
 
         plateLST = plate.getLSTRange()
@@ -261,6 +274,8 @@ def simulatePlates(plates, jdRange, mode, efficiency=None, SN2Factor=None,
 
         jd = jdRange[0]
         while jd < jdRange[1]:
+
+            expTimeEff = expTime / efficiency
 
             # If MaNGA is observing at the beginning of the night the cart is
             # already loaded, so we can assume that the efficiency of the first
@@ -270,25 +285,25 @@ def simulatePlates(plates, jdRange, mode, efficiency=None, SN2Factor=None,
                 row = row[0]
                 if row['Position'] == 1 and jd == row['JD0']:
                     expTimeEff = expTime
-                else:
-                    expTimeEff = expTime / efficiency
 
-            if plate.isComplete:
+            if plate.getPlateCompletion() >= 1:
                 break
 
             lst = site.localSiderealTime(jd)
             lstMean = site.localSiderealTime(jd+expTimeEff/2./86400.)
 
             if (not utils.isPointInInterval(lst, plateLST, wrapAt=24)):
-                if mode == 'planner':
-                    break
+                # if mode == 'planner':
+                break
             elif plate.getAltitude(lstMean) > maxAltitude:
                 break
             else:
                 result = plate.addMockExposure(set=None, startTime=jd,
                                                expTime=expTimeEff,
                                                plugging=plugging,
-                                               factor=SN2Factor, silent=True)
+                                               factor=SN2Factor,
+                                               rearrange=rearrange,
+                                               silent=True)
 
                 # If everything worked, we add a flag to mark this exposure
                 # as temporary.

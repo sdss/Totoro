@@ -430,7 +430,12 @@ class Plugger(object):
                 self.carts[cartNumber] = plate
                 cartPlateMessage[cartNumber] = (plate, 'already plugged')
                 allocatedPlates.append(plate)
-                cartStatus.pop(cartNumber)
+                if cartNumber in cartStatus:
+                    # This 'if' checks that the cart number exists in
+                    # cartStatus to avoid an error if the plate is plugged
+                    # in an offline cart (which should not happen but can
+                    # happen).
+                    cartStatus.pop(cartNumber)
 
         # Allocates replugs
         for plate in plates:
@@ -549,6 +554,9 @@ class Plugger(object):
             nExposures = [self._nNewExposures[plate.plate_id]
                           if plate.plate_id in self._nNewExposures else 0
                           for cart, plate in scheduled]
+
+            # Sorts scheduled exposures from few to many scheduled exposures.
+            scheduledOrdered = [scheduled[ii] for ii in np.argsort(nExposures)]
 
             # Sorts scheduled exposures from few to many scheduled exposures.
             scheduledOrdered = [scheduled[ii] for ii in np.argsort(nExposures)]

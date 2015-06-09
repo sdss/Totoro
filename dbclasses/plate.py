@@ -431,8 +431,8 @@ class Plate(plateDB.Plate):
         else:
             status = utils.isPlateComplete(self)
             # If the plate is mock, caches the status.
-            # if status is True and self.isMock:
-            #     self._complete = status
+            if status is True and self.isMock:
+                self._complete = status
             return status
 
     def copy(self):
@@ -671,14 +671,15 @@ class Plate(plateDB.Plate):
         return True if secIntersectionLength >= minLength else False
 
     def addMockExposure(self, exposure=None, startTime=None, set=None,
-                        expTime=None, silent=False, **kwargs):
+                        expTime=None, silent=False, rearrange=True, **kwargs):
         """Creates a mock expusure in the best possible way."""
 
         ra, dec = self.coords
 
         if exposure is None:
             exposure = TotoroExposure.createMockExposure(
-                startTime=startTime, expTime=expTime, ra=ra, dec=dec, **kwargs)
+                startTime=startTime, expTime=expTime, ra=ra, dec=dec,
+                dust=self.dust, **kwargs)
 
         validSet = plateUtils.getOptimalSet(self, exposure)
 
@@ -702,7 +703,9 @@ class Plate(plateDB.Plate):
         if newSet:
             self.sets.append(validSet)
         validSet.totoroExposures.append(exposure)
-        self.rearrangeSets(mode='optimal', scope='incomplete', silent=True)
+
+        if rearrange:
+            self.rearrangeSets(mode='optimal', scope='incomplete', silent=True)
 
         return exposure
 

@@ -15,7 +15,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro.scheduler import Plugger
-from sdss.internal.manga.Totoro import TotoroDBConnection
+from sdss.internal.manga.Totoro import TotoroDBConnection, config
 from collections import OrderedDict
 import unittest
 
@@ -27,6 +27,8 @@ class TestPlugger(unittest.TestCase):
 
     def setUp(self):
         """Sets default priorities for plates 8550 and 7443."""
+
+        self.originalOfflineCarts = config['offlineCarts']
 
         with session.begin(subtransactions=True):
 
@@ -47,6 +49,7 @@ class TestPlugger(unittest.TestCase):
 
         with session.begin(subtransactions=True):
 
+            # Restores priorities
             plate8550 = session.query(db.plateDB.Plate).filter(
                 db.plateDB.Plate.plate_id == 8550).one()
             plate8550.plate_pointings[0].priority = 5
@@ -65,6 +68,9 @@ class TestPlugger(unittest.TestCase):
                 plugging_pk = originalActivePlugging.plugging_pk
                 session.add(db.plateDB.ActivePlugging(pk=pk,
                                                       plugging_pk=plugging_pk))
+
+        # Restores offline carts
+        config['offlineCarts'] = self.originalOfflineCarts
 
     def test57157(self):
         """Tests Plugger with MJD=57157."""
@@ -135,6 +141,20 @@ class TestPlugger(unittest.TestCase):
                 session.add(db.plateDB.ActivePlugging(pk=pk,
                                                       plugging_pk=plugging_pk))
 
+    def testOfflineCarts(self):
+        """Tests if Plugger works if a plate is plugged in an offline cart."""
+
+        # Makes cart 3 offline
+        config['offlineCarts'] = [3]
+
+        # Runs Plugger
+        plugger = Plugger(startDate=2457182.64792, endDate=2457182.79097)
+        output = plugger.getASOutput()
+
+        self.assertEqual(output,
+                         OrderedDict([(1, 8482), (2, 8312), (3, 8486),
+                                      ('cart_order', [9, 8, 7, 4, 5, 6,
+                                                      2, 3, 1])]))
 
 if __name__ == '__main__':
     unittest.main()

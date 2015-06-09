@@ -310,8 +310,8 @@ class Set(mangaDB.Set):
 
         status = checkSet(self, **kwargs)
 
-        # if self.isMock and quality[0] != 'Incomplete':
-        #     self._quality = quality
+        if self.isMock and status[0] != 'Incomplete':
+            self._quality = status
 
         return status
 
@@ -446,14 +446,12 @@ def setSetStatus(set, status):
 
         ss = session.query(db.mangaDB.Set).get(pk)
 
-        if ss.set_status_pk is None and statusPK is None:
-            pass
-        elif ss.set_status_pk is not None and statusPK is None:
+        if ss.set_status_pk is not None and statusPK is None:
             warnings.warn('changing set pk={0} from status {1} to None'
                           .format(pk, ss.status.label),
                           exceptions.TotoroUserWarning)
-        else:
-            ss.set_status_pk = statusPK
+
+        ss.set_status_pk = statusPK
 
     log.debug('mangaDB.Set.pk={0} set to {1}'.format(pk, status))
 
