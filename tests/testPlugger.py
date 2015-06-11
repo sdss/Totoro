@@ -25,17 +25,15 @@ session = db.session
 
 class TestPlugger(unittest.TestCase):
 
-    def setUp(self):
-        """Sets default priorities for plates 8550 and 7443."""
+    @classmethod
+    def setUpClass(cls):
+        """Sets up the test suite."""
 
-        self.originalOfflineCarts = config['offlineCarts']
+        cls.originalOfflineCarts = config['offlineCarts']
 
         with session.begin(subtransactions=True):
 
-            # Saves the list of active pluggings
-            self.originalActivePluggings = session.query(
-                db.plateDB.ActivePlugging).all()
-
+            # Restores priorities
             plate8550 = session.query(db.plateDB.Plate).filter(
                 db.plateDB.Plate.plate_id == 8550).one()
             plate8550.plate_pointings[0].priority = 5
@@ -45,7 +43,7 @@ class TestPlugger(unittest.TestCase):
             plate7443.plate_pointings[0].priority = 1
 
     def tearDown(self):
-        """Sets default priorities for plates 8550 and 7443."""
+        """Restores changes made to the DB during the tests."""
 
         with session.begin(subtransactions=True):
 
@@ -59,15 +57,13 @@ class TestPlugger(unittest.TestCase):
             plate7443.plate_pointings[0].priority = 1
 
             # Restores the list of active pluggings
-            activePluggings = session.query(db.plateDB.ActivePlugging).all()
-            for actPlug in activePluggings:
-                session.delete(actPlug)
+            for ii in range(1, 4):
+                session.delete(
+                    session.query(db.plateDB.ActivePlugging).get(ii))
 
-            for originalActivePlugging in self.originalActivePluggings:
-                pk = originalActivePlugging.pk
-                plugging_pk = originalActivePlugging.plugging_pk
-                session.add(db.plateDB.ActivePlugging(pk=pk,
-                                                      plugging_pk=plugging_pk))
+            session.add(db.plateDB.ActivePlugging(plugging_pk=70172, pk=1))
+            session.add(db.plateDB.ActivePlugging(plugging_pk=70173, pk=2))
+            session.add(db.plateDB.ActivePlugging(plugging_pk=70124, pk=3))
 
         # Restores offline carts
         config['offlineCarts'] = self.originalOfflineCarts
@@ -78,7 +74,7 @@ class TestPlugger(unittest.TestCase):
         plugger = Plugger(startDate=2457157.76042, endDate=2457157.95)
 
         validResult = OrderedDict(
-            [(1, 8312), (3, 8486), (4, 8550),
+            [(1, 8482), (3, 8486), (4, 8550),
              ('cart_order', [9, 8, 7, 2, 5, 6, 1, 3, 4])])
 
         self.assertEqual(validResult, plugger.getASOutput())
@@ -103,7 +99,7 @@ class TestPlugger(unittest.TestCase):
         # We expect the same result as before but with 8550 and 7443 assigned
         # first.
         validResult = OrderedDict(
-            [(1, 8482), (3, 8486), (4, 7443), (5, 8550),
+            [(1, 8482), (3, 8486), (4, 7443), (5, 8550), (6, 8335),
              ('cart_order', [9, 8, 7, 2, 6, 3, 1, 4, 5])])
 
         self.assertEqual(validResult, plugger.getASOutput())
@@ -114,11 +110,12 @@ class TestPlugger(unittest.TestCase):
         # Sets a custom list of active pluggings.
         with session.begin(subtransactions=True):
 
-            for actPlug in self.originalActivePluggings:
-                session.delete(actPlug)
+            for ii in range(1, 4):
+                session.delete(
+                    session.query(db.plateDB.ActivePlugging).get(ii))
 
-            session.add(db.plateDB.ActivePlugging(plugging_pk=68904, pk=2))
             session.add(db.plateDB.ActivePlugging(plugging_pk=70003, pk=1))
+            session.add(db.plateDB.ActivePlugging(plugging_pk=68904, pk=2))
             session.add(db.plateDB.ActivePlugging(plugging_pk=70124, pk=3))
 
         # Calls the Plugger without dates
@@ -126,20 +123,6 @@ class TestPlugger(unittest.TestCase):
 
         self.assertEqual(plugger.getASOutput()['cart_order'],
                          [9, 8, 7, 4, 5, 6, 3, 2, 1])
-
-        # Restores list of original active plugging. For extra safety, this is
-        # also done in tearDown.
-        with session.begin(subtransactions=True):
-
-            activePluggings = session.query(db.plateDB.ActivePlugging).all()
-            for actPlug in activePluggings:
-                session.delete(actPlug)
-
-            for originalActivePlugging in self.originalActivePluggings:
-                pk = originalActivePlugging.pk
-                plugging_pk = originalActivePlugging.plugging_pk
-                session.add(db.plateDB.ActivePlugging(pk=pk,
-                                                      plugging_pk=plugging_pk))
 
     def testOfflineCarts(self):
         """Tests if Plugger works if a plate is plugged in an offline cart."""
@@ -152,7 +135,7 @@ class TestPlugger(unittest.TestCase):
         output = plugger.getASOutput()
 
         self.assertEqual(output,
-                         OrderedDict([(1, 8482), (2, 8312), (3, 8486),
+                         OrderedDict([(1, 8482), (2, 8334), (3, 8486),
                                       ('cart_order', [9, 8, 7, 4, 5, 6,
                                                       2, 3, 1])]))
 

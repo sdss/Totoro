@@ -290,12 +290,23 @@ def simulatePlates(plates, jdRange, mode, efficiency=None, SN2Factor=None,
                 break
 
             lst = site.localSiderealTime(jd)
-            lstMean = site.localSiderealTime(jd+expTimeEff/2./86400.)
+            lstMean = site.localSiderealTime(jd + expTimeEff / 2. / 86400.)
+
+            # Calculates how much time the exposure is observed above
+            # max altitude minus 5 degrees.
+            lstRange = site.localSiderealTime([jd, jd + expTimeEff / 86400.])
+            highAltitudeRange = plate.getLSTRangeAboveAltitude(maxAltitude - 5)
+            highAltitudeIntersection = utils.getIntervalIntersectionLength(
+                lstRange, highAltitudeRange, wrapAt=24.)
 
             if (not utils.isPointInInterval(lst, plateLST, wrapAt=24)):
                 # if mode == 'planner':
                 break
             elif plate.getAltitude(lstMean) > maxAltitude:
+                break
+            elif highAltitudeIntersection * 3600 > expTimeEff * 0.9:
+                # If the most part of the exposure happens at high altitude,
+                # the exposure is not valid.
                 break
             else:
                 result = plate.addMockExposure(set=None, startTime=jd,
