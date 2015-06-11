@@ -204,7 +204,7 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
         return completePlates[np.argmin(nNewExposures)]
 
     # We add the priority into the mix
-    platePriorities = np.array([plate.priority for plate in plates])
+    platePriorities = np.array([plate.priority for plate in plates]) - 5.
     _completionFactor(plates, 1 + 0.25 * platePriorities)
 
     # If no complete plates exist, selects the ones that have the largest

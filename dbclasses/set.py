@@ -252,8 +252,8 @@ class Set(mangaDB.Set):
         if len(self.totoroExposures) == 0:
             return np.array([0.0, 0.0, 0.0, 0.0])
         else:
-            return np.sum([exp.getSN2Array()
-                           for exp in self.totoroExposures], axis=0)
+            return np.nansum([exp.getSN2Array()
+                              for exp in self.totoroExposures], axis=0)
 
     def getSN2Range(self):
         """Returns the SN2 range in which new exposures may be taken."""
