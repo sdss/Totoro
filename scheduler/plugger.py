@@ -171,7 +171,7 @@ class Plugger(object):
             'no JD1, JD2 values provided. Plugger will only return plugged, '
             'non-completed plates.', exceptions.TotoroPluggerWarning)
 
-        pluggedPlates = getPlugged()
+        pluggedPlates = getPlugged(fullCheck=False, updateSets=False)
 
         self.carts = OrderedDict()
         self._nNewExposures = dict()
@@ -287,7 +287,8 @@ class Plugger(object):
         plates = dbclasses.getAtAPO(onlyIncomplete=onlyIncomplete,
                                     onlyMarked=onlyMarked,
                                     rejectLowPriority=True,
-                                    fullCheck=False, raRange=raRange)
+                                    fullCheck=False, updateSets=False,
+                                    raRange=raRange)
 
         log.info('plates found: {0}'.format(len(plates)))
 
@@ -416,6 +417,10 @@ class Plugger(object):
                 db.plateDB.ActivePlugging).order_by(
                     db.plateDB.ActivePlugging.pk).all()
 
+        for activePlugging in activePluggings:
+            if activePlugging.pk in config['offlineCarts']:
+                self.carts[activePlugging.pk] = None
+
         # Gets the status of the plates in each remaining cart.
         cartStatus = OrderedDict(
             [(cartNumber, getCartStatus(activePluggings, cartNumber))
@@ -430,12 +435,7 @@ class Plugger(object):
                 self.carts[cartNumber] = plate
                 cartPlateMessage[cartNumber] = (plate, 'already plugged')
                 allocatedPlates.append(plate)
-                if cartNumber in cartStatus:
-                    # This 'if' checks that the cart number exists in
-                    # cartStatus to avoid an error if the plate is plugged
-                    # in an offline cart (which should not happen but can
-                    # happen).
-                    cartStatus.pop(cartNumber)
+                cartStatus.pop(cartNumber)
 
         # Allocates replugs
         for plate in plates:
@@ -543,7 +543,7 @@ class Plugger(object):
                 continue
             if plate.priority == forcePlugPriority:
                 forcePlug.append((cart, plate))
-            elif plate.isComplete:
+            elif plate.getPlateCompletion(useMock=False) > 1:
                 completed.append((cart, plate))
             else:
                 scheduled.append((cart, plate))
