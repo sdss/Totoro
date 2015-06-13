@@ -15,11 +15,27 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro.dbclasses import Plate, Exposure, Set
+from sdss.internal.manga.Totoro import TotoroDBConnection
 import numpy as np
 import unittest
 
+db = TotoroDBConnection()
+
 
 class testSets(unittest.TestCase):
+
+    @classmethod
+    def tearDownClass(cls):
+        """Restores plate 7495."""
+
+        with db.session.begin(subtransactions=True):
+            exp = db.session.query(db.mangaDB.Exposure).get(17)
+            exp.set_pk = 4
+            exp.exposure_status_pk = 1
+            exp.sn2values[0].b1_sn2 = 3.28888
+            exp.sn2values[0].b2_sn2 = 2.90681
+            exp.sn2values[0].r1_sn2 = 6.01449
+            exp.sn2values[0].r2_sn2 = 6.55439
 
     def testSetLoad(self):
         """Tests set loading."""
@@ -111,6 +127,61 @@ class testSets(unittest.TestCase):
         statuses = [ss.getStatus()[0] for ss in plate8486.sets]
         self.assertEqual(statuses.count('Incomplete'), 2)
 
+    def testIncompleteExposure(self):
+        """Checks if an incompletely reduced exposure behaves properly."""
+
+        # Checks exposure
+        exp = Exposure(17, parent='mangadb')
+        self.assertIsNot(exp._mangaExposure.set_pk, None)
+
+        # Modifies the exposure
+        with db.session.begin(subtransactions=True):
+            exp = db.session.query(db.mangaDB.Exposure).get(17)
+            exp.set_pk = None
+            exp.sn2values[0].b1_sn2 = None
+            exp.sn2values[0].b2_sn2 = None
+            exp.sn2values[0].r1_sn2 = None
+            exp.sn2values[0].r2_sn2 = None
+
+        exp = Exposure(17, parent='mangadb')
+        self.assertIsNone(exp._mangaExposure.set_pk)
+
+        # Loads the plate
+        plate = Plate(7495, format='plate_id', force=True)
+        for exp in plate.getScienceExposures():
+            if exp.mangadbExposure[0].pk == 17:
+                self.assertIsNone(exp.mangadbExposure[0].set_pk)
+                break
+
+        # Changes exposure to incomplete but valid
+        with db.session.begin(subtransactions=True):
+            exp = db.session.query(db.mangaDB.Exposure).get(17)
+            exp.sn2values[0].b1_sn2 = 3.28888
+            exp.sn2values[0].b2_sn2 = 2.90681
+            exp.sn2values[0].r1_sn2 = 6.01449
+            exp.sn2values[0].r2_sn2 = None
+
+        plate = Plate(7495, format='plate_id', force=True)
+        for exp in plate.getTotoroExposures():
+            if exp._mangaExposure.pk == 17:
+                self.assertEqual(exp.mangadbExposure[0].set_pk, 1)
+                self.assertIsNone(exp.mangadbExposure[0].status)
+                break
+
+        # Now we break the exposure again
+        with db.session.begin(subtransactions=True):
+            exp = db.session.query(db.mangaDB.Exposure).get(17)
+            exp.sn2values[0].b1_sn2 = 0.0
+            exp.sn2values[0].b2_sn2 = 0.0
+            exp.sn2values[0].r1_sn2 = 6.01449
+            exp.sn2values[0].r2_sn2 = 6.55439
+
+        plate = Plate(7495, format='plate_id', force=True)
+        for exp in plate.getTotoroExposures():
+            if exp._mangaExposure.pk == 17:
+                self.assertIsNone(exp.mangadbExposure[0].set_pk)
+                self.assertEqual(exp.mangadbExposure[0].status.pk, 5)
+                break
 
 if __name__ == '__main__':
     unittest.main()
