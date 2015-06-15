@@ -463,7 +463,14 @@ def setExposureStatus(exposure, status):
 
         # If status is Totoro Bad, removes set_pk
         if status == 'Totoro Bad':
-            exp.set_pk = None
+            setPK = exp.set_pk
+            if setPK is None:
+                pass
+            else:
+                exp.set_pk = None
+                ss = session.query(db.mangaDB.Set).get(setPK)
+                if len(ss.exposures) == 0:
+                    session.delete(ss)
 
     log.debug('mangaDB.Exposure.pk={0} set to {1}'.format(pk, status))
 

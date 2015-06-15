@@ -110,7 +110,7 @@ class Set(mangaDB.Set):
         """Creates a mock set for a list of Totoro.Exposures."""
 
         newSet = Set(mock=True, **kwargs)
-        # print(exposures)
+
         if isinstance(exposures, Exposure):
             newSet.totoroExposures = [exposures]
         else:
