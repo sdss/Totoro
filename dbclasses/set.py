@@ -505,7 +505,7 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
     7: average seeing > maximum
     8: exposures span more than one plugging.
     9: set is incomplete but the plugging is no longer current.
-    10: from set status.
+    10: overridden set status.
 
     """
 
@@ -520,10 +520,15 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
     if flagExposures is None:
         flagExposures = flag
 
-    # If the exposure is not mock and it is already flagged, we use that value
-    # unless force=True.
-    # if set.isMock is False and set.set_status_pk is not None and not force:
-    #     return (set.status.label, 10)
+    # If the exposure is not mock, force is not True, and an override status
+    # is set, returns that.
+    if set.isMock is False and set.set_status_pk is not None and not force:
+        if set.status.label == 'Overridden Good':
+            return ('Good', 10)
+        elif set.status.label == 'Overridden Bad':
+            return ('Bad', 10)
+        else:
+            pass
 
     # Empty set
     if len(set.totoroExposures) == 0:
