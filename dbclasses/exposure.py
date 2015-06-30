@@ -70,17 +70,16 @@ class Exposure(plateDB.Exposure):
         self._sn2Array = None
         self._seeing = None
         self._plugging = None
+        self._mlhalimit = None
+        self._haRange = None
 
         self.isMock = mock
         self.kwargs = kwargs
 
-        self._haRange = None
-
-        self.mlhalimit = utils.mlhalimit(self.dec)
-
         self._mangaExposure = (self.mangadbExposure[0]
                                if len(self.mangadbExposure) > 0 else
                                mangaDB.Exposure())
+
         if self._mangaExposure is None:
             warnings.warn('plateDB.Exposure.pk={0} has no mangaDB.Exposure '
                           'counterpart.', NoMangaExposure)
@@ -384,6 +383,14 @@ class Exposure(plateDB.Exposure):
         if self.status.label in ['Good', 'Override Good']:
             return True
         return False
+
+    @property
+    def mlhalimit(self):
+        """Returns the HA range for this exposure."""
+
+        if self._mlhalimit is None:
+            self._mlhalimit = utils.mlhalimit(self.dec)
+        return self._mlhalimit
 
 
 def flagExposure(exposure, status, errorCode, flag=True, message=None):
