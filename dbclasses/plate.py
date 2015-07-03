@@ -381,6 +381,7 @@ class Plate(plateDB.Plate):
                         if not exp.isMock:
                             exp.mangadbExposure[0].set_pk = None
                         ss.totoroExposures.remove(exp)
+                        ss.set_status_pk = None
 
                 # Checks if the sets is now empty, if so, removes it
                 # from the object and from the DB
