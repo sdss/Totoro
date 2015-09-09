@@ -463,16 +463,34 @@ class Plate(plateDB.Plate):
 
     def getPlateCompletion(self, includeIncompleteSets=False, useMock=True):
 
-        totalSN = self.getCumulatedSN2(
-            includeIncomplete=includeIncompleteSets, useMock=useMock)
+        # totalSN = self.getCumulatedSN2(
+        #     includeIncomplete=includeIncompleteSets, useMock=useMock)
 
-        totalSN[0:2] /= config['SN2thresholds']['plateBlue']
-        totalSN[2:] /= config['SN2thresholds']['plateRed']
+        validStatuses = ['Good', 'Excellent']
+        if includeIncompleteSets:
+            validStatuses.append('Incomplete')
 
-        avgCompletion = np.array([np.nanmean(totalSN[0:2]),
-                                  np.nanmean(totalSN[2:])])
+        sets = []
+        for ss in self.sets:
+            if not useMock and ss.isMock:
+                continue
+            if ss.getStatus()[0] in validStatuses:
+                sets.append(ss)
 
-        return np.min(avgCompletion)
+        exposureSN2 = np.array([exp.getSN2Array() for ss in sets
+                                for exp in ss.totoroExposures])
+
+        if exposureSN2.shape[0] == 0:
+            return 0
+
+        blueSN2 = np.nansum(np.nanmean(exposureSN2[:, [0, 1]], axis=1))
+        redSN2 = np.nansum(np.nanmean(exposureSN2[:, [2, 3]], axis=1))
+
+        if np.isnan(blueSN2) or np.isnan(redSN2):
+            return 0
+        else:
+            return np.min([blueSN2 / config['SN2thresholds']['plateBlue'],
+                          redSN2 / config['SN2thresholds']['plateRed']])
 
     def getSN2Array(self, **kwargs):
         """Same as getCumulatedSN2. Added for consistency with Set and
