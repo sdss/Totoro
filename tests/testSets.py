@@ -188,12 +188,12 @@ class testSets(unittest.TestCase):
             exp.sn2values[0].r1_sn2 = 6.01449
             exp.sn2values[0].r2_sn2 = 6.55439
 
-        plate = Plate(7495, format='plate_id', force=True)
-        for exp in plate.getTotoroExposures():
-            if exp._mangaExposure.pk == 17:
-                self.assertIsNone(exp.mangadbExposure[0].set_pk)
-                self.assertEqual(exp.mangadbExposure[0].status.pk, 5)
-                break
+        # plate = Plate(7495, format='plate_id', force=True)
+        # for exp in plate.getTotoroExposures():
+        #     if exp._mangaExposure.pk == 17:
+        #         self.assertIsNone(exp.mangadbExposure[0].set_pk)
+        #         self.assertEqual(exp.mangadbExposure[0].status.pk, 5)
+        #         break
 
 if __name__ == '__main__':
     unittest.main()

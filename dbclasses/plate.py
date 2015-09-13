@@ -374,22 +374,22 @@ class Plate(plateDB.Plate):
 
         # Checks if some sets have incompletely reduced exposures. If so,
         # removes their set_pk so that they are completely procesed again.
-        with session.begin(subtransactions=True):
-            for ss in self.sets:
-                for exp in ss.totoroExposures:
-                    if exp._mangaExposure.status is None:
-                        if not exp.isMock:
-                            exp.mangadbExposure[0].set_pk = None
-                        ss.totoroExposures.remove(exp)
-                        ss.set_status_pk = None
+        # with session.begin(subtransactions=True):
+        #     for ss in self.sets:
+        #         for exp in ss.totoroExposures:
+        #             if exp._mangaExposure.status is None:
+        #                 if not exp.isMock:
+        #                     exp.mangadbExposure[0].set_pk = None
+        #                 ss.totoroExposures.remove(exp)
+        #                 ss.set_status_pk = None
 
-                # Checks if the sets is now empty, if so, removes it
-                # from the object and from the DB
-                if len(ss.totoroExposures) == 0:
-                    if not ss.isMock:
-                        setDB = session.query(mangaDB.Set).get(ss.pk)
-                        session.delete(setDB)
-                    self.sets.remove(ss)
+        #         # Checks if the sets is now empty, if so, removes it
+        #         # from the object and from the DB
+        #         if len(ss.totoroExposures) == 0:
+        #             if not ss.isMock:
+        #                 setDB = session.query(mangaDB.Set).get(ss.pk)
+        #                 session.delete(setDB)
+        #             self.sets.remove(ss)
 
         # if self.isComplete:
         #     if not force:
