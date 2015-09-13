@@ -443,8 +443,9 @@ def applyArrangement(plate, arrangement):
                     exp.mangadbExposure.set_pk = None
                     if setPK is not None:
                         setDB = session.query(db.mangaDB.Set).get(setPK)
-                        session.delete(setDB)
-                        session.flush()
+                        if setDB is not None:
+                            session.delete(setDB)
+                            session.flush()
 
                 session.flush()
 
