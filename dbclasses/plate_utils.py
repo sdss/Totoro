@@ -327,8 +327,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
             if setId not in setStatus:
                 setStatus[setId] = ss.getStatus(silent=True)[0]
                 setSN2[setId] = ss.getSN2Array() \
-                    if setStatus[setId] in ['Excellent', 'Good'] \
-                    else zeroSN2
+                    if setStatus[setId] in ['Excellent', 'Good'] else zeroSN2
 
             del ss
 
