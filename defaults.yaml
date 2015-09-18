@@ -30,7 +30,7 @@ dbConnectionTest: &dbConnectionTest
 dbConnectionDev: &dbConnectionDev
     user: sdssdb_admin
     password: 4-photometry
-    host: localhost
+    host: sdss4-db
     port: 5440
     database: apo_platedb
 
