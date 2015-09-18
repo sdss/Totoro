@@ -18,7 +18,7 @@ from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro import TotoroDBConnection, log, config, site
 from sdss.internal.manga.Totoro import exceptions
-from sdss.internal.manga.Totoro.utils import intervals
+from sdss.internal.manga.Totoro.utils import intervals, checkOpenSession
 from scipy.misc import factorial
 import numpy as np
 import collections
@@ -33,6 +33,10 @@ def updatePlate(plate, rearrangeIncomplete=True, **kwargs):
     """Finds new exposures and assigns them a new set. If
     `rearrangeIncomplete=True`, exposures in incomplete sets are then
     arranged in the best possible mode."""
+
+    # updatePlate will likely fail if the code is being run within an open,
+    # external session. So, we check to make sure that's not the case
+    checkOpenSession()
 
     unassignedExposures = getUnassignedExposures(plate)
 
@@ -90,7 +94,7 @@ def assignExposureToOptimalSet(plate, exposure):
 
     if optimalSet is None:
         setPK = getConsecutiveSets(1)[0]
-        with session.begin(subtransactions=True):
+        with session.begin():
             if session.query(db.mangaDB.Set).get(setPK) is None:
                 newSet = db.mangaDB.Set(pk=setPK)
                 session.add(newSet)
@@ -111,7 +115,7 @@ def assignExposureToOptimalSet(plate, exposure):
                           .format(plate.plate_id, exposure.exposure_no))
                 return
     else:
-        with session.begin(subtransactions=True):
+        with session.begin():
             exposure.mangadbExposure[0].set_pk = optimalSet.pk
         for ss in plate.sets:
             if ss.pk == optimalSet.pk:
@@ -259,7 +263,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
     if mode.lower() == 'sequential':
         # If mode is sequential, removes set_pk from all selected exposures
         # and triggers a plate update.
-        with session.begin(subtransactions=True):
+        with session.begin():
             for exposure in exposures:
                 if exposure.mangadbExposure[0].set_pk is not None:
                     session.delete(exposure.mangadbExposure[0].set)
@@ -441,7 +445,7 @@ def applyArrangement(plate, arrangement):
 
     if not any(expMock):
         # Removes sets and exposure-set assignment from the DB
-        with session.begin(subtransactions=True):
+        with session.begin():
             for ss in plate.sets:
                 for exp in ss.totoroExposures:
                     setPK = exp.mangadbExposure[0].set_pk
@@ -458,7 +462,7 @@ def applyArrangement(plate, arrangement):
         pks = getConsecutiveSets(len(arrangement))
 
         # Now creates the new sets and assigns the exposures
-        with session.begin(subtransactions=True):
+        with session.begin():
             for ii, ss in enumerate(arrangement):
                 newSet = db.mangaDB.Set(pk=pks[ii])
                 session.add(newSet)
@@ -597,7 +601,7 @@ def getConsecutiveSets(nSets=1):
     """Returns a list of consecutive set pks that are not assigned."""
 
     # Finds already used set pks
-    with session.begin(subtransactions=True):
+    with session.begin():
         setPKs = session.query(db.mangaDB.Set.pk).all()
 
     # Creates a list of unused set pks
@@ -629,7 +633,7 @@ def removeOrphanedSets():
 
     nRemoved = 0
 
-    with session.begin(subtransactions=True):
+    with session.begin():
         sets = session.query(db.mangaDB.Set).all()
         for ss in sets:
             if len(ss.exposures) == 0:

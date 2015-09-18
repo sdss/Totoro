@@ -37,7 +37,7 @@ __all__ = ['Set']
 
 def getPlateSets(inp, format='plate_id', **kwargs):
 
-    with session.begin(subtransactions=True):
+    with session.begin():
         sets = session.query(mangaDB.Set).join(
             mangaDB.Exposure,
             plateDB.Exposure,
@@ -61,7 +61,7 @@ class Set(mangaDB.Set):
         if isinstance(input, base):
             instance = input
         else:
-            with session.begin(subtransactions=True):
+            with session.begin():
                 instance = session.query(base).filter(
                     eval('{0}.{1} == {2}'.format(base.__name__, format, input))
                     ).one()
@@ -435,7 +435,7 @@ def setSetStatus(set, status):
     else:
         pk = set
 
-    with session.begin(subtransactions=True):
+    with session.begin():
         try:
             queryStatus = session.query(db.mangaDB.SetStatus).filter(
                 db.mangaDB.SetStatus.label == status).one()

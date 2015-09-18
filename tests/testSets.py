@@ -31,7 +31,7 @@ class testSets(unittest.TestCase):
 
         setPK = [1, 1, 1, 2, 2, 2, 3, 4, 3, 4, 3, 4]
 
-        with db.session.begin(subtransactions=True):
+        with db.session.begin():
 
             for ii, expPK in enumerate(range(17, 29)):
                 exp = db.session.query(db.mangaDB.Exposure).get(expPK)
@@ -146,7 +146,7 @@ class testSets(unittest.TestCase):
         self.assertIsNot(exp._mangaExposure.set_pk, None)
 
         # Modifies the exposure
-        with db.session.begin(subtransactions=True):
+        with db.session.begin():
             exp = db.session.query(db.mangaDB.Exposure).get(17)
             exp.set_pk = None
             exp.sn2values[0].b1_sn2 = None
@@ -166,7 +166,7 @@ class testSets(unittest.TestCase):
                 break
 
         # Changes exposure to incomplete but valid
-        with db.session.begin(subtransactions=True):
+        with db.session.begin():
             exp = db.session.query(db.mangaDB.Exposure).get(17)
             exp.sn2values[0].b1_sn2 = 3.28888
             exp.sn2values[0].b2_sn2 = 2.90681
@@ -181,7 +181,7 @@ class testSets(unittest.TestCase):
                 break
 
         # Now we break the exposure again
-        with db.session.begin(subtransactions=True):
+        with db.session.begin():
             exp = db.session.query(db.mangaDB.Exposure).get(17)
             exp.sn2values[0].b1_sn2 = 0.0
             exp.sn2values[0].b2_sn2 = 0.0

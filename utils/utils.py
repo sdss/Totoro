@@ -19,6 +19,7 @@ from sdss.internal.manga.Totoro import config
 from sdss.internal.manga.Totoro import exceptions
 from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
 from sdss.manga.mlhalimit import mlhalimit as mlhalimitHours
+from sqlalchemy.exc import InvalidRequestError, ResourceClosedError
 from collections import OrderedDict
 from itertools import combinations
 import numpy as np
@@ -270,7 +271,7 @@ def isMaNGA_Led(plate):
         pass
     else:
         try:
-            with session.begin(subtransactions=True):
+            with session.begin():
                 plate = session.query(plateDB.Plate).filter(
                     plateDB.Plate.plate_id == plate).one()
         except:
@@ -282,3 +283,28 @@ def isMaNGA_Led(plate):
             return True
 
     return False
+
+
+def checkOpenSession():
+    """Raises an error if Totoro is being run from inside an open session."""
+
+    totoroDB = TotoroDBConnection()
+
+    try:
+        with totoroDB.session.begin():
+            totoroDB.session.commit()
+    except ResourceClosedError:
+        pass
+    except InvalidRequestError as ee:
+        if 'A transaction is already begun' in str(ee):
+            raise exceptions.TotoroError('Totoro is being run within an open '
+                                         'SQLalchemy session. Please, modify '
+                                         'your code to avoid this.')
+        else:
+            raise exceptions.TotoroError(
+                'Failed while checking session status. Error message is: {0}'
+                .format(str(ee)))
+    except Exception as ee:
+        raise exceptions.TotoroError(
+            'Failed while checking session status. Error message is: {0}'
+            .format(str(ee)))
