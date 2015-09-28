@@ -522,14 +522,15 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
 
     # If the exposure is not mock, force is not True, and an override status
     # is set, returns that.
-    if set.isMock is False and set.set_status_pk is not None and not force:
+    if set.isMock is False and set.set_status_pk is not None:
         if set.status.label == 'Override Good':
             return ('Good', 10)
         elif set.status.label == 'Override Bad':
             return ('Bad', 10)
-        elif 'Excellent' in set.status.label or 'Good' in set.status.label:
+        elif ('Excellent' in set.status.label or 'Good' in set.status.label and
+              not force):
             return ('Good', 10)
-        elif 'Poor' in set.status.label:
+        elif 'Poor' in set.status.label and not force:
             return ('Bad', 10)
         else:
             pass
