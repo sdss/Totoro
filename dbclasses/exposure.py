@@ -345,6 +345,10 @@ class Exposure(plateDB.Exposure):
         """Returns the pk of the plate associated to this plate."""
         return int(self.observation.plate_pointing.plate.pk)
 
+    def getPlateID(self):
+        """Returns the plateid of the plate associated to this plate."""
+        return int(self.observation.plate_pointing.plate.plate_id)
+
     def getMJD(self):
         """Gets the MJD for this exposure."""
         return self.mjd()
