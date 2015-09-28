@@ -16,6 +16,7 @@ from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro import TotoroDBConnection
 from sdss.internal.manga.Totoro.dbclasses import fromPlateID
+from sdss.internal.manga.Totoro.dbclasses.plate_utils import removeOrphanedSets
 import unittest
 
 
@@ -23,7 +24,37 @@ db = TotoroDBConnection()
 session = db.session
 
 
-class testSetArrangement(unittest.TestCase):
+class TestSetArrangement(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        """Restores plate 7495."""
+
+        setPK = [1, 1, 1, 2, 2, 2, 3, 4, 3, 4, 3, 4]
+
+        with db.session.begin():
+
+            for ii, expPK in enumerate(range(17, 29)):
+                exp = db.session.query(db.mangaDB.Exposure).get(expPK)
+                ss = db.session.query(db.mangaDB.Set).get(setPK[ii])
+                if ss is None:
+                    db.session.add(db.mangaDB.Set(pk=setPK[ii]))
+                    db.session.flush()
+                exp.set_pk = setPK[ii]
+                exp.exposure_status_pk = 4
+                db.session.flush()
+
+            for sPK in setPK:
+                ss = db.session.query(db.mangaDB.Set).get(sPK)
+                ss.set_status_pk = 0
+
+        removeOrphanedSets()
+
+    @classmethod
+    def tearDownClass(cls):
+        """Similar to set up."""
+
+        cls.setUpClass()
 
     def testExposureAssignment(self):
         """Tests if an exposure is assigned to a correct incomplete set."""
@@ -69,6 +100,32 @@ class testSetArrangement(unittest.TestCase):
         for ii, ss in enumerate(plate8551.sets):
             setExposures = [exp.exposure_no
                             for exp in plate8551.sets[ii].totoroExposures]
+            self.assertItemsEqual(setExposures, correctSetExposures[ii])
+
+    def testRearrangementWithOverriddenSet(self):
+        """Tests a rearrangement in a plate with an overriden set."""
+
+        with db.session.begin():
+            exp18 = db.session.query(db.mangaDB.Exposure).get(18)
+            exp20 = db.session.query(db.mangaDB.Exposure).get(20)
+            exp18.set_pk = 2
+            exp20.set_pk = 1
+
+            set1 = db.session.query(db.mangaDB.Set).get(1)
+            set1.set_status_pk = 3
+
+        plate = fromPlateID(7495)
+        plate.rearrangeSets()
+
+        correctSetExposures = [[17, 20, 19],
+                               [18],
+                               [23, 21, 22],
+                               [24, 25],
+                               [27, 28, 26]]
+
+        for ii, ss in enumerate(plate.sets):
+            setExposures = [exp._mangaExposure.pk
+                            for exp in plate.sets[ii].totoroExposures]
             self.assertItemsEqual(setExposures, correctSetExposures[ii])
 
 

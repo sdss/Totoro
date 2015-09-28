@@ -200,6 +200,19 @@ def getValidDither(ss):
     return remainingDithers[0]
 
 
+def _getSetStatusLabel(exposure):
+    """Returns the set status for an exposure or None."""
+
+    if len(exposure.mangadbExposure) == 0:
+        return None
+    elif exposure.mangadbExposure[0].set is None:
+        return None
+    elif exposure.mangadbExposure[0].set.status is None:
+        return None
+    else:
+        return exposure.mangadbExposure[0].set.status.label
+
+
 def rearrangeSets(plate, mode='complete', scope='all', force=False,
                   LST=None, silent=False, **kwargs):
     """Rearranges exposures in a plate.
@@ -247,24 +260,38 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
     else:
         raise exceptions.TotoroError('scope={0} is invalid'.format(scope))
 
-    # Rejects invalid exposures:
-    exposures = [exp for exp in exposures
-                 if exp.isMock or exp.isValid(force=True, flag=True)[0]]
+    # Removes exposures that are in sets overriden good or bad, or that are
+    # invalid.
+    validExposures = []
+    for exp in exposures:
+        status = _getSetStatusLabel(exp)
+        if status is not None and 'Overridden' in status:
+            continue
+        elif not exp.isValid(force=True, flag=True):
+            continue
+        elif exp.isMock:
+            validExposures.append(exp)
+        else:
+            validExposures.append(exp)
+
+    # Stores overriden sets
+    overridenSets = [ss for ss in plate.sets if ss.status is not None and
+                     'Overridden' in ss.status.label]
 
     # Does some logging.
-    logMode('plate_id={0}: rearranging sets, mode=\'{1}\', '
-            'scope=\'{2}\''.format(plate.plate_id, mode, scope))
-    logMode('plate_id={0}: found {1} valid exposures'.format(plate.plate_id,
-                                                             len(exposures)))
+    logMode('plate_id={0}: rearranging sets, mode=\'{1}\', scope=\'{2}\''
+            .format(plate.plate_id, mode, scope))
+    logMode('plate_id={0}: found {1} valid exposures'
+            .format(plate.plate_id, len(validExposures)))
 
-    if len(exposures) == 0:
+    if len(validExposures) == 0:
         return True
 
     if mode.lower() == 'sequential':
         # If mode is sequential, removes set_pk from all selected exposures
         # and triggers a plate update.
         with session.begin():
-            for exposure in exposures:
+            for exposure in validExposures:
                 if exposure.mangadbExposure[0].set_pk is not None:
                     session.delete(exposure.mangadbExposure[0].set)
                 exposure.mangadbExposure[0].set_pk = None
@@ -277,7 +304,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
 
     # The remainder of this function assumes that the mode is optimal.
 
-    ditherPositions = [exp.ditherPosition for exp in exposures]
+    ditherPositions = [exp.ditherPosition for exp in validExposures]
     nPermutations = getNumberPermutations(ditherPositions)
 
     logMode('plate_id={0}: testing {1} permutations'.format(plate.plate_id,
@@ -301,17 +328,26 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
         exposures."""
         return np.sum([id(exp) for exp in ss.totoroExposures])
 
+    zeroSN2 = np.array([0.0, 0.0, 0.0, 0.0])
+
     goodArrangements = []
     setStatus = {}
     setSN2 = {}
     completions = []
 
+    # Adds the SN2 of the overridden sets
+    for ss in overridenSets:
+        setId = getSetId(ss)
+        setStatus[setId] = ss.getStatus(silent=True)[0]
+        if 'Good' in setStatus[setId]:
+            setSN2[setId] = ss.getSN2Array()
+        else:
+            setSN2[setId] = zeroSN2
+
     # Counts the actual number of permutations, from the iterator.
     # For testing purposes.
     permutationCounter = 0
     setRearrFactor = config['set']['setRearrangementFactor']
-
-    zeroSN2 = np.array([0.0, 0.0, 0.0, 0.0])
 
     for nn, permutation in enumerate(permutations):
 
@@ -319,7 +355,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
 
         for setIndices in permutation:
 
-            setExposures = [exposures[ii] for ii in setIndices
+            setExposures = [validExposures[ii] for ii in setIndices
                             if ii is not None]
 
             ss = TotoroSet.fromExposures(setExposures)
@@ -331,9 +367,12 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
             if setId not in setStatus:
                 setStatus[setId] = ss.getStatus(silent=True)[0]
                 setSN2[setId] = ss.getSN2Array() \
-                    if setStatus[setId] in ['Excellent', 'Good'] else zeroSN2
+                    if setStatus[setId] in ['Excellent', 'Good',
+                                            'Overridden Good'] else zeroSN2
 
             del ss
+
+        sets += overridenSets
 
         # Instead of using Plate.getPlateCompletion, we calculate the plate
         # completion here using the setStatus dictionary. Way faster this way.
@@ -440,6 +479,9 @@ def applyArrangement(plate, arrangement):
 
     from sdss.internal.manga.Totoro.dbclasses import Set as TotoroSet
 
+    arrangement = [ss for ss in arrangement
+                   if ss.status is None or 'Overridden' not in ss.status.label]
+
     # If all exposures are real, saves data to the DB.
     expMock = [exp.isMock for ss in arrangement for exp in ss.totoroExposures]
 
@@ -447,6 +489,8 @@ def applyArrangement(plate, arrangement):
         # Removes sets and exposure-set assignment from the DB
         with session.begin():
             for ss in plate.sets:
+                if ss.status is not None and 'Overridden' in ss.status.label:
+                    continue
                 for exp in ss.totoroExposures:
                     setPK = exp.mangadbExposure[0].set_pk
                     exp.mangadbExposure.set_pk = None
