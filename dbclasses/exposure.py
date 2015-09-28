@@ -80,9 +80,9 @@ class Exposure(plateDB.Exposure):
                                if len(self.mangadbExposure) > 0 else
                                mangaDB.Exposure())
 
-        if self._mangaExposure is None:
+        if self._mangaExposure.pk is None:
             warnings.warn('plateDB.Exposure.pk={0} has no mangaDB.Exposure '
-                          'counterpart.', NoMangaExposure)
+                          'counterpart.'.format(self.pk), NoMangaExposure)
 
     def __repr__(self):
         return ('<Totoro Exposure (mangaDB.Exposure.pk={0}, exposure_no={1}, '
@@ -561,9 +561,9 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
                 return (True, 10)
             elif mangaDBstatus == 'Totoro Bad' and not force:
                 return (False, 10)
-            elif mangaDBstatus == 'Overridden Good':
+            elif mangaDBstatus == 'Override Good':
                 return (True, 10)
-            elif mangaDBstatus == 'Overridden Bad':
+            elif mangaDBstatus == 'Override Bad':
                 return (False, 10)
             else:
                 pass
