@@ -18,7 +18,8 @@ from __future__ import print_function
 from sdss.internal.manga.Totoro import log, TotoroDBConnection
 from sdss.internal.manga.Totoro.dbclasses.exposure import (Exposure,
                                                            setExposureStatus)
-from sdss.internal.manga.Totoro.dbclasses.set import Set, checkSet
+from sdss.internal.manga.Totoro.dbclasses.set import (Set, checkSet,
+                                                      setErrorCodes)
 from sdss.internal.manga.Totoro.dbclasses.plate_utils import (
     getConsecutiveSets, removeOrphanedSets)
 from sdss.internal.manga.Totoro.dbclasses import fromPlateID
@@ -33,6 +34,7 @@ import sys
 import os
 
 
+warnings.simplefilter('always')
 db = TotoroDBConnection()
 
 
@@ -50,14 +52,8 @@ def _getStatusPK(status):
                      .format(status))
 
 
-def override(args):
-    """Overrides a set of exposures as good or bad."""
-
-    mode = args.mode.capitalize()
-    exposures = args.EXPOSURE_NO
-    verbose = args.verbose
-
-    overriddenStatusPK = _getStatusPK('Override ' + mode)
+def _checkExposures(exposures):
+    """Raises exceptions if exposures don't meed certain requirements."""
 
     if len(exposures) == 0:
         raise TotoroError('no exposures specified')
@@ -86,6 +82,20 @@ def override(args):
         totExposures.append(totExp)
         originalSetPKs.append(totExp._mangaExposure.set_pk)
         plateIDs.append(totExp.getPlateID())
+
+    return totExposures, originalSetPKs, plateIDs
+
+
+def override(args):
+    """Overrides a set of exposures as good or bad."""
+
+    mode = args.mode.capitalize()
+    exposures = args.EXPOSURE_NO
+    verbose = args.verbose
+
+    overriddenStatusPK = _getStatusPK('Override ' + mode)
+
+    totExposures, originalSetPKs, plateIDs = _checkExposures(exposures)
 
     if len(np.unique(plateIDs)) != 1:
         raise TotoroError('exposures belong to different plates.')
@@ -221,6 +231,73 @@ def removeStatus(args):
     return
 
 
+def getInfo(args):
+    """Returns information about a set composed by a list of exposures."""
+
+    exposures = args.EXPOSURE_NO
+    verbose = args.verbose
+
+    if verbose:
+        log.info('checking exposures ' + ', '.join(map(str, exposures)))
+
+    totExposures, originalSetPKs, plateIDs = _checkExposures(exposures)
+
+    if len(np.unique(plateIDs)) != 1:
+        raise TotoroError('exposures belong to different plates.')
+
+    if len(np.unique(originalSetPKs)) == 1 and originalSetPKs[0] is not None:
+        log.important('exposures belong to real set pk={0}'
+                      .format(originalSetPKs[0]))
+        ss = Set(originalSetPKs[0])
+    else:
+        log.important('creating mock set for input exposures')
+        ss = Set.fromExposures(totExposures)
+
+    if ss.isMock is False and ss.set_status_pk is not None:
+        status = ss.status.label
+        code = 10
+    else:
+        status, code = ss.getStatus()
+
+    log.important('set status is {0}'.format(status))
+    log.important('error code is {0:d}: {1}'.format(code, setErrorCodes[code]))
+
+    if code == 10:
+        log.important('now ignoring status from database ... ')
+
+        # If the set is overridden then all the exposures will also be
+        # overridden. To make this test we change their status to None. This
+        # won't be recorded in the DB.
+        exposureStatusPK = []
+        if 'Override' in status:
+            for exp in totExposures:
+                exposureStatusPK.append(exp._mangaExposure.exposure_status_pk)
+                exp._mangaExposure.exposure_status_pk = None
+
+        ss = Set.fromExposures(totExposures)
+        statusMock, codeMock = ss.getStatus(flag=False, force=True,
+                                            flagExposures=False)
+        log.important('mock set status is {0}'.format(statusMock))
+        log.important('error code is {0:d}: {1}'
+                      .format(codeMock, setErrorCodes[codeMock]))
+
+        # Just in case, let's restore the exposure statuses
+        if 'Override' in status:
+            for ii, exp in enumerate(totExposures):
+                exp._mangaExposure.exposure_status_pk = exposureStatusPK[ii]
+
+    else:
+        codeMock = statusMock = None
+
+    if code not in [0, 9, 10] or codeMock not in [0, 9, 10]:
+        warnings.warn('this is not a comprehensive list of reasons why the '
+                      'set is invalid. Other conditions may be failing for '
+                      'this set apart from the specified here.',
+                      TotoroUserWarning)
+
+    return (status, code, statusMock, codeMock)
+
+
 def main(argv=None):
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
@@ -244,6 +321,15 @@ def main(argv=None):
                            'overridden as a new bad set.')
     parserBad.set_defaults(func=override, mode='bad')
 
+    parserInfo = subparsers.add_parser(
+        'info', help='gets information about a set.',
+        description='If the set exists it returns its real status. Otherwise, '
+        'it returns status of the mock set and, if invalid, why it is so.')
+    parserInfo.add_argument('EXPOSURE_NO', metavar='EXPOSURE_NO',
+                            type=int, nargs='*',
+                            help='The list of exposure_no(s) to be tested.')
+    parserInfo.set_defaults(func=getInfo)
+
     parserRemove = subparsers.add_parser('remove',
                                          help='removes set status.',
                                          description='Removes set status.')
@@ -262,7 +348,7 @@ def main(argv=None):
     else:
         args = parser.parse_args()
 
-    args.func(args)
+    return args.func(args)
 
 
 if __name__ == '__main__':
