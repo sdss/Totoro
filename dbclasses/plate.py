@@ -15,7 +15,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
-from sdss.internal.manga.Totoro import exceptions as TotoroExpections
+from sdss.internal.manga.Totoro import exceptions as TotoroExceptions
 from sdss.internal.manga.Totoro import log, config, dustMap, site
 from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro.scheduler import observingPlan
@@ -102,7 +102,7 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
                              plateDB.Pointing.center_ra <= raRange[1][1])))
             else:
                 warnings.warn('unrecognised format for raRange',
-                              TotoroExpections.TotoroUserWarning)
+                              TotoroExceptions.TotoroUserWarning)
 
         if rejectLowPriority:
             plates = plates.filter(
@@ -194,7 +194,7 @@ def _checkNumberPlatesAtAPO(plates):
     if nPlates >= 0.9 * nPlatesAPO:
         warnings.warn('MaNGA has {0} plates at APO when the maximum is {1}'
                       .format(nPlates, nPlatesAPO),
-                      TotoroExpections.TotoroUserWarning)
+                      TotoroExceptions.TotoroUserWarning)
 
     return
 
@@ -312,7 +312,7 @@ class Plate(plateDB.Plate):
     def createMockPlate(cls, ra=None, dec=None, **kwargs):
 
         if ra is None or dec is None:
-            raise TotoroExpections.TotoroError('ra and dec must be specified')
+            raise TotoroExceptions.TotoroError('ra and dec must be specified')
 
         mockPlate = plateDB.Plate.__new__(cls)
         mockPlate.__init__(None, mock=True, ra=ra, dec=dec, **kwargs)
@@ -354,7 +354,7 @@ class Plate(plateDB.Plate):
             raise AttributeError('Plate instance has no pk or plate_id.')
 
         if not self.isMaNGA:
-            raise TotoroExpections.TotoroError('this is not a MaNGA plate!')
+            raise TotoroExceptions.NoMangaPlate('this is not a MaNGA plate!')
 
         if full:
             nMaNGAExposures = len(self.getMangadbExposures())
@@ -364,7 +364,7 @@ class Plate(plateDB.Plate):
                               'but only {2} mangaDB.Exposures'.format(
                                   nScienceExposures, self.plate_id,
                                   nMaNGAExposures),
-                              TotoroExpections.NoMangaExposure)
+                              TotoroExceptions.NoMangaExposure)
 
     @property
     def isMaNGA(self):
@@ -446,7 +446,7 @@ class Plate(plateDB.Plate):
             if len(self.plate_pointings) > 1:
                 warnings.warn('plate_id={0:d}: multiple plate pointings found.'
                               ' Using the first one.'.format(self.plate_id),
-                              TotoroExpections.MultiplePlatePointings)
+                              TotoroExceptions.MultiplePlatePointings)
 
             return np.array(
                 [self.plate_pointings[0].pointing.center_ra,
@@ -540,7 +540,7 @@ class Plate(plateDB.Plate):
             if len(plugging.activePlugging) > 0:
                 return int(plugging.cartridge.number)
 
-        raise TotoroExpections.PlateNotPlugged(
+        raise TotoroExceptions.PlateNotPlugged(
             'plate_id={0} is not currently plugged'.format(self.plate_id))
 
     def getActivePlugging(self):
@@ -560,7 +560,7 @@ class Plate(plateDB.Plate):
         mangaExposures = []
         for exp in scienceExps:
             if exp.mangadbExposure is None or len(exp.mangadbExposure) == 0:
-                raise TotoroExpections.TotoroError(
+                raise TotoroExceptions.TotoroError(
                     'platedb exposure_no={0} has no mangadb counterpart'
                     .format(exp.exposure_no))
             else:
@@ -644,7 +644,7 @@ class Plate(plateDB.Plate):
         if jdRange is None:
             warnings.warn('no observing block found for MJD={0:d}. '
                           'Observing windows will not be contrained.'
-                          .format(mjd), TotoroExpections.NoObservingBlock)
+                          .format(mjd), TotoroExceptions.NoObservingBlock)
             return haRange
 
         observingRangeLST = np.array(map(site.localSiderealTime, jdRange))
