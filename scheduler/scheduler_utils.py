@@ -25,8 +25,28 @@ from numbers import Number
 
 expTime = config['exposure']['exposureTime']
 minSchedulingTime = config['plugger']['minSchedulingTimeHours']
-patchSetFactor = 0.1
-platePriorityFactor = 0.25
+patchSetFactor = config['scheduling']['patchSetFactor']
+platePriorityFactor = config['scheduling']['platePriorityFactor']
+nextNightFactor = config['scheduling']['nextNightFactor']
+
+
+def _getNextNightRange(jdRange):
+    """For a given jdRange, returns the JD range of the next night."""
+
+    currentNight = observingPlan[(observingPlan['JD0'] <= jdRange[0]) &
+                                 (observingPlan['JD1'] >= jdRange[1])]
+
+    if len(currentNight) == 0 or len(currentNight) > 1:
+        return None
+
+    JD = currentNight['JD']
+
+    # Next night must be JD + 1 (i.e., be in the same run)
+    nextNight = observingPlan[observingPlan['JD'] == JD + 1]
+    if len(nextNight) == 0:
+        return None
+    else:
+        return (nextNight['JD0'][0], nextNight['JD1'][0])
 
 
 def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
@@ -103,8 +123,32 @@ def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
     return optimalPlate, newExps
 
 
+def _normaliseWindowLength(plates, jdRange, factor=1.0, apply=True):
+    """Calculates normalisation factors based on window lengths."""
+
+    lstRange = site.localSiderealTime(jdRange)
+    plateWindowLength = np.array([
+        utils.getIntervalIntersectionLength(plate.getLSTRange(), lstRange,
+                                            wrapAt=24.)
+        for plate in plates])
+
+    plateWindowLenghtNormalised = np.array((plateWindowLength /
+                                            np.min(plateWindowLength)))
+
+    plateWindowLenghtNormalisedFactor = (
+        factor * (plateWindowLenghtNormalised - 1.) + 1)
+
+    if apply:
+        _completionFactor(plates, plateWindowLenghtNormalisedFactor)
+
+    return plateWindowLenghtNormalisedFactor
+
+
 def selectPlate(plates, jdRange, normalise=False, scope='all'):
     """From a list of simulated plates, returns the optimal one."""
+
+    # Gets the JD range for the following night
+    nextNightJDrange = _getNextNightRange(jdRange)
 
     # First we exclude plates without new exposures
     plates = [plate for plate in plates
@@ -168,16 +212,12 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
 
     if normalise:
 
-        lstRange = site.localSiderealTime(jdRange)
-        plateWindowLength = np.array([
-            utils.getIntervalIntersectionLength(plate.getLSTRange(),
-                                                lstRange, wrapAt=24.)
-            for plate in plates])
+        _normaliseWindowLength(plates, jdRange, factor=1.0, apply=True)
 
-        plateWindowLenghtNormalised = (plateWindowLength /
-                                       np.min(plateWindowLength))
-
-        _completionFactor(plates, plateWindowLenghtNormalised)
+        # We also normalise using the following night, if possible.
+        if nextNightJDrange is not None:
+            _normaliseWindowLength(plates, nextNightJDrange,
+                                   factor=nextNightFactor, apply=True)
 
         # Now we normalise plate completion using a metric that gives higher
         # priority to plates for which we have patched incomplete sets.

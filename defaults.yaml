@@ -65,6 +65,11 @@ dustMap:
     maps: [SFD_dust_4096_ngp.fits, SFD_dust_4096_sgp.fits]
     grid: +data/IGincrease.fits
 
+scheduling:
+    patchSetFactor: 0.1
+    platePriorityFactor: 0.25
+    nextNightFactor: 0.5
+
 planner:
     efficiency: 0.8
     maxAltitude: 80
