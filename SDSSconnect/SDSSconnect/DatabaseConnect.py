@@ -132,13 +132,14 @@ class DatabaseConnection(object):
 
     @classmethod
     def _createNewInstance(cls, profile=None, databaseConnectionString=None,
-                           expireOnCommit=True, models='all', **kwargs):
+                           expireOnCommit=True, models='all',
+                           profilePath=None, **kwargs):
         """Creates a new instance of the connection."""
 
         me = object.__new__(cls)
 
         if profile is not None:
-            profileDict = readProfile(profile=profile)
+            profileDict = readProfile(profile=profile, path=profilePath)
             me.databaseConnectionString = (
                 'postgresql+psycopg2://{user}:{password}@'
                 '{host}:{port}/{database}'.format(**profileDict))
