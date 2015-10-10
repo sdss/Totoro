@@ -109,7 +109,7 @@ class DatabaseConnection(object):
             newConn = cls._createNewInstance(**kwargs)
             if connectionName is not None:
                 if connectionName == cls._defaultConnectionName:
-                    warnings.warn('overriding default connection')
+                    warnings.warn('overriding default connection', UserWarning)
                 cls._singletons[connectionName] = newConn
             return newConn
 
