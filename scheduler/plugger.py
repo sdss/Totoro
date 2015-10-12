@@ -93,9 +93,6 @@ def getCartPlate(activePluggings, cartNumber):
 def getCartForReplug(plate):
     """Returns the cart of the last plugging."""
 
-    # TODO: this function should check that the returned plugging actually
-    # contains science exposures.
-
     if len(plate.pluggings) == 0:
         return None
 
@@ -320,20 +317,25 @@ class Plugger(object):
             # If the plate has been started but is not plugged and the cart
             # that must be used is already plugged, skips the plate.
             if plate.getPlateCompletion(includeIncompleteSets=True) > 0:
-                cartToUse = getCartForReplug(plate)
-                isCartFree = True
-                for pp in platesToSchedule:
-                    if (pp.isPlugged and
-                            pp.getActiveCartNumber() == cartToUse):
-                        isCartFree = False
-                        break
-                if not isCartFree:
-                    log.info('Skipped plate_id={0} because is a replug and '
-                             'its cart is in use.'.format(plate_id))
-                    continue
-                else:
-                    # Marks the plate for future reference
-                    plate.isReplug = True
+                plate.isReplug = True
+
+                # Replacing this logic because now we allow a plate to be
+                # replugged in a different cart.
+                #
+                # cartToUse = getCartForReplug(plate)
+                # isCartFree = True
+                # for pp in platesToSchedule:
+                #     if (pp.isPlugged and
+                #             pp.getActiveCartNumber() == cartToUse):
+                #         isCartFree = False
+                #         break
+                # if not isCartFree:
+                #     log.info('Skipped plate_id={0} because is a replug and '
+                #              'its cart is in use.'.format(plate_id))
+                #     continue
+                # else:
+                #     # Marks the plate for future reference
+                #     plate.isReplug = True
 
             platesToSchedule.append(plate)
 
@@ -444,11 +446,17 @@ class Plugger(object):
             if hasattr(plate, 'isReplug') and plate.isReplug:
                 cartNumber = getCartForReplug(plate)
                 statusCode = cartStatus[cartNumber][2]
-                self.carts[cartNumber] = plate
-                allocatedPlates.append(plate)
-                cartPlateMessage[cartNumber] = (plate,
-                                                replaceMsgs[statusCode])
-                cartStatus.pop(cartNumber)
+                if cartNumber is not None and cartNumber not in config['offlineCarts']:
+                    self.carts[cartNumber] = plate
+                    allocatedPlates.append(plate)
+                    cartPlateMessage[cartNumber] = (plate,
+                                                    replaceMsgs[statusCode])
+                    cartStatus.pop(cartNumber)
+                else:
+                    log.debug('not plugging plate {0} in its original cart {1}'
+                              ' because it is not available'
+                              .format(plate.plate_id, cartNumber))
+                    continue
 
         # Sorts carts by priority. Note that sortedCarts is a list of tuples,
         # while cartStatus was a dictionary.
@@ -468,7 +476,7 @@ class Plugger(object):
             allocatedPlates.append(plate)
             msg = replaceMsgs[statusCode]
             if statusLabel == 'MaNGA_started':
-                msg + ', completion={0:.2f}'.format(completion)
+                msg += ', completion={0:.2f}'.format(completion)
 
             cartPlateMessage[cartNumber] = (plate, msg)
 
