@@ -37,7 +37,7 @@ class Planner(object):
     """A class for field selection."""
 
     def __init__(self, startDate=None, endDate=None, useFields=True,
-                 optimiseFootprint=True, **kwargs):
+                 optimiseFootprint=True, plates=None, fields=None, **kwargs):
 
         log.info('entering PLANNER mode.')
 
@@ -60,30 +60,36 @@ class Planner(object):
         log.debug('created PlannerScheduler with {0} timelines'
                   .format(len(self.timelines)))
 
-        # Selects all valid plates, including complete ones.
-        self._allPlates = self.getPlates(optimiseFootprint=optimiseFootprint,
-                                         **kwargs)
+        # If plates is defined, we use that list of plates
+        if plates is not None:
+            self.plates = plates
+        else:
+            # Selects all valid plates, including complete ones.
+            self._allPlates = self.getPlates(
+                optimiseFootprint=optimiseFootprint, **kwargs)
 
-        # Selects only plates that are incomplete and have enough priority
-        self.plates = [plate for plate in self._allPlates
-                       if len(plate.getTotoroExposures()) == 0 and
-                       plate.priority > minimumPlugPriority]
+            # Selects only plates that are incomplete and have enough priority
+            self.plates = [plate for plate in self._allPlates
+                           if len(plate.getTotoroExposures()) == 0 and
+                           plate.priority > minimumPlugPriority]
 
-        drilling = [plate for plate in self.plates if not plate.drilled]
+            drilling = [plate for plate in self.plates if not plate.drilled]
 
-        txtDrilling = ''
-        if len(drilling) > 0:
-            txtDrilling = _color_text(
-                '({0} in process of being drilled)'.format(len(drilling)),
-                'red')
+            txtDrilling = ''
+            if len(drilling) > 0:
+                txtDrilling = _color_text(
+                    '({0} in process of being drilled)'.format(len(drilling)),
+                    'red')
 
-        log.info('Plates found: {0} {1}'.format(len(self.plates), txtDrilling))
+            log.info('Plates found: {0} {1}'.format(len(self.plates),
+                                                    txtDrilling))
 
         # Gets fields (rejectDrilled=False because we do our own rejection)
-        if useFields:
+        self.fields = []
+        if fields is not None:
+            self.fields = fields
+        elif useFields:
             self.createFields(self._allPlates)
-        else:
-            self.fields = []
 
         # Defines priorities
         if optimiseFootprint:
@@ -154,8 +160,7 @@ class Planner(object):
             for status in plate.statuses:
                 if status.label in ['Rejected', 'Unobservable']:
                     validPlate = False
-            if (not usePlatesNotAtAPO and
-                    plate.getLocation() != 'APO'):
+            if not usePlatesNotAtAPO and plate.getLocation() != 'APO':
                 validPlate = False
             if optimiseFootprint:
                 if ((plate.ra < 100 or plate.ra > 300) and
@@ -283,10 +288,8 @@ class Planner(object):
                              startDate.iso.split()[0], totalTime))
 
             if nn not in goodWeatherIdx:
-                log.info(
-                    _color_text(
-                        '... skipping timeline because of bad weather.',
-                        'cyan'))
+                log.info(_color_text('... skipping timeline because of '
+                                     'bad weather.','cyan'))
                 timeline.observed = False
                 continue
 

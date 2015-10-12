@@ -527,10 +527,11 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
     assert isinstance(set, Set), ('input set is not an instance of '
                                   'Totoro.dbclasses.Set')
 
-    pk = set.pk
-
     if set.isMock or any([exp.isMock for exp in set.totoroExposures]):
         flag = False
+        pk = None
+    else:
+        pk = set.pk
 
     if flagExposures is None:
         flagExposures = flag
