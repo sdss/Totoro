@@ -157,7 +157,7 @@ def override(args):
         except EmptySet:
 
             if verbose:
-                log.info('set pk={0} not empty. Removing it.'.format(setPK))
+                log.info('set pk={0} is empty. Removing it.'.format(setPK))
             with db.session.begin():
                 ss = db.session.query(db.mangaDB.Set).get(setPK)
                 db.session.delete(ss)
