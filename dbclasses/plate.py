@@ -27,6 +27,7 @@ from astropy import time
 import numpy as np
 from copy import deepcopy
 from sqlalchemy import or_, and_
+from sqlalchemy.orm.exc import NoResultFound
 
 
 __all__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plate',
@@ -246,10 +247,16 @@ class Plate(plateDB.Plate):
         if isinstance(input, base):
             instance = input
         else:
-            with session.begin():
-                instance = session.query(base).filter(
-                    eval('{0}.{1} == {2}'.format(base.__name__, format, input))
-                    ).one()
+            try:
+                with session.begin():
+                    instance = session.query(base).filter(
+                        eval('{0}.{1} == {2}'.format(base.__name__,
+                                                     format, input))
+                        ).one()
+            except NoResultFound:
+                raise TotoroExceptions.TotoroError('no plate found for input '
+                                                   '{0}={1}'
+                                                   .format(format, input))
 
         instance.__class__ = cls
 
