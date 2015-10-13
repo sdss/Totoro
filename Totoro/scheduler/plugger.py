@@ -16,10 +16,10 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from sdss.internal.manga.Totoro import log, config, TotoroDBConnection, site
-from sdss.internal.manga.Totoro.scheduler.timeline import Timeline
-from sdss.internal.manga.Totoro import exceptions
-from sdss.internal.manga.Totoro.utils import intervals
+from Totoro import log, config, TotoroDBConnection, site
+from Totoro.scheduler.timeline import Timeline
+from Totoro import exceptions
+from Totoro.utils import intervals
 from collections import OrderedDict
 import warnings
 import numpy as np
@@ -43,7 +43,7 @@ def getCartStatus(activePluggings, cartNumber):
     """Returns the status of the plate in a cart. The returned tuple is
     (cart_number, plate, status_number, status_code, completion)"""
 
-    from sdss.internal.manga.Totoro.dbclasses.plate import Plate
+    from Totoro.dbclasses.plate import Plate
 
     cartActivePluggings = [aP for aP in activePluggings
                            if aP.plugging.cartridge.number == cartNumber]
@@ -159,7 +159,7 @@ class Plugger(object):
         assignement contains only those plugged MaNGA plates that are not
         complete."""
 
-        from sdss.internal.manga.Totoro.dbclasses import getPlugged
+        from Totoro.dbclasses import getPlugged
 
         self.startDate = None
         self.endDate = None
@@ -256,7 +256,7 @@ class Plugger(object):
         """Selects plates to schedule, rejecting those which are invalid or
         must not be scheduled."""
 
-        from sdss.internal.manga.Totoro import dbclasses
+        from Totoro import dbclasses
 
         onlyVisiblePlates = kwargs.pop('onlyVisiblePlates',
                                        config['plugger']['onlyVisiblePlates'])
@@ -344,7 +344,7 @@ class Plugger(object):
     def _scheduleForced(self, **kwargs):
         """Schedules plates that have priority=forcePlugPriority."""
 
-        from sdss.internal.manga.Totoro.dbclasses import Plate
+        from Totoro.dbclasses import Plate
 
         forcePlugPriority = int(config['plugger']['forcePlugPriority'])
 

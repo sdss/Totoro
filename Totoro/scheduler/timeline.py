@@ -14,11 +14,11 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from sdss.internal.manga.Totoro import log, config
-from sdss.internal.manga.Totoro import utils
-from sdss.internal.manga.Totoro.scheduler import scheduler_utils as logic
-from sdss.internal.manga.Totoro.core.colourPrint import _color_text
-from sdss.internal.manga.Totoro.exceptions import TotoroUserWarning
+from Totoro import log, config
+from Totoro import utils
+from Totoro.scheduler import scheduler_utils as logic
+from Totoro.core.colourPrint import _color_text
+from Totoro.exceptions import TotoroUserWarning
 import numpy as np
 import warnings
 
@@ -72,7 +72,7 @@ class Timeline(object):
                                  useMock=True):
         """Calculates plate completion after rejecting exposures."""
 
-        from sdss.internal.manga.Totoro.dbclasses import Plate, Set
+        from Totoro.dbclasses import Plate, Set
 
         if len(rejectExposures) == 0:
             return plate.getPlateCompletion(useMock=useMock)
@@ -104,7 +104,7 @@ class Timeline(object):
         """Schedules a list of plates in the LST ranges not yet observed in the
         timeline."""
 
-        from sdss.internal.manga.Totoro.dbclasses import Field
+        from Totoro.dbclasses import Field
 
         mode = mode.lower()
 

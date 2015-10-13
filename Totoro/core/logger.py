@@ -16,7 +16,7 @@ from colourPrint import colourPrint
 import shutil
 import re
 from textwrap import TextWrapper
-from sdss.internal.manga.Totoro.exceptions import TotoroError
+from Totoro.exceptions import TotoroError
 
 
 # Initialize by calling initLog()

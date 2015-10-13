@@ -14,9 +14,9 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from sdss.internal.manga import Totoro
+import Totoro
 import plate
-from sdss.internal.manga.Totoro.exceptions import TotoroError
+from Totoro.exceptions import TotoroError
 import os
 from astropy import table
 import numpy as np

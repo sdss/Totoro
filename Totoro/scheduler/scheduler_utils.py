@@ -17,9 +17,9 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from sdss.internal.manga.Totoro import utils
-from sdss.internal.manga.Totoro import config, site
-from sdss.internal.manga.Totoro.scheduler import observingPlan
+from Totoro import utils
+from Totoro import config, site
+from Totoro.scheduler import observingPlan
 from numbers import Number
 
 

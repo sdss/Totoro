@@ -18,10 +18,10 @@ import unittest
 import numpy as np
 import warnings
 
-from sdss.internal.manga.Totoro import TotoroDBConnection
-from sdss.internal.manga.Totoro.dbclasses.plate_utils import removeOrphanedSets
-from sdss.internal.manga.Totoro.bin.overrideSet import main
-from sdss.internal.manga.Totoro.dbclasses import Exposure, Set, fromPlateID
+from Totoro import TotoroDBConnection
+from Totoro.dbclasses.plate_utils import removeOrphanedSets
+from Totoro.bin.overrideSet import main
+from Totoro.dbclasses import Exposure, Set, fromPlateID
 
 
 db = TotoroDBConnection()

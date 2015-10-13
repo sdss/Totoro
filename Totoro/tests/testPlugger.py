@@ -14,8 +14,8 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from sdss.internal.manga.Totoro.scheduler import Plugger
-from sdss.internal.manga.Totoro import TotoroDBConnection, config
+from Totoro.scheduler import Plugger
+from Totoro import TotoroDBConnection, config
 from collections import OrderedDict
 import unittest
 

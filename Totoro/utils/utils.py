@@ -14,10 +14,10 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from sdss.internal.manga.Totoro import log
-from sdss.internal.manga.Totoro import config
-from sdss.internal.manga.Totoro import exceptions
-from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
+from Totoro import log
+from Totoro import config
+from Totoro import exceptions
+from Totoro.apoDB import TotoroDBConnection
 from sdss.manga.mlhalimit import mlhalimit as mlhalimitHours
 from sqlalchemy.exc import InvalidRequestError, ResourceClosedError
 from collections import OrderedDict
@@ -67,7 +67,7 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
     forceCheckCompletion is False and the plugging is marked as complete,
     no plateCompletion check is performed (this saves some time)."""
 
-    from sdss.internal.manga.Totoro.dbclasses.plate import Plate
+    from Totoro.dbclasses.plate import Plate
 
     if not isinstance(plate, Plate):
         if format.lower() not in ['pk', 'plate_id']:
@@ -117,7 +117,7 @@ def getAPOcomplete(plates, format='plate_id',
                    func=np.max, createFile=False, **kwargs):
     """Returns a dictionary with the APOcomplete output."""
 
-    from sdss.internal.manga.Totoro.dbclasses import Plate
+    from Totoro.dbclasses import Plate
 
     SN2_blue = config['SN2thresholds']['plateBlue'] \
         if SN2_blue is None else SN2_blue
@@ -265,7 +265,7 @@ def isMaNGA_Led(plate):
     plateDB = totoroDB.plateDB
     session = totoroDB.session
 
-    from sdss.internal.manga.Totoro.dbclasses import Plate
+    from Totoro.dbclasses import Plate
 
     if isinstance(plate, (Plate, plateDB.Plate)):
         pass

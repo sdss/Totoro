@@ -12,9 +12,9 @@ Licensed under a 3-clause BSD license.
 from __future__ import division
 from __future__ import print_function
 from astropy import table, time
-from sdss.internal.manga.Totoro import exceptions
+from Totoro import exceptions
 import warnings
-from sdss.internal.manga.Totoro import config, log, readPath
+from Totoro import config, log, readPath
 import numpy as np
 import os
 

@@ -14,9 +14,9 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from sdss.internal.manga.Totoro import TotoroDBConnection
-from sdss.internal.manga.Totoro.dbclasses import fromPlateID
-from sdss.internal.manga.Totoro.dbclasses.plate_utils import removeOrphanedSets
+from Totoro import TotoroDBConnection
+from Totoro.dbclasses import fromPlateID
+from Totoro.dbclasses.plate_utils import removeOrphanedSets
 import unittest
 
 

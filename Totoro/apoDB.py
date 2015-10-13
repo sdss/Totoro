@@ -18,7 +18,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import sys
-from sdss.internal.manga.Totoro import config, log
+from Totoro import config, log
 
 try:
     from sdss.internal.database.DatabaseConnection import DatabaseConnection

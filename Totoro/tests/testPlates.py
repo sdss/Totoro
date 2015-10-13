@@ -15,9 +15,9 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import unittest
-from sdss.internal.manga.Totoro.dbclasses import Plate, fromPlateID
-from sdss.internal.manga.Totoro import TotoroDBConnection
-from sdss.internal.manga.Totoro import exceptions
+from Totoro.dbclasses import Plate, fromPlateID
+from Totoro import TotoroDBConnection
+from Totoro import exceptions
 
 
 class plateTestCase(unittest.TestCase):
