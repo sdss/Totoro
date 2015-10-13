@@ -1,0 +1,3 @@
+[submodule "submodules/SDSSconnect"]
+	path = submodules/SDSSconnect
+	url = git@github.com:albireox/SDSSconnect.git
