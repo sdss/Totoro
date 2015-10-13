@@ -1,2 +1,0 @@
-
-from .addTiles import addFromTilingCatalogue
