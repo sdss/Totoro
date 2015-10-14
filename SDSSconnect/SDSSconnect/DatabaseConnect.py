@@ -20,17 +20,15 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.event import listen
 from sqlalchemy.pool import Pool
-from simplecrypt import decrypt
 import warnings
 import configparser
-import StringIO
 import os
 
 
 __MODELS__ = ['plateDB']
 
 
-def readProfile(profile=None, path=None, password=None):
+def readProfile(profile=None, path=None):
     """Reads a profile and creates the appropriate connection string."""
 
     profilesPath = os.path.join(os.path.expanduser('~'), '.sdssconnect',
@@ -39,16 +37,8 @@ def readProfile(profile=None, path=None, password=None):
     if not os.path.exists(profilesPath):
         raise RuntimeError('profile not found in {0}'.format(profilesPath))
 
-    if 'SDSSCONNECT_PASSWORD' not in os.environ and password is None:
-        raise RuntimeError('$SDSSCONNECT_PASSWORD not defined')
-
-    passwd = (os.environ['SDSSCONNECT_PASSWORD']
-              if password is None else password)
-
     config = configparser.ConfigParser()
-    config.readfp(
-        StringIO.StringIO(
-            decrypt(passwd, open(profilesPath, 'r').read()).decode('utf8')))
+    config.read(profilesPath)
 
     # If no profile is defined, we try to return the DEFAULTS section and, if
     # that fails, the first section in the profiles file.
