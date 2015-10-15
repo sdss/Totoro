@@ -19,6 +19,7 @@ import unittest
 import configparser
 import os
 from SDSSconnect import DatabaseConnection
+from SDSSconnect.exceptions import SDSSconnectError
 from SDSSconnect.DatabaseConnect import readProfile
 import warnings
 
@@ -131,24 +132,29 @@ class TestDatabaseConnect(unittest.TestCase):
         self.assertIs(connDefault, conn2)
         self.assertEqual(connDefault.profile, 'test')
 
-        conn3 = DatabaseConnection('test', new=True)
+        with warnings.catch_warnings(record=True) as ww:
+            warnings.simplefilter('always')
+            conn3 = DatabaseConnection('test', new=True)
+            self.assertIn('overwritting profile test', str(ww[-1].message))
+
         self.assertIs(connDefault, conn2)
         self.assertIsNot(connDefault, conn3)
         self.assertIsNot(conn2, conn3)
 
-        conn4 = DatabaseConnection('test', new=True, name='testConn')
-        self.assertItemsEqual(conn4.listConnections(), ['default', 'testConn'])
+        conn4 = DatabaseConnection('test', new=True, name='testConn',
+                                   default=True)
+        self.assertItemsEqual(conn4.listConnections(), ['test', 'testConn'])
         self.assertItemsEqual(conn4.listConnections(),
                               DatabaseConnection.listConnections())
         self.assertIsNot(conn4, conn3)
         self.assertIsNot(conn4, connDefault)
+        self.assertEqual(conn4.getDefaultConnectionName(), 'testConn')
 
-        with warnings.catch_warnings(record=True) as ww:
-            warnings.simplefilter('always')
+        conn5 = DatabaseConnection()
+        self.assertIs(conn5, conn4)
+
+        with self.assertRaises(SDSSconnectError):
             DatabaseConnection('production')
-            self.assertIn('returned instance uses profile test while you '
-                          'requested production. Maybe you want to use the '
-                          'new=True option.', str(ww[-1].message))
 
 
 if __name__ == '__main__':

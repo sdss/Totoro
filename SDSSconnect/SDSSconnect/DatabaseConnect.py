@@ -22,6 +22,7 @@ from sqlalchemy.pool import Pool
 from SDSSconnect.models import construct_mangaDB, construct_plateDB
 from SDSSconnect.models.utils import ModelWrapper
 from sqlalchemy.ext.automap import automap_base
+from SDSSconnect.exceptions import SDSSconnectUserWarning, SDSSconnectError
 
 import warnings
 import configparser
@@ -54,7 +55,7 @@ def readProfile(profile=None, path=None):
                                    .format(profilesPath))
             section = config.sections()[0]
             warnings.warn('no default profile found. Using first profile: {}'
-                          .format(section), UserWarning)
+                          .format(section), SDSSconnectUserWarning)
             return (dict(config.items(section)), section)
 
     if not config.has_section(profile.lower()):
@@ -95,7 +96,7 @@ listen(Pool, 'connect', clearSearchPathCallback)
 class DatabaseConnection(object):
 
     _singletons = dict()
-    _defaultConnectionName = 'default'
+    _defaultConnectionProfile = None
 
     def __new__(cls, *args, **kwargs):
 
@@ -106,60 +107,62 @@ class DatabaseConnection(object):
                              'accepts one argument')
 
         new = kwargs.get('new', False)
-        connectionName = kwargs.get('name', None)
-
-        if len(cls._singletons.keys()) == 0:
-            if connectionName is not None:
-                cls._defaultConnectionName = connectionName
-            cls._singletons[cls._defaultConnectionName] = \
-                cls._createNewInstance(**kwargs)
-        elif new:
-            newConn = cls._createNewInstance(**kwargs)
-            if connectionName is not None:
-                if connectionName == cls._defaultConnectionName:
-                    warnings.warn('overriding default connection', UserWarning)
-                cls._singletons[connectionName] = newConn
-            return newConn
-
-        instanceToReturn = cls._singletons[cls._defaultConnectionName]
-        cls._checkProfileName(instanceToReturn, **kwargs)
-
-        return instanceToReturn
-
-    @staticmethod
-    def _checkProfileName(instanceToReturn, **kwargs):
-        """Checks if the profile of the instance returned matches the input."""
-
+        default = kwargs.get('default', False)
         profile = kwargs.get('profile', None)
-        connectionString = kwargs.get('databaseConnectionString', None)
 
-        if profile is None and connectionString is None:
-            profile = 'DEFAULT'
+        if len(cls._singletons.keys()) == 0 or new:
 
-        if instanceToReturn.profile != profile:
-            warnings.warn('returned instance uses profile {0} while you '
-                          'requested {1}. Maybe you want to use the new=True '
-                          'option.'.format(instanceToReturn.profile, profile),
-                          UserWarning)
+            newInstance = cls._createNewInstance(**kwargs)
+            profile = newInstance.profile
+
+            if profile in cls.listConnections():
+                warnings.warn('overwritting profile {0}'.format(profile),
+                              SDSSconnectUserWarning)
+
+            if default or len(cls._singletons.keys()) == 0:
+                cls._defaultConnectionProfile = newInstance.profile
+
+            cls._singletons[newInstance.profile] = newInstance
+
+            return cls._singletons[newInstance.profile]
+
+        else:
+
+            if profile is None and len(cls.listConnections()) == 0:
+                raise SDSSconnectError('no available connection exists')
+            else:
+                if profile is None:
+                    return cls.getDefaultConnection()
+                elif profile not in cls.listConnections():
+                    raise SDSSconnectError('profile {0} not in the list of '
+                                           'connections. Use new=True if you '
+                                           'want to create a new connection.'
+                                           .format(profile))
+                else:
+                    return cls._singletons[profile]
 
     @classmethod
     def _createNewInstance(cls, profile=None, databaseConnectionString=None,
                            expireOnCommit=True, models='all',
-                           profilePath=None, **kwargs):
+                           profilePath=None, name=None, **kwargs):
         """Creates a new instance of the connection."""
 
         me = object.__new__(cls)
 
         if databaseConnectionString is not None:
             me.databaseConnectionString = databaseConnectionString
-            me.profile = None
+            me.profile = 'connection_string'
         else:
             profileDict, profileName = readProfile(profile=profile,
                                                    path=profilePath)
             me.databaseConnectionString = (
                 'postgresql+psycopg2://{user}:{password}@'
                 '{host}:{port}/{database}'.format(**profileDict))
-            me.profile = profileName
+
+            if name is None:
+                me.profile = profileName
+            else:
+                me.profile = name
 
         me.engine = create_engine(me.databaseConnectionString, echo=False)
 
@@ -173,14 +176,14 @@ class DatabaseConnection(object):
         return me
 
     @classmethod
-    def getConnection(cls, connectionName):
+    def getConnection(cls, connectionProfile):
         """Returns a named connection."""
 
-        if connectionName not in cls._singletons:
+        if connectionProfile not in cls._singletons:
             raise KeyError('connection named {0} does not exist'
-                           .format(connectionName))
+                           .format(connectionProfile))
 
-        return cls._singletons[connectionName]
+        return cls._singletons[connectionProfile]
 
     @classmethod
     def listConnections(cls):
@@ -189,26 +192,32 @@ class DatabaseConnection(object):
         return cls._singletons.keys()
 
     @classmethod
+    def getDefaultConnectionName(cls):
+        """Returns the default connection name."""
+
+        if len(cls._singletons) == 0:
+            raise SDSSconnectError('no connections available')
+        elif cls._defaultConnectionProfile not in cls._singletons:
+            raise SDSSconnectError('default profile {0} is not in the list of '
+                                   'conections'.format(cls._defaultConnection))
+
+        return cls._defaultConnectionProfile
+
+    @classmethod
     def getDefaultConnection(cls):
         """Returns the default connection."""
 
-        if len(cls._singletons) == 0:
-            raise RuntimeError('no connections available')
-        elif cls._defaultConnectionName not in cls._singletons:
-            raise KeyError('default connection {0} does not exist'
-                           .format(cls._defaultConnectionName))
-
-        return cls._singletons[cls._defaultConnectionName]
+        return cls._singletons[cls.getDefaultConnectionName()]
 
     @classmethod
-    def setDefaultConnection(cls, connectionName):
+    def setDefaultConnection(cls, connectionProfile):
         """Sets the default connection."""
 
-        if connectionName not in cls._singletons:
-            raise KeyError('connection named {0} does not exist'
-                           .format(connectionName))
+        if connectionProfile not in cls._singletons:
+            raise KeyError('connection profile {0} does not exist'
+                           .format(connectionProfile))
 
-        cls._defaultConnectionName = connectionName
+        cls._defaultConnectionProfile = connectionProfile
 
     def addModels(self, models, overwrite=False):
         """Adds a list of model classes to the object."""
