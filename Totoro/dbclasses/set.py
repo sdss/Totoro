@@ -29,7 +29,7 @@ from astropy import time
 db = TotoroDBConnection()
 plateDB = db.plateDB
 mangaDB = db.mangaDB
-session = db.session
+session = db.Session()
 
 
 __all__ = ['Set']

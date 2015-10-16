@@ -8,35 +8,30 @@ logging:
 
 dbConnectionProduction: &dbConnectionProduction
     user: sdssdb_admin
-    password: 4-photometry
     host: sdss4-db
     port: 5432
     database: apodb
 
 dbConnectionLocal: &dbConnectionLocal
     user: sdssdb_admin
-    password: 4-photometry
     host: localhost
     port: 5432
     database: apodb
 
 dbConnectionTest: &dbConnectionTest
     user: sdssdb_admin
-    password: 4-photometry
     host: localhost
     port: 5432
     database: apodb_test
 
 dbConnectionDev: &dbConnectionDev
     user: sdssdb_admin
-    password: 4-photometry
     host: sdss4-db
     port: 5440
     database: apo_platedb
 
 dbConnectionTunnel: &dbConnectionTunnel
     user: sdssdb_admin
-    password: 4-photometry
     host: localhost
     port: 6000
     database: apodb

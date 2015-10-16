@@ -21,7 +21,7 @@ import unittest
 
 
 db = TotoroDBConnection()
-session = db.session
+session = db.Session()
 
 
 class TestSetArrangement(unittest.TestCase):
