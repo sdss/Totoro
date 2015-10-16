@@ -20,7 +20,7 @@ import configparser
 import os
 from SDSSconnect import DatabaseConnection
 from SDSSconnect.exceptions import SDSSconnectError
-from SDSSconnect.DatabaseConnect import readProfile
+from SDSSconnect.DatabaseConnection import readProfile
 import warnings
 
 
