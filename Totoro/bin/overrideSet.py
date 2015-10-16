@@ -16,15 +16,11 @@ from __future__ import division
 from __future__ import print_function
 
 from Totoro import log, TotoroDBConnection
-from Totoro.dbclasses.exposure import (Exposure,
-                                                           setExposureStatus)
-from Totoro.dbclasses.set import (Set, checkSet,
-                                                      setErrorCodes)
-from Totoro.dbclasses.plate_utils import (
-    getConsecutiveSets, removeOrphanedSets)
+from Totoro.dbclasses.exposure import Exposure, setExposureStatus
+from Totoro.dbclasses.set import Set, checkSet, setErrorCodes
+from Totoro.dbclasses.plate_utils import getConsecutiveSets, removeOrphanedSets
 from Totoro.dbclasses import fromPlateID
-from Totoro.exceptions import (TotoroUserWarning,
-                                                   TotoroError, EmptySet)
+from Totoro.exceptions import TotoroUserWarning, TotoroError, EmptySet
 
 from sqlalchemy.orm.exc import NoResultFound
 import numpy as np
@@ -36,13 +32,14 @@ import os
 
 warnings.simplefilter('always')
 db = TotoroDBConnection()
+session = db.Session()
 
 
 def _getStatusPK(status):
     """Returns the pk for a set status label."""
 
-    with db.session.begin():
-        statuses = db.session.query(db.mangaDB.SetStatus).all()
+    with session.begin():
+        statuses = session.query(db.mangaDB.SetStatus).all()
 
     for st in statuses:
         if st.label.lower() == status.lower():
@@ -115,9 +112,9 @@ def override(args):
         overridenSetPK = getConsecutiveSets(1)[0]
         if verbose:
             log.info('creating new set pk={0}'.format(overridenSetPK))
-        with db.session.begin():
+        with session.begin():
             ss = db.mangaDB.Set(pk=overridenSetPK)
-            db.session.add(ss)
+            session.add(ss)
 
     for totExp in totExposures:
         setExposureStatus(totExp, 'Override ' + mode)
@@ -126,15 +123,15 @@ def override(args):
                      .format(totExp.exposure_no, mode))
 
         if totExp._mangaExposure.set_pk != overridenSetPK:
-            with db.session.begin():
+            with session.begin():
                 totExp._mangaExposure.set_pk = overridenSetPK
             if verbose:
                 log.info('changing set_pk for exposure_no={0} to {1}'
                          .format(totExp.exposure_no, overridenSetPK))
 
     # Overrides the set good/bad.
-    with db.session.begin():
-        ss = db.session.query(db.mangaDB.Set).get(overridenSetPK)
+    with session.begin():
+        ss = session.query(db.mangaDB.Set).get(overridenSetPK)
         ss.set_status_pk = overriddenStatusPK
 
     # Reflags the remaining sets
@@ -158,9 +155,9 @@ def override(args):
 
             if verbose:
                 log.info('set pk={0} is empty. Removing it.'.format(setPK))
-            with db.session.begin():
-                ss = db.session.query(db.mangaDB.Set).get(setPK)
-                db.session.delete(ss)
+            with session.begin():
+                ss = session.query(db.mangaDB.Set).get(setPK)
+                session.delete(ss)
             continue
 
     # Checks if completion has changed for the plate and, if so, issues a
@@ -198,8 +195,8 @@ def removeStatus(args):
     reload = args.reload
 
     # Checks that the set exists
-    with db.session.begin():
-        ss = db.session.query(db.mangaDB.Set).get(setPK)
+    with session.begin():
+        ss = session.query(db.mangaDB.Set).get(setPK)
         if ss is None:
             raise TotoroError('set_pk={0} does not exist'.format(setPK))
 
@@ -223,7 +220,7 @@ def removeStatus(args):
             exp.exposure_status_pk = None
 
         # Removes the set
-        db.session.delete(ss)
+        session.delete(ss)
 
     # We run a removeOrphanedSets just to be sure
     if verbose:

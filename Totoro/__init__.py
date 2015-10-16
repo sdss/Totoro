@@ -34,8 +34,7 @@ except:
 from sdss.utilities.Site import Site
 site = Site()
 
-from external.SDSSconnect.SDSSconnect import DatabaseConnection \
-    as TotoroDBConnection
+from SDSSconnect import DatabaseConnection as TotoroDBConnection
 
 # Now we create the default DB connection
 databaseConnectionString = (

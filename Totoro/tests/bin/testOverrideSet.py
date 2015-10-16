@@ -25,6 +25,7 @@ from Totoro.dbclasses import Exposure, Set, fromPlateID
 
 
 db = TotoroDBConnection()
+session = db.Session()
 
 
 class TestOverrideSet(unittest.TestCase):
@@ -35,36 +36,36 @@ class TestOverrideSet(unittest.TestCase):
 
         setPK = [1, 1, 1, 2, 2, 2, 3, 4, 3, 4, 3, 4]
 
-        with db.session.begin():
+        with session.begin():
 
             for ii, expPK in enumerate(range(17, 29)):
-                exp = db.session.query(db.mangaDB.Exposure).get(expPK)
-                ss = db.session.query(db.mangaDB.Set).get(setPK[ii])
+                exp = session.query(db.mangaDB.Exposure).get(expPK)
+                ss = session.query(db.mangaDB.Set).get(setPK[ii])
                 if ss is None:
-                    db.session.add(db.mangaDB.Set(pk=setPK[ii]))
-                    db.session.flush()
+                    session.add(db.mangaDB.Set(pk=setPK[ii]))
+                    session.flush()
                 exp.set_pk = setPK[ii]
                 exp.exposure_status_pk = 4
-                db.session.flush()
+                session.flush()
 
             for sPK in setPK:
-                ss = db.session.query(db.mangaDB.Set).get(sPK)
+                ss = session.query(db.mangaDB.Set).get(sPK)
                 ss.set_status_pk = 0
 
         plate8549_setPKs = [268, 269, 276, 280, 281]
         plate8549_setStatus = [1, None, 1, None, 1]
-        with db.session.begin():
+        with session.begin():
             for ii, setPK in enumerate(plate8549_setPKs):
-                ss = db.session.query(db.mangaDB.Set).get(setPK)
+                ss = session.query(db.mangaDB.Set).get(setPK)
                 if ss is None:
-                    db.session.add(
+                    session.add(
                         db.mangaDB.Set(pk=setPK,
                                        set_status_pk=plate8549_setStatus[ii]))
-                    db.session.flush()
+                    session.flush()
                     continue
                 else:
                     ss.set_status_pk = plate8549_setStatus[ii]
-                    db.session.flush()
+                    session.flush()
 
                 for exp in ss.exposures:
                     exp.set_pk = None
@@ -73,18 +74,18 @@ class TestOverrideSet(unittest.TestCase):
                                84658, 84661, 84591, 84672, 84675]
         plate8549_exposure_set = [268, 268, 268, 269, 276, 276, 276, 280, 280,
                                   281, 281, 281]
-        with db.session.begin():
+        with session.begin():
             for ii, expPK in enumerate(plate8549_exposures):
-                exp = db.session.query(db.plateDB.Exposure).get(expPK)
+                exp = session.query(db.plateDB.Exposure).get(expPK)
                 if expPK == 84468:
                     exp.mangadbExposure[0].exposure_status_pk = None
                 else:
                     exp.mangadbExposure[0].exposure_status_pk = 4
                 exp.mangadbExposure[0].set_pk = plate8549_exposure_set[ii]
 
-            ss = db.session.query(db.mangaDB.Set).get(312)
+            ss = session.query(db.mangaDB.Set).get(312)
             if ss is not None:
-                db.session.delete(ss)
+                session.delete(ss)
 
         removeOrphanedSets()
 
@@ -108,8 +109,8 @@ class TestOverrideSet(unittest.TestCase):
                              'Override Good')
 
         # Checks that the set is overriden good
-        with db.session.begin():
-            ss = db.session.query(db.mangaDB.Set).get(1)
+        with session.begin():
+            ss = session.query(db.mangaDB.Set).get(1)
 
         self.assertIsNotNone(ss)
         self.assertEqual(ss.status.label, 'Override Good')
@@ -134,8 +135,8 @@ class TestOverrideSet(unittest.TestCase):
         self.assertEqual(len(np.unique(setPKs)), 1)
 
         # Checks that the set is overriden good
-        with db.session.begin():
-            ss = db.session.query(db.mangaDB.Set).get(setPKs[0])
+        with session.begin():
+            ss = session.query(db.mangaDB.Set).get(setPKs[0])
 
         self.assertIsNotNone(ss)
         self.assertEqual(ss.status.label, 'Override Good')
@@ -167,8 +168,8 @@ class TestOverrideSet(unittest.TestCase):
                              'Override Bad')
 
         # Checks that the set is overriden good
-        with db.session.begin():
-            ss = db.session.query(db.mangaDB.Set).get(1)
+        with session.begin():
+            ss = session.query(db.mangaDB.Set).get(1)
 
         self.assertIsNotNone(ss)
         self.assertEqual(ss.status.label, 'Override Bad')
@@ -209,8 +210,8 @@ class TestOverrideSet(unittest.TestCase):
         self.assertEqual(len(np.unique(setPKs)), 1)
 
         # Checks that the set is overriden bad
-        with db.session.begin():
-            ss = db.session.query(db.mangaDB.Set).get(setPKs[0])
+        with session.begin():
+            ss = session.query(db.mangaDB.Set).get(setPKs[0])
 
         self.assertIsNotNone(ss)
         self.assertEqual(ss.status.label, 'Override Bad')
@@ -237,8 +238,8 @@ class TestOverrideSet(unittest.TestCase):
         overridenSetPK = main(argv=['-v', 'bad'] + map(str, exps))
 
         # Checks that the new overridden set is 297
-        with db.session.begin():
-            ss = db.session.query(db.mangaDB.Set).get(overridenSetPK)
+        with session.begin():
+            ss = session.query(db.mangaDB.Set).get(overridenSetPK)
 
         self.assertIsNotNone(ss)
         self.assertEqual(ss.status.label, 'Override Bad')
@@ -247,15 +248,15 @@ class TestOverrideSet(unittest.TestCase):
         main(argv=['-v', 'remove', str(overridenSetPK)])
 
         # Check that set_pk 297 has been removed
-        with db.session.begin():
-            ss = db.session.query(db.mangaDB.Set).get(overridenSetPK)
+        with session.begin():
+            ss = session.query(db.mangaDB.Set).get(overridenSetPK)
 
         self.assertIsNone(ss)
 
         # Checks that all exposures don't have exposure status or set_pk
-        with db.session.begin():
+        with session.begin():
             for exp in exps:
-                ee = db.session.query(db.plateDB.Exposure).filter(
+                ee = session.query(db.plateDB.Exposure).filter(
                     db.plateDB.Exposure.exposure_no == exp).one()
                 mangaDBexp = ee.mangadbExposure[0]
                 self.assertIsNone(mangaDBexp.set_pk)
@@ -270,17 +271,17 @@ class TestOverrideSet(unittest.TestCase):
 
         # Checks that all exposures don't have exposure status or set_pk
         expSetPKs = [2, 2, 1]
-        with db.session.begin():
+        with session.begin():
             for ii, exp in enumerate(exps):
-                ee = db.session.query(db.plateDB.Exposure).filter(
+                ee = session.query(db.plateDB.Exposure).filter(
                     db.plateDB.Exposure.exposure_no == exp).one()
                 mangaDBexp = ee.mangadbExposure[0]
                 self.assertEqual(mangaDBexp.set_pk, expSetPKs[ii])
                 self.assertEqual(mangaDBexp.exposure_status_pk, 4)
 
-        with db.session.begin():
+        with session.begin():
             for setPK in [1, 2]:
-                ss = db.session.query(db.mangaDB.Set).get(setPK)
+                ss = session.query(db.mangaDB.Set).get(setPK)
                 self.assertEqual(ss.status.label, 'Good')
 
     def testInfo(self):
@@ -331,8 +332,8 @@ class TestOverrideSet(unittest.TestCase):
         exps = [198371, 198447, 198258]
         main(argv=['-v', 'good'] + map(str, exps))
 
-        with db.session.begin():
-            exp198371 = db.session.query(db.plateDB.Exposure).filter(
+        with session.begin():
+            exp198371 = session.query(db.plateDB.Exposure).filter(
                 db.plateDB.Exposure.exposure_no == 198371).one()
             ss = exp198371.mangadbExposure[0].set
 

@@ -1,7 +1,3 @@
 
-def setup_package():
-    pass
-
-
-def teardown_package():
-    pass
+from Totoro import TotoroDBConnection
+TotoroDBConnection('test', default=True, new=True)

@@ -27,9 +27,6 @@ if __name__ == '__main__':
     (or may not) break something.
     """
 
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
-    os.environ['TOTORO_DB_CONNECTION'] = 'test'
-
     if '-v' not in sys.argv:
         sys.argv.append('-v')
     if '--nologcapture' not in sys.argv:
