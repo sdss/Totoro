@@ -96,7 +96,7 @@ class Timeline(object):
             return 0
         unallocatedTime = 0.0
         for interval in unallocatedRange:
-            unallocatedTime += (interval[1]-interval[0])
+            unallocatedTime += (interval[1] - interval[0])
         return unallocatedTime * 24.
 
     def schedule(self, plates, mode='plugger', showUnobservedTimes=True,
@@ -192,12 +192,11 @@ class Timeline(object):
 
                 else:
                     log.info(_color_text(
-                                '...... manga_tiledid={0} ({1} new exps, '
-                                '{2:.2f} -> {3:.2f} complete) {4}'
-                                .format(optimalPlate.getMangaTileID(),
-                                        nExps, completionPre, completionPost,
-                                        flags),
-                                'yellow'))
+                        '...... manga_tiledid={0} ({1} new exps, '
+                        '{2:.2f} -> {3:.2f} complete) {4}'
+                        .format(optimalPlate.getMangaTileID(),
+                                nExps, completionPre, completionPost, flags),
+                        'yellow'))
 
         if showUnobservedTimes:
             if self.remainingTime <= expTimeJD:
