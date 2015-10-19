@@ -90,7 +90,7 @@ def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
                           if plate.isPlugged]
     else:
         priorityPlates = [plate for plate in observablePlates
-                          if not plate.isMock or
+                          if plate.drilled or
                           len(plate.getTotoroExposures()) > 0]
 
     # Tries finding an optimal plate among the priority plates. Note that
