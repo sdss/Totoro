@@ -128,13 +128,8 @@ class Fields(list):
 
 class Field(plate.Plate):
 
-    def __new__(cls, *args, **kwargs):
-
-        field = plateDB.Plate.__new__(cls)
-        return field
-
     def __repr__(self):
-        return '<Field: manga_tileid={0:d}>'.format(self.manga_tileid)
+        return '<Field: manga_tileid={0}>'.format(self.manga_tileid)
 
     @property
     def isComplete(self):

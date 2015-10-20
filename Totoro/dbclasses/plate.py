@@ -321,7 +321,7 @@ class Plate(plateDB.Plate):
         if ra is None or dec is None:
             raise TotoroExceptions.TotoroError('ra and dec must be specified')
 
-        mockPlate = Plate(None, mock=True, ra=ra, dec=dec, **kwargs)
+        mockPlate = Plate.__new__(cls, mock=True, ra=ra, dec=dec, **kwargs)
         mockPlate.isMock = True
 
         log.debug('created mock plate with ra={0:.3f} and dec={0:.3f}'.format(
