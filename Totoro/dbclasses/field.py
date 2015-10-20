@@ -16,11 +16,16 @@ from __future__ import division
 from __future__ import print_function
 import Totoro
 import plate
+from Totoro import TotoroDBConnection
 from Totoro.exceptions import TotoroError
 import os
 from astropy import table
 import numpy as np
 from numbers import Integral
+
+
+db = TotoroDBConnection()
+plateDB = db.plateDB
 
 
 __all__ = ['Fields', 'Field', 'getTilingCatalogue']
@@ -122,6 +127,11 @@ class Fields(list):
 
 
 class Field(plate.Plate):
+
+    def __new__(cls, *args, **kwargs):
+
+        field = plateDB.Plate.__new__(cls)
+        return field
 
     def __repr__(self):
         return '<Field: manga_tileid={0:d}>'.format(self.manga_tileid)

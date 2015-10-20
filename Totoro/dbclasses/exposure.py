@@ -35,11 +35,11 @@ class Exposure(plateDB.Exposure):
                 **kwargs):
 
         if input is None:
-            return plateDB.Exposure.__new__(cls)
+            exp = plateDB.Exposure.__new__(cls)
+            super(Exposure, exp).__init__()
+            return exp
 
-        base = cls.__bases__[0]
-
-        if isinstance(input, base):
+        if isinstance(input, plateDB.Exposure):
             instance = input
 
         elif isinstance(input, mangaDB.Exposure):
@@ -48,13 +48,13 @@ class Exposure(plateDB.Exposure):
         else:
             if parent.lower() == 'platedb':
                 with session.begin():
-                    instance = session.query(base).filter(
+                    instance = session.query(plateDB.Exposure).filter(
                         eval('plateDB.Exposure.{0} == {1}'
                              .format(format, input))).one()
 
             elif parent.lower() == 'mangadb':
                 with session.begin():
-                    instance = session.query(base).join(
+                    instance = session.query(plateDB.Exposure).join(
                         mangaDB.Exposure).filter(
                             eval('mangaDB.Exposure.{0} == {1}'.format(
                                 format, input))).one()
@@ -63,7 +63,7 @@ class Exposure(plateDB.Exposure):
 
         return instance
 
-    def __init__(self, input, format='pk', mock=False, *args, **kwargs):
+    def __init__(self, input=None, format='pk', mock=False, *args, **kwargs):
 
         self._valid = None
         self._ditherPosition = None
@@ -80,7 +80,7 @@ class Exposure(plateDB.Exposure):
                                if len(self.mangadbExposure) > 0 else
                                mangaDB.Exposure())
 
-        if self._mangaExposure.pk is None:
+        if self._mangaExposure.pk is None and not self.isMock:
             warnings.warn('plateDB.Exposure.pk={0} has no mangaDB.Exposure '
                           'counterpart.'.format(self.pk), NoMangaExposure)
 
@@ -101,9 +101,9 @@ class Exposure(plateDB.Exposure):
                   self.pk))
 
     @classmethod
-    def createMockExposure(cls, startTime=None, expTime=None,
+    def createMockExposure(cls, startTime=None, expTime=None, plugging=None,
                            ditherPosition=None, ra=None, dec=None,
-                           plugging=None, silent=False, **kwargs):
+                           silent=False, sn2values=None, **kwargs):
         """Creates a mock exposure instance."""
 
         if ra is None or dec is None:
@@ -128,7 +128,14 @@ class Exposure(plateDB.Exposure):
         newExposure.exposure_time = expTime
         newExposure._plugging = plugging
 
-        newExposure.simulateObservedParamters(**kwargs)
+        haRange = newExposure.getHA()
+        ha = utils.calculateMean(haRange)
+        newExposure._airmass = utils.computeAirmass(newExposure.dec, ha)
+
+        if sn2values is None:
+            newExposure.simulateObservedParamters(**kwargs)
+        else:
+            newExposure._sn2Array = sn2values
 
         if not silent:
             log.debug('Created mock exposure with ra={0:.3f} and dec={0:.3f}'
@@ -152,10 +159,6 @@ class Exposure(plateDB.Exposure):
                 self._dust = dustMap(self.ra, self.dec)
             else:
                 self._dust = {'iIncrease': [1], 'gIncrease': [1]}
-
-        haRange = self.getHA()
-        ha = utils.calculateMean(haRange)
-        self._airmass = utils.computeAirmass(self.dec, ha)
 
         nominalRed = config['simulation']['redSN2'] * factor
         nominalBlue = config['simulation']['blueSN2'] * factor
