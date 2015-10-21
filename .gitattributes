@@ -2,6 +2,7 @@
 /README.md -text
 /__init__.py -text
 /apoDB.py -text
+bin/autoAssignPlatePriorities.py -text
 bin/loadMangaPlates.py -text
 bin/mangaPluggingRequest.py -text
 bin/rearrangeSets.py -text
