@@ -4,3 +4,4 @@ GITS/core/__init__.py -text
 GITS/core/core.py -text
 GITS/exceptions.py -text
 GITS/version.py -text
+/README.md -text
