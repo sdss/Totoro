@@ -114,8 +114,7 @@ class Set(mangaDB.Set):
 
     def loadExposures(self, silent=False):
 
-        return [Exposure(mangaExp.pk, format='pk', parent='mangaDB',
-                         silent=silent)
+        return [Exposure(mangaExp, silent=silent)
                 for mangaExp in self.exposures]
 
     def _checkHasExposures(self):
