@@ -144,7 +144,7 @@ def addExposure(exp, plate):
     db = TotoroDBConnection()
     session = db.Session()
 
-    with session.begin():
+    with session.begin(subtransactions=True):
         if validSet.pk is None:
             validSet.pk = getNewSetPK()
             session.add(validSet)
@@ -226,7 +226,7 @@ def removeSet(set_pk, orphan=False):
     db = TotoroDBConnection()
     session = db.Session()
 
-    with session.begin():
+    with session.begin(subtransactions=True):
         set = session.query(db.mangaDB.Set).get(set_pk)
         if set is not None:
             if set.exposures is not None:
@@ -252,7 +252,7 @@ def updateSet(set):
     for ss in np.unique(setPKs):
         removeSet(ss)
 
-    with session.begin():
+    with session.begin(subtransactions=True):
         newSet = db.mangaDB.Set()
         newSet.pk = getNewSetPK()
         session.add(newSet)
@@ -275,7 +275,7 @@ def removeOrphanSets():
     db = TotoroDBConnection()
     session = db.Session()
 
-    with session.begin():
+    with session.begin(subtransactions=True):
         nullSets = session.query(db.mangaDB.Set).outerjoin(
             db.mangaDB.Exposure).group_by(db.mangaDB.Set.pk).having(
                 func.count(db.mangaDB.Set.exposures) == 0).all()
