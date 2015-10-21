@@ -132,7 +132,7 @@ def prioritiseCarts(cartStatus, activePluggings):
     started = sorted(started, key=lambda xx: xx[4])
 
     # Returns carts in the desired order.
-    return empty + complete + noMaNGA + noStarted + unknown + started
+    return empty + complete + unknown + noMaNGA + noStarted + started
 
 
 class Plugger(object):
@@ -168,7 +168,7 @@ class Plugger(object):
         for plate in pluggedPlates:
             if not plate.isComplete:
                 cart = plate.getActiveCartNumber()
-                self.carts[cart] = plate.plate_id
+                self.carts[cart] = plate
 
     def _initFromDates(self, jd0, jd1, **kwargs):
         """Initialites the Plugger instance from two JD dates."""
@@ -187,7 +187,10 @@ class Plugger(object):
         self.platesToSchedule = self.selectPlates(**kwargs)
         log.info('scheduling {0} plates'.format(len(self.platesToSchedule)))
 
-        self.carts = OrderedDict([(key, None) for key in config['carts']])
+        # Initialises a dictionary with the MaNGA carts. Removes offline carts.
+        self.carts = OrderedDict([(key, None)
+                                  for key in config['mangaCarts']
+                                  if key not in config['offlineCarts']])
 
         self._scheduleForced()
 
@@ -199,6 +202,12 @@ class Plugger(object):
                                     if plate not in self.timeline.plates],
                                    mode='plugger')
 
+        # We log the number of new exposures for the plates in the timeline.
+        # We'll use this later when we prioritise carts.
+        self._nNewExposures = dict(
+            [(plate.plate_id, len(plate.getMockExposures()))
+             for plate in self.timeline.plates])
+
         self.allocateCarts(plates=self.timeline.plates)
         self._cleanUp()  # Removes cart without MaNGA plates
 
@@ -208,8 +217,24 @@ class Plugger(object):
         else:
             log.debug('all time has been allocated.')
 
-    def getOutput(self, **kwargs):
-        """Returns the plugging request as a cart dictionary."""
+    def getASOutput(self, **kwargs):
+        """Returns the plugging request as a cart dictionary, in a format
+        that the master autoscheduler can understand."""
+
+        # First we add carts not used to cart_order, with lower priority
+        nonUsedCarts = [cartNo for cartNo in config['mangaCarts']
+                        if cartNo not in self.carts['cart_order']]
+
+        self.carts['cart_order'] = nonUsedCarts + self.carts['cart_order']
+
+        # We also add the APOGEE carts
+        self.carts['cart_order'] = (config['apogeeCarts'][::-1] +
+                                    self.carts['cart_order'])
+
+        # We change the Totoro.Plate instances to plate_ids
+        for key in self.carts:
+            if key != 'cart_order':
+                self.carts[key] = self.carts[key].plate_id
 
         return self.carts
 
@@ -406,7 +431,7 @@ class Plugger(object):
         for plate in plates:
             if plate.isPlugged:
                 cartNumber = plate.getActiveCartNumber()
-                self.carts[cartNumber] = plate.plate_id
+                self.carts[cartNumber] = plate
                 cartPlateMessage[cartNumber] = (plate, 'already plugged')
                 allocatedPlates.append(plate)
                 cartStatus.pop(cartNumber)
@@ -418,7 +443,7 @@ class Plugger(object):
             if hasattr(plate, 'isReplug') and plate.isReplug:
                 cartNumber = getCartForReplug(plate)
                 statusCode = cartStatus[cartNumber][2]
-                self.carts[cartNumber] = plate.plate_id
+                self.carts[cartNumber] = plate
                 allocatedPlates.append(plate)
                 cartPlateMessage[cartNumber] = (plate,
                                                 replaceMsgs[statusCode])
@@ -438,7 +463,7 @@ class Plugger(object):
 
             cartNumber, cartPlate, statusCode, statusLabel, completion = cart
 
-            self.carts[cartNumber] = plate.plate_id
+            self.carts[cartNumber] = plate
             allocatedPlates.append(plate)
             msg = replaceMsgs[statusCode]
             if statusLabel == 'MaNGA_started':
@@ -461,7 +486,7 @@ class Plugger(object):
             else:
                 if statusLabel != 'noMaNGAplate' and plate is not None:
                     # If this is a MaNGA plate, keeps it.
-                    self.carts[cartNumber] = plate.plate_id
+                    self.carts[cartNumber] = plate
                     if plate.isPlugged:
                         cartPlateMessage[cartNumber] = (plate,
                                                         'already plugged')
@@ -477,6 +502,55 @@ class Plugger(object):
             self._logCartAllocation(cartNumber,
                                     cartPlateMessage[cartNumber][0],
                                     cartPlateMessage[cartNumber][1])
+
+        # Now we add a list with the priority order of the allocated carts.
+        # This is useful if APOGEE needs to take over some of our carts.
+        # In this way, they'll first use our carts with lower priority.
+        self.addCartOrder()
+
+    def addCartOrder(self):
+        """Adds a key `cart_order` to self.carts with the priority of the carts
+
+        Priority (from low to high) goes as it follows:
+
+        - Completed plates. Note that there should be no completed plates
+        in self.carts, but this is just to double-check.
+        - Other plates, sorted by the number of exposures needed to fill out
+        the night.
+        - Force plug plates (plates with priority 10)
+
+        """
+
+        forcePlugPriority = int(config['plugger']['forcePlugPriority'])
+
+        # Splits plates in the three priority categories.
+        completed = []
+        scheduled = []
+        forcePlug = []
+
+        for cart, plate in self.carts.iteritems():
+            if plate.priority == forcePlugPriority:
+                forcePlug.append((cart, plate))
+            elif plate.isComplete:
+                completed.append((cart, plate))
+            else:
+                scheduled.append((cart, plate))
+
+        # Retrieves how many scheduled (mock) exposures are in each plate.
+        nExposures = [self._nNewExposures[plate.plate_id]
+                      if plate.plate_id in self._nNewExposures else 0
+                      for cart, plate in scheduled]
+
+        # Sorts scheduled exposures from few to many scheduled exposures.
+        scheduledOrdered = [scheduled[ii] for ii in np.argsort(nExposures)]
+
+        # Creates master ordered list
+        orderedCarts = completed + scheduledOrdered + forcePlug
+
+        # Now it adds the list to self.carts
+        self.carts['cart_order'] = [cart for cart, plate in orderedCarts]
+
+        return
 
     def _cleanUp(self):
         """Removes the key in the self.cart dictionary that contain None."""

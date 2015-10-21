@@ -38,7 +38,7 @@ def mangaPluggingRequest(mjd=None, marked=False):
     jd0, jd1 = observingPlan.getJD(jd=int(tt.jd))
 
     plugger = Plugger(jd0, jd1, onlyMarked=marked)
-    log.info('returned dictionary: {0}'.format(plugger.getOutput()))
+    log.info('returned dictionary: {0}'.format(plugger.getASOutput()))
 
 
 def main(argv=None):

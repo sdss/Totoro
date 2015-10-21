@@ -823,6 +823,17 @@ class Plate(plateDB.Plate):
 
         return orphaned
 
+    def getMockExposures(self):
+        """Returns mock exposues in this plate."""
+
+        result = []
+        for ss in self.sets:
+            for exp in ss.totoroExposures:
+                if exp.isMock:
+                    result.append(exp)
+
+        return result
+
     @property
     def drilled(self):
         """Property to record if a plate has already been drilled."""
