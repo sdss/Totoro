@@ -22,6 +22,7 @@ from astropy import table
 from astropy import time
 import warnings
 import numpy as np
+import os
 
 
 expTime = config['exposure']['exposureTime']
@@ -138,35 +139,45 @@ class PlannerScheduler(object):
                 config['fields']['tilesBeingDrilled'].lower() != 'none' and
                 usePlatesNotAtAPO):
 
-            tilesBeingDrilledRaw = open(
-                readPath(config['fields']['tilesBeingDrilled']), 'r') \
-                .read().strip().splitlines()
+            tilesPath = readPath(config['fields']['tilesBeingDrilled'])
 
-            if len(tilesBeingDrilledRaw) > 0 and tilesBeingDrilledRaw[0] != '':
-                tilesBeingDrilled = map(int, tilesBeingDrilledRaw)
+            if not os.path.exists(tilesPath):
+
+                warnings.warn(
+                    'tilesBeingDrilled path does not exists. Skipping '
+                    'additional tiles.', exceptions.TotoroPlannerWarning)
+
             else:
-                tilesBeingDrilled = []
 
-            tiles = getTilingCatalogue()
+                tilesBeingDrilledRaw = open(tilesPath, 'r') \
+                    .read().strip().splitlines()
 
-            for tile in tilesBeingDrilled:
+                if (len(tilesBeingDrilledRaw) > 0
+                        and tilesBeingDrilledRaw[0] != ''):
+                    tilesBeingDrilled = map(int, tilesBeingDrilledRaw)
+                else:
+                    tilesBeingDrilled = []
 
-                if tile not in tiles['ID']:
-                    warnings.warn('tile being drilled not identified, '
-                                  'manga_tileid={0}'.format(tile),
-                                  exceptions.TotoroPlannerWarning)
-                    continue
+                tiles = getTilingCatalogue()
 
-                tileRow = tiles[tiles['ID'] == tile]
+                for tile in tilesBeingDrilled:
 
-                mockPlate = Plate.createMockPlate(
-                    ra=tileRow['RA'][0], dec=tileRow['DEC'][0],
-                    manga_tileid=tile, silent=True)
+                    if tile not in tiles['ID']:
+                        warnings.warn('tile being drilled not identified, '
+                                      'manga_tileid={0}'.format(tile),
+                                      exceptions.TotoroPlannerWarning)
+                        continue
 
-                mockPlate.manga_tileid = tile
-                mockPlate.drilled = False
+                    tileRow = tiles[tiles['ID'] == tile]
 
-                validPlates.append(mockPlate)
+                    mockPlate = Plate.createMockPlate(
+                        ra=tileRow['RA'][0], dec=tileRow['DEC'][0],
+                        manga_tileid=tile, silent=True)
+
+                    mockPlate.manga_tileid = tile
+                    mockPlate.drilled = False
+
+                    validPlates.append(mockPlate)
 
         # Plates to be rejected.
         if ('platesIgnore' in config['planner'] and

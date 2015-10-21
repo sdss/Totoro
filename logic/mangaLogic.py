@@ -17,8 +17,9 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from sdss.internal.manga.Totoro import TotoroDBConnection, config, log
+from sdss.internal.manga.Totoro import TotoroDBConnection, config, log, site
 import numpy as np
+from astropy import time
 from sdss.internal.manga.Totoro import utils
 
 
@@ -55,6 +56,7 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
     5: HA range outside the range of visibility of the plate.
     6: exposure not completely reduced
     7: low transparency
+    8: exposure taken during twilight
     10: status read from DB.
     """
 
@@ -112,7 +114,7 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
                           .format(exposure._mangaExposure.pk,
                                   exposure.ditherPosition))
 
-    # Checks tranparency
+    # Checks transparency
     if (exposure._mangaExposure.transparency is not None and
             exposure._mangaExposure.transparency <
             config['exposure']['transparency']):
@@ -151,12 +153,26 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
                           .format(exposure._mangaExposure.pk, HA[0], HA[1],
                                   visibilityWindow[0], visibilityWindow[1]))
 
-    # Checks wheter at least one camera for each arm has been reduced
+    # Checks altitude of the object
+    if not exposure.isMock:
+        # Avoids this check for mock exposures as it slows down simulations.
+        maxSunAltitude = config['exposure']['maxSunAltitude']
+        exposureDate = time.Time(exposure.getJD(), format='jd', scale='tai')
+        sunAltitude = site.getSunAltitude(exposureDate)
+
+        if np.any(sunAltitude > maxSunAltitude):
+            return flagHelper(False, 8,
+                              'Invalid exposure. plateDB.Exposure.pk={0}: '
+                              'altitude the Sun at the time of the exposure '
+                              '< {1:.1f} deg'.format(
+                                  exposure._mangaExposure.pk, maxSunAltitude))
+
+    # Checks whether at least one camera for each arm has been reduced
     exposureSN2 = exposure.getSN2Array(useNaN=False)
     blue = exposureSN2[0:2].tolist()
     red = exposureSN2[2:].tolist()
 
-    # If one of the arms has no SN2 value, returns False and doees not flag
+    # If one of the arms has no SN2 value, returns False and does not flag
     # the exposure
     if not any(blue) or not any(red):
         setExposureStatus(exposure, 'Good', silent=silent)
@@ -246,7 +262,7 @@ def setExposureStatus(exposure, status, silent=False, **kwargs):
 
 
 def checkSet(input, flag=True, flagExposures=None, silent=False,
-             forceReflag=False, **kwargs):
+             forceReflag=False, ignoreUnplugged=False, **kwargs):
     """Checks if a set meets MaNGA's quality criteria. Returns one of the
     following values: 'Good', 'Excellent', 'Poor', 'Bad', 'Incomplete'.
 
@@ -364,18 +380,19 @@ def checkSet(input, flag=True, flagExposures=None, silent=False,
     # Checks if set is incomplete
     if len(setDitherPositions) < len(ditherPositions):
 
-        # Gets the current plugging
-        currentPlugging = getCurrentPlugging(set.totoroExposures[0])
+        if not ignoreUnplugged:
+            # Gets the current plugging
+            currentPlugging = getCurrentPlugging(set.totoroExposures[0])
 
-        # If the plugging of the exposures in the set is not the current one,
-        # this set is invalid
-        testExposure = set.totoroExposures[0]
-        testExposurePlugging = testExposure.getPlugging().pk \
-            if testExposure.getPlugging() is not None else None
-        if testExposurePlugging != currentPlugging:
-            return flagHelper('Unplugged', 9,
-                              'set pk={0} is from a previous plugging.'
-                              .format(set.pk))
+            # If the plugging of the exposures in the set is not the current
+            # one, this set is invalid
+            testExposure = set.totoroExposures[0]
+            testExposurePlugging = testExposure.getPlugging().pk \
+                if testExposure.getPlugging() is not None else None
+            if testExposurePlugging != currentPlugging:
+                return flagHelper('Unplugged', 9,
+                                  'set pk={0} is from a previous plugging.'
+                                  .format(set.pk))
 
         # Otherwise, the set is valid but incomplete.
         return flagHelper('Incomplete', 0,
