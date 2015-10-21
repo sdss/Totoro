@@ -75,7 +75,7 @@ class TestPlugger(unittest.TestCase):
 
         validResult = OrderedDict(
             [(1, 8482), (3, 8486), (4, 8550),
-             ('cart_order', [9, 8, 7, 2, 5, 6, 1, 3, 4])])
+             ('cart_order', [9, 8, 7, 2, 5, 6, 3, 1, 4])])
 
         self.assertEqual(validResult, plugger.getASOutput())
 
@@ -100,7 +100,7 @@ class TestPlugger(unittest.TestCase):
         # first.
         validResult = OrderedDict(
             [(1, 8482), (3, 8486), (4, 7443), (5, 8550), (6, 8335),
-             ('cart_order', [9, 8, 7, 2, 6, 3, 1, 4, 5])])
+             ('cart_order', [9, 8, 7, 2, 3, 1, 6, 4, 5])])
 
         self.assertEqual(validResult, plugger.getASOutput())
 
@@ -137,7 +137,7 @@ class TestPlugger(unittest.TestCase):
         self.assertEqual(output,
                          OrderedDict([(1, 8482), (2, 8334), (3, 8486),
                                       ('cart_order', [9, 8, 7, 4, 5, 6,
-                                                      2, 3, 1])]))
+                                                      1, 3, 2])]))
 
 if __name__ == '__main__':
     unittest.main()
