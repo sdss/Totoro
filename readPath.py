@@ -20,7 +20,7 @@ import os
 def readPath(path):
     """Get a Totoro-formatted path and returns the real path.
 
-    Paths are expanded depending on the first characher of the input string.
+    Paths are expanded depending on the first character of the input string.
     If the first character is '+', the path is considered to be
     Totoro-internal relative to the root of the package. Otherwise, the path
     is expanded using os.path.expandvars and os.path.expanduser. So,
