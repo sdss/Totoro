@@ -41,7 +41,7 @@ def removeSet(set_pk):
 
 
 def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
-                  silent=False, forceReflag=True, **kwargs):
+                  silent=False, forceReflag=False, **kwargs):
     """Checks if a given exposures meets MaNGA's quality criteria.
 
     Error codes:
@@ -52,10 +52,20 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
     3: seeing too large.
     4: SN2 too low.
     5: HA range outside the range of visibility of the plate.
+    6: exposure not completely reduced
     10: manually overriden bad.
     """
 
     from sdss.internal.manga.Totoro import dbclasses
+
+    def flagHelper(status, errorCode, message=None):
+        """Helper function to log and flag exposures."""
+        if not silent and message is not None:
+            log.debug(message)
+        if flag:
+            statusLabel = 'Totoro Good' if status else 'Totoro Bad'
+            setExposureStatus(exposure, statusLabel)
+        return (status, errorCode)
 
     # Performs a quick check to see if the exposure is alredy flagged.
     statusLabel = None
@@ -84,14 +94,11 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
         exposure = dbclasses.Exposure(exposure, format=format,
                                       parent=parent, silent=silent)
 
-    def flagHelper(status, errorCode, message=None):
-        """Helper function to log and flag exposures."""
-        if not silent and message is not None:
-            log.debug(message)
-        if flag:
-            statusLabel = 'Totoro Good' if status else 'Totoro Bad'
-            setExposureStatus(exposure, statusLabel)
-        return (status, errorCode)
+    # Checks if the exposure has been completely reduce. If not, returns False
+    # but does not flag it.
+    if None in list(exposure.getSN2Array()):
+        setExposureStatus(exposure, 'Good')
+        return (False, 6)
 
     # Checks dither position
     if (exposure.ditherPosition not in
