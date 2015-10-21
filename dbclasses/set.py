@@ -527,6 +527,10 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
             return ('Good', 10)
         elif set.status.label == 'Overridden Bad':
             return ('Bad', 10)
+        elif 'Excellent' in set.status.label or 'Good' in set.status.label:
+            return ('Good', 10)
+        elif 'Poor' in set.status.label:
+            return ('Bad', 10)
         else:
             pass
 

@@ -16,6 +16,7 @@ from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro.dbclasses import Plate, Exposure, Set
 from sdss.internal.manga.Totoro import TotoroDBConnection
+from sdss.internal.manga.Totoro.dbclasses.plate_utils import removeOrphanedSets
 import numpy as np
 import unittest
 
@@ -25,17 +26,27 @@ db = TotoroDBConnection()
 class testSets(unittest.TestCase):
 
     @classmethod
-    def tearDownClass(cls):
+    def setUpClass(cls):
         """Restores plate 7495."""
 
+        setPK = [1, 1, 1, 2, 2, 2, 3, 4, 3, 4, 3, 4]
+
         with db.session.begin(subtransactions=True):
-            exp = db.session.query(db.mangaDB.Exposure).get(17)
-            exp.set_pk = 4
-            exp.exposure_status_pk = 1
-            exp.sn2values[0].b1_sn2 = 3.28888
-            exp.sn2values[0].b2_sn2 = 2.90681
-            exp.sn2values[0].r1_sn2 = 6.01449
-            exp.sn2values[0].r2_sn2 = 6.55439
+
+            for ii, expPK in enumerate(range(17, 29)):
+                exp = db.session.query(db.mangaDB.Exposure).get(expPK)
+                ss = db.session.query(db.mangaDB.Set).get(setPK[ii])
+                if ss is None:
+                    db.session.add(db.mangaDB.Set(pk=setPK[ii]))
+                exp.set_pk = setPK[ii]
+                exp.exposure_status_pk = 4
+                if ii == 17:
+                    exp.sn2values[0].b1_sn2 = 3.28888
+                    exp.sn2values[0].b2_sn2 = 2.90681
+                    exp.sn2values[0].r1_sn2 = 6.01449
+                    exp.sn2values[0].r2_sn2 = 6.55439
+
+        removeOrphanedSets()
 
     def testSetLoad(self):
         """Tests set loading."""
@@ -142,6 +153,7 @@ class testSets(unittest.TestCase):
             exp.sn2values[0].b2_sn2 = None
             exp.sn2values[0].r1_sn2 = None
             exp.sn2values[0].r2_sn2 = None
+            exp.exposure_status_pk = None
 
         exp = Exposure(17, parent='mangadb')
         self.assertIsNone(exp._mangaExposure.set_pk)
