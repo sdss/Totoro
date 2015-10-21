@@ -249,11 +249,13 @@ class PluggerScheduler(object):
                           exceptions.TotoroPluggerWarning)
             forcePlugPlatesSorted = forcePlugPlatesSorted[0:len(self.carts)]
 
-        self.timeline.schedule(plates=forcePlugPlatesSorted, mode='plugger')
+        self.timeline.schedule(
+            plates=forcePlugPlatesSorted, showUnobservedTimes=False,
+            mode='plugger')
 
         # Manually adds all the forced plates to the timeline, whether they
         # have been observed or not.
-        self.timeline.allocateJDs(forcePlugPlatesSorted)
+        # self.timeline.allocateJDs(forcePlugPlatesSorted)
         self.timeline.plates += [plate for plate in forcePlugPlatesSorted
                                  if plate not in self.timeline.plates]
 
@@ -332,12 +334,12 @@ class PluggerScheduler(object):
 
                     if status == 'empty':
                         cartPlateMessage[cartNumber] = (plate, 'empty cart')
-                    elif status == 'noMaNGAPlate':
-                        cartPlateMessage[cartNumber] = (
-                            plate, 'replacing no-MaNGA plate')
                     elif status == 'complete':
                         cartPlateMessage[cartNumber] = (
                             plate, 'replacing complete plate')
+                    elif status == 'noMaNGAPlate':
+                        cartPlateMessage[cartNumber] = (
+                            plate, 'replacing no-MaNGA plate')
                     elif status == 'notStarted':
                         cartPlateMessage[cartNumber] = (
                             plate, 'replacing non started plate')

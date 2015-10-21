@@ -4,6 +4,8 @@ import warnings
 from exceptions import DustMapWarning, TotoroError
 # warnings.filterwarnings('ignore', module='astropy.time.core')
 warnings.filterwarnings('ignore', 'Module argparse was already imported')
+warnings.filterwarnings('ignore', 'Skipped unsupported reflection of ' +
+                        'expression-based index q3c_field_idx')
 
 from readPath import readPath
 __DEFAULT_CONFIG_FILE__ = readPath('+defaults.yaml')

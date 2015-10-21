@@ -56,7 +56,8 @@ class PlannerScheduler(object):
             log.info('rejected {0} fields because they have already '
                      'been drilled'.format(nFieldsDrilled))
 
-    def getPlates(self, **kwargs):
+    @staticmethod
+    def getPlates(**kwargs):
         """Gets plates that are already drilled or in process of being so,
         with some filtering."""
 

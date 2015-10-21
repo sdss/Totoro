@@ -263,6 +263,7 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
     6: multiple exposures with the same dither position
     7: average seeing > maximum
     8: exposures span more than one plugging.
+    9: set is incomplete but the plugging is no longer current.
     10: from set status.
 
     """
@@ -276,9 +277,9 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
     else:
         set = dbclasses.Set(input, silent=silent)
 
-    if set.isMock is False:
-        if set.set_status_pk is not None and not forceReflag:
-            return (set.status.label, 10)
+    if (set.isMock is False and set.set_status_pk is not None
+            and not forceReflag):
+        return (set.status.label, 10)
 
     def flagHelper(statusLabel, errorCode, message=None):
         """Helper function to log and flag sets."""
@@ -344,17 +345,32 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
                               'the same dither position'.format(set.pk))
 
     # Checks if all exposures belong to the same plugging
-    pluggings = np.array(
+    expPluggings = np.array(
         [exp.getPlugging().pk if exp.getPlugging() is not None else 0
          for exp in set.totoroExposures])
 
-    if not np.all(pluggings == pluggings[0]):
-        return flagHelper('Bad', 7,
+    if not np.all(expPluggings == expPluggings[0]):
+        return flagHelper('Bad', 8,
                           'set pk={0} has exposures from different pluggings.'
                           .format(set.pk))
 
     # Checks if set is incomplete
     if len(setDitherPositions) < len(ditherPositions):
+
+        # Gets the current plugging
+        currentPlugging = getCurrentPlugging(set.totoroExposures[0])
+
+        # If the plugging of the exposures in the set is not the current one,
+        # this set is invalid
+        testExposure = set.totoroExposures[0]
+        testExposurePlugging = testExposure.getPlugging().pk \
+            if testExposure.getPlugging() is not None else None
+        if testExposurePlugging != currentPlugging:
+            return flagHelper('Unplugged', 9,
+                              'set pk={0} is from a previous plugging.'
+                              .format(set.pk))
+
+        # Otherwise, the set is valid but incomplete.
         return flagHelper('Incomplete', 0,
                           'set pk={0} is incomplete.'.format(set.pk))
 
@@ -365,6 +381,22 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
     #     return flagHelper('Excellent', 0)
     # else:
     return flagHelper('Good', 0)
+
+
+def getCurrentPlugging(exposure):
+    """Gets the pk of the current plugging for a plate
+    from one of its exposures."""
+
+    if exposure.pk is None:
+        return None
+
+    plate = exposure.observation.plate_pointing.plate
+
+    for plugging in plate.pluggings:
+        if len(plugging.activePlugging) > 0:
+            return plugging.pk
+
+    return None
 
 
 def setSetStatus(set, status):

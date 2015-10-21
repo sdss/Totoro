@@ -31,7 +31,7 @@ def updatePlate(plate, **kwargs):
     """Finds missing exposures """
 
     log.debug('plate_id={0}: updating sets'.format(plate.plate_id))
-
+    # print(plate)
     badSetStatus = checkBadSets(plate, **kwargs)
     if badSetStatus:
         plate = fixBadSets(plate)
@@ -79,11 +79,12 @@ def checkBadSets(plate, **kwargs):
     """Identifies bad sets and breaks them."""
 
     setQuality = [set.getQuality(silent=True)[0] for set in plate.sets]
+
     if 'Bad' in setQuality:
         nBadSets = len([True for ss in setQuality if ss == 'Bad'])
         log.debug('plate_id={0}: found {1} bad sets. Fixing them.'.format(
                   plate.plate_id, nBadSets))
-        plate = fixBadSets(plate, setQuality=setQuality)
+        # plate = fixBadSets(plate, setQuality=setQuality)
         return True
     return False
 

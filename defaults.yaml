@@ -67,12 +67,14 @@ plugger:
     efficiency: 0.9
     noPlugPriority: 2
     forcePlugPriority: 10
+    maxAltitude: 80
 
 simulation:
-    blueSN2: 3.6
-    alphaBlue: 1.0
-    redSN2: 7.5
-    alphaRed: 1.25
+    blueSN2: 3.4
+    alphaBlue: 1.25
+    redSN2: 5.77
+    alphaRed: 0.65
+    maxAltitude: 75
 
 SN2thresholds:
     plateRed: 60
@@ -84,7 +86,6 @@ exposure:
     exposureTime: 900
     minExpTime: 899
     maxSeeing: 2.5
-    maxAltitude: 80
     transparency: 0.2
     validDitherPositions: ['N', 'S', 'E']
 
@@ -101,5 +102,5 @@ setArrangement:
     permutationLimit: 600000
     forceRearrangementMinExposures: 3
 
-carts: [1, 2, 3, 4]
+carts: [1, 2, 3, 4, 5, 6]
 defaultPriority: 5

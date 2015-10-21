@@ -20,8 +20,6 @@ from sdss.internal.manga.Totoro import config, site
 
 
 expTime = config['exposure']['exposureTime']
-maxAlt = config['exposure']['maxAltitude']
-
 
 def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
                     prioritiseDrilled=True, mode='plugger',
@@ -146,6 +144,7 @@ def simulatePlates(plates, jdRanges, mode='plugger'):
     observedFlag = False
 
     expTimeEff = expTime / config[mode]['efficiency']
+    maxAlt = config[mode]['maxAltitude']
 
     for plate in plates:
 
@@ -162,10 +161,11 @@ def simulatePlates(plates, jdRanges, mode='plugger'):
                     break
 
                 lst = site.localSiderealTime(jd)
+                lstMean = site.localSiderealTime(jd+expTimeEff/2./86400.)
 
                 if (not utils.isPointInInterval(lst, plateLST, wrapAt=24)):
                     pass
-                elif plate.getAltitude(lst) > maxAlt:
+                elif plate.getAltitude(lstMean) > maxAlt:
                     stopPlate = True
                     break
                 else:
@@ -176,7 +176,7 @@ def simulatePlates(plates, jdRanges, mode='plugger'):
                         observedFlag = True
                         result._tmp = True
 
-                jd += expTimeEff / 86400
+                jd += expTimeEff / 86400.
 
             if stopPlate:
                 break
