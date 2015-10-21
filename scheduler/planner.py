@@ -37,7 +37,7 @@ class PlannerScheduler(object):
         log.debug('created PlannerScheduler with {0} timelines'
                   .format(len(self.timelines)))
 
-        self.plates, self._completed = self.getPlates(
+        allPlates, self.plates, self._completed = self.getPlates(
             updateSets=False, silent=True, **kwargs)
 
         drilling = [plate for plate in self.plates if plate.isMock]
@@ -47,7 +47,7 @@ class PlannerScheduler(object):
         # Gets fields (rejectDrilled=False because we do our own rejection)
         if useFields:
             tmpFields = Fields(rejectDrilled=False)
-            tileIDPlates = [plate.getMangaTileID() for plate in self.plates]
+            tileIDPlates = [plate.getMangaTileID() for plate in allPlates]
 
             self.fields = [field for field in tmpFields
                            if field.manga_tileid not in tileIDPlates]
@@ -58,6 +58,8 @@ class PlannerScheduler(object):
         if nFieldsDrilled > 0:
             log.info('rejected {0} fields because they have already '
                      'been drilled'.format(nFieldsDrilled))
+
+        del allPlates  # Not needed anymore
 
     @staticmethod
     def getPlates(**kwargs):
@@ -115,7 +117,7 @@ class PlannerScheduler(object):
             plates = [plate for plate in plates
                       if plate.plate_id not in platesIgnore]
 
-        return plates, completed
+        return allPlates, plates, completed
 
     def schedule(self, useFields=True, goodWeatherFraction=None, **kwargs):
         """Runs the scheduling simulation."""
