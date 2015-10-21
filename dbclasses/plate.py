@@ -29,8 +29,8 @@ from copy import deepcopy
 import os
 
 
-__ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'Plates', 'Plate',
-           'fromPlateID']
+__ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plates',
+           'Plate', 'fromPlateID']
 
 
 totoroDB = TotoroDBConnection()
@@ -126,6 +126,24 @@ def _getIncomplete(plates, **kwargs):
     return Plates(incompletePlates)
 
 
+def getComplete(**kwargs):
+    """Retrieves only complete files by looking at the plugging status
+    (faster than using getAll and then selecting the complete plates)."""
+
+    session = totoroDB.Session()
+    with session.begin(subtransactions=True):
+        plates = session.query(plateDB.Plate).join(
+            plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode,
+            plateDB.Plugging, plateDB.PluggingStatus).filter(
+                plateDB.Survey.label == 'MaNGA',
+                plateDB.SurveyMode.label == 'MaNGA dither',
+                plateDB.PluggingStatus.label.in_(['Good', 'Overridden Good'])
+                ).order_by(
+                    plateDB.Plate.plate_id).all()
+
+    return Plates(plates, **kwargs)
+
+
 class Plates(list):
 
     def __init__(self, inp, format='pk', **kwargs):
@@ -144,12 +162,12 @@ class Plates(list):
     @staticmethod
     def getAll(**kwargs):
         """For backards compatibility."""
-        return getPlugged(**kwargs)
+        return getAll(**kwargs)
 
     @staticmethod
     def getAtAPO(**kwargs):
         """For backards compatibility."""
-        return getPlugged(**kwargs)
+        return getAtAPO(**kwargs)
 
 
 def fromPlateID(plateid, **kwargs):
@@ -414,13 +432,14 @@ class Plate(plateDB.Plate):
 
         return scienceExps
 
-    def getTotoroExposures(self):
+    def getTotoroExposures(self, silent=True):
         """Returns a list of Totoro dbclasses.Exposure instances for this
         Plate insance."""
 
-        totoroExposures = []
-        for set in self.sets:
-            totoroExposures += set.totoroExposures
+        mangaDBExps = self.getMangadbExposures()
+        totoroExposures = [Exposure(mangaDBExp.pk, parent='mangadb',
+                                    silent=silent)
+                           for mangaDBExp in mangaDBExps]
 
         return totoroExposures
 
@@ -428,8 +447,8 @@ class Plate(plateDB.Plate):
 
         validSets = []
         for set in self.sets:
-            quality = set.getQuality()
-            if quality in ['Good', 'Excellent', 'Poor']:
+            quality = set.getQuality()[0]
+            if quality in ['Good', 'Excellent']:
                 validSets.append(set)
             elif includeIncomplete and quality == 'Incomplete':
                 validSets.append(set)
