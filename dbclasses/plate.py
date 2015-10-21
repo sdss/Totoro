@@ -483,8 +483,8 @@ class Plate(plateDB.Plate):
         if len(validSets) == 0:
             return np.array([0.0, 0.0, 0.0, 0.0])
         else:
-            return np.sum([set.getSN2Array(useMock=useMock)
-                           for set in validSets], axis=0)
+            return np.nansum([set.getSN2Array(useMock=useMock)
+                              for set in validSets], axis=0)
 
     def getActiveCartNumber(self):
         """Returns the cart number of the active plugging. Raises an error if

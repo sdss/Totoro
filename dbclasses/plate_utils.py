@@ -36,7 +36,8 @@ def updatePlate(plate, rearrangeIncomplete=True, **kwargs):
 
     unassignedExposures = getUnassignedExposures(plate)
 
-    newExposures = [exp for exp in unassignedExposures if exp.isValid()[0]]
+    newExposures = [exp for exp in unassignedExposures
+                    if exp.isValid(force=True, flag=True)[0]]
 
     if len(newExposures) == 0:
         return False
@@ -48,7 +49,7 @@ def updatePlate(plate, rearrangeIncomplete=True, **kwargs):
         assignExposureToOptimalSet(plate, exp)
 
         if rearrangeIncomplete:
-            result = rearrangeSets(plate, mode='complete', scope='incomplete',
+            result = rearrangeSets(plate, mode='optimal', scope='incomplete',
                                    silent=True)
             if not result:
                 return result
@@ -65,6 +66,14 @@ def getUnassignedExposures(plate):
 
     unassigned = []
     for scienceExp in scienceExposures:
+        # If the exposure has no status (usually because it is not completely
+        # reduced), we remove it set_pk, if any, so that it will be processed
+        # again.
+        if scienceExp.mangadbExposure[0].exposure_status_pk is None:
+            with session.begin(subtransactions=True):
+                scienceExp.mangadbExposure[0].set_pk = None
+
+        # If the exposure is not assigned to a set, adds it to the list.
         if scienceExp.mangadbExposure[0].set_pk is None:
             unassigned.append(TotoroExposure(scienceExp))
 
@@ -234,8 +243,8 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
         raise exceptions.TotoroError('scope={0} is invalid'.format(scope))
 
     # Rejects invalid exposures:
-    exposures = [exp for exp in exposures if exp.isMock or
-                 exp.isPlateDBValid()]
+    exposures = [exp for exp in exposures
+                 if exp.isMock or exp.isValid(force=True, flag=True)[0]]
 
     # Does some logging.
     logMode('plate_id={0}: rearranging sets, mode=\'{1}\', '

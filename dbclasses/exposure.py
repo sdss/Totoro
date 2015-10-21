@@ -393,8 +393,13 @@ def flagExposure(exposure, status, errorCode, flag=True, message=None):
         log.debug(message)
 
     if flag:
-        statusLabel = 'Totoro Good' if status else 'Totoro Bad'
-        setExposureStatus(exposure, statusLabel)
+        if errorCode != 6:
+            statusLabel = 'Totoro Good' if status else 'Totoro Bad'
+            setExposureStatus(exposure, statusLabel)
+        else:
+            # If the exposure is not complete reduced, we remove the status,
+            # if any.
+            setExposureStatus(exposure, None)
 
     return (status, errorCode)
 
@@ -409,9 +414,10 @@ def setExposureStatus(exposure, status):
         The exposure that will receive the new status. Either a
         Totoro.Exposure, plateDB.Exposure or mangaDB.Exposure instance.
         Alternatively, the pk of the mangaDB.Exposure can be used.
-    status : string
+    status : string or None
         The status to be set. It must be one of the values in
-        mangaDB.ExposureStatus.label.
+        mangaDB.ExposureStatus.label. If `status=None`, the status of the
+        exposure is removed
 
     Returns
     -------
@@ -438,9 +444,12 @@ def setExposureStatus(exposure, status):
     with session.begin(subtransactions=True):
 
         try:
-            queryStatus = session.query(db.mangaDB.ExposureStatus).filter(
-                db.mangaDB.ExposureStatus.label == status).one()
-            statusPK = queryStatus.pk
+            if status is None:
+                statusPK = None
+            else:
+                queryStatus = session.query(db.mangaDB.ExposureStatus).filter(
+                    db.mangaDB.ExposureStatus.label == status).one()
+                statusPK = queryStatus.pk
         except:
             raise TotoroError('status {0} not found in mangaDB.ExposureStatus'
                               .format(status))
@@ -503,6 +512,7 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     6: exposure not completely reduced
     7: low transparency
     8: exposure taken during twilight
+    9: plateDB status is Bad or Override Bad.
     10: status read from DB.
     """
 
@@ -543,6 +553,13 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     # If the exposure is mock, we set flag to False
     if exposure.isMock:
         flag = False
+
+    # Checks plateDB status
+    if not exposure.isMock and not exposure.isPlateDBValid():
+        message = ('Invalid exposure. plateDB.Exposure.pk={0} '
+                   'is marked {1} in plateDB.exposure_status.'
+                   .format(pk, exposure.status.label))
+        return flagExposure(exposure, False, 9, flag=flag, message=message)
 
     # Checks dither position
     validDitherPositions = config['exposure']['validDitherPositions']
@@ -612,14 +629,18 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     red = exposureSN2[2:]
 
     # If the exposure is partially reduced
-    if not all(exposureSN2):
+    if not np.all(exposureSN2 >= 0):
         # If at least one camera in each spectrograph is reduced, does not flag
         # the exposure but returs True
-        if np.any(blue) and np.any(red):
-            return (True, 6)
+        if np.any(blue >= 0) and np.any(red >= 0):
+            message = ('plateDB.Exposure.pk={0}: not completely reduced but '
+                       'temporarily considering it valid'.format(pk))
+            return flagExposure(exposure, True, 6, flag=flag, message=message)
         else:
             # Otherwise, returns False
-            return (False, 6)
+            message = ('plateDB.Exposure.pk={0}: not completely reduced but '
+                       'temporarily considering it invalid'.format(pk))
+            return flagExposure(exposure, False, 6, flag=flag, message=message)
 
     # Checks SN2
     minSN2red = config['SN2thresholds']['exposureRed']
