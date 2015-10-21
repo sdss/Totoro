@@ -23,10 +23,6 @@ import numpy as np
 from numbers import Integral
 
 
-db = Totoro.TotoroDBConnection()
-session = db.Session()
-
-
 def getTilingCatalogue(tilingCatalogue=None):
     tilingCatalogue = Totoro.readPath(
         Totoro.config['fields']['tilingCatalogue']) \

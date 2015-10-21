@@ -29,11 +29,11 @@ from astropy import time
 totoroDB = TotoroDBConnection()
 plateDB = totoroDB.plateDB
 mangaDB = totoroDB.mangaDB
+session = totoroDB.session
 
 
 def getPlateSets(inp, format='plate_id', **kwargs):
 
-    session = totoroDB.Session()
     with session.begin(subtransactions=True):
         sets = session.query(mangaDB.Set).join(
             mangaDB.Exposure,
@@ -55,7 +55,6 @@ class Set(mangaDB.Set):
 
         base = cls.__bases__[0]
 
-        session = totoroDB.Session()
         with session.begin(subtransactions=True):
             instance = session.query(base).filter(
                 eval('{0}.{1} == {2}'.format(base.__name__, format, input))

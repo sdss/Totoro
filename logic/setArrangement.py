@@ -27,6 +27,10 @@ import numpy as np
 import time
 
 
+db = TotoroDBConnection()
+session = db.session
+
+
 def updatePlate(plate, nExposuresMax=None, **kwargs):
     """Finds missing exposures """
 
@@ -149,9 +153,6 @@ def addExposure(exp, plate):
     if plate.isMock:
         return True
 
-    db = TotoroDBConnection()
-    session = db.Session()
-
     with session.begin(subtransactions=True):
         if validSet.pk is None:
             validSet.pk = getNewSetPK()
@@ -171,9 +172,6 @@ def addExposure(exp, plate):
 
 def getNewSetPK():
     """Gets the lowest available set pk."""
-
-    db = TotoroDBConnection()
-    session = db.Session()
 
     with session.begin(subtransactions=True):
         setPKs = session.query(db.mangaDB.Set.pk).all()
@@ -253,9 +251,6 @@ def removeSet(set_pk, orphan=False):
     if set_pk is None:
         return
 
-    db = TotoroDBConnection()
-    session = db.Session()
-
     with session.begin(subtransactions=True):
         set = session.query(db.mangaDB.Set).get(set_pk)
         if set is not None:
@@ -272,9 +267,6 @@ def removeSet(set_pk, orphan=False):
 
 def updateSet(set):
     """Updates the set_pk for the exposures in the set. Writes to the DB."""
-
-    db = TotoroDBConnection()
-    session = db.Session()
 
     setPKs = [exposure._mangaExposure.set_pk
               for exposure in set.totoroExposures]
@@ -301,9 +293,6 @@ def updateSet(set):
 
 def removeOrphanSets():
     """Removes sets without exposures."""
-
-    db = TotoroDBConnection()
-    session = db.Session()
 
     with session.begin(subtransactions=True):
         nullSets = session.query(db.mangaDB.Set).outerjoin(

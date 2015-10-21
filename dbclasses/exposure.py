@@ -27,6 +27,7 @@ import warnings
 totoroDB = TotoroDBConnection()
 plateDB = totoroDB.plateDB
 mangaDB = totoroDB.mangaDB
+session = totoroDB.session
 
 
 class Exposure(plateDB.Exposure):
@@ -46,7 +47,6 @@ class Exposure(plateDB.Exposure):
             instance = input.platedbExposure
 
         else:
-            session = totoroDB.Session()
             if parent.lower() == 'platedb':
                 with session.begin(subtransactions=True):
                     instance = session.query(base).filter(

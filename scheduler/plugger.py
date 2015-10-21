@@ -26,6 +26,7 @@ import numpy as np
 
 
 db = TotoroDBConnection()
+session = db.session
 
 
 def getAvailableCart(carts):
@@ -36,7 +37,6 @@ def getAvailableCart(carts):
 
     from sdss.internal.manga.Totoro.dbclasses import Plate
 
-    session = db.Session()
     with session.begin(subtransactions=True):
         activePluggings = session.query(db.plateDB.ActivePlugging).all()
 
@@ -84,7 +84,6 @@ def getCartPriority(carts):
 
     from sdss.internal.manga.Totoro.dbclasses import Plate
 
-    session = db.Session()
     with session.begin(subtransactions=True):
         activePluggings = session.query(db.plateDB.ActivePlugging).all()
 
@@ -119,7 +118,6 @@ def getCartPriority(carts):
 def getCartPlate(cartNumber):
     """Returns the plate plugged in a cart or None."""
 
-    session = db.Session()
     with session.begin(subtransactions=True):
         activePluggings = session.query(db.plateDB.ActivePlugging).all()
 

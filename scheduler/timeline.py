@@ -15,14 +15,10 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from astropy.time import Time
-from sdss.internal.manga.Totoro import log, TotoroDBConnection, config
+from sdss.internal.manga.Totoro import log, config
 from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro import logic
 import numpy as np
-
-
-db = TotoroDBConnection()
-session = db.Session()
 
 
 class Timelines(list):
