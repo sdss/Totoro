@@ -21,9 +21,9 @@ from sdss.internal.manga.Totoro import config, site
 
 expTime = config['exposure']['exposureTime']
 
+
 def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
-                    prioritiseDrilled=True, mode='plugger',
-                    **kwargs):
+                    mode='plugger', **kwargs):
     """Gets the optimal plate to observe in a range of JDs."""
 
     jdRanges = np.atleast_2d(jdRanges).copy()
@@ -107,16 +107,29 @@ def selectOptimal(plates, jdRanges, **kwargs):
                       for plate in completedPlates]
         return completedPlates[np.argmin(nExposures)]
 
+    marked = np.array([plate for plate in newPlates
+                       if plate.statuses[0].label == 'Accepted'])
+    markedOptimal = _getOptimalFromList(marked) if len(marked) > 0 else None
+
+    if markedOptimal is not None:
+        return markedOptimal
+    else:
+        return _getOptimalFromList(newPlates)
+
+
+def _getOptimalFromList(plates):
+    """Returns the optimal plate from a list."""
+
     # If no completed plates, calculates the plate completion using only
     # complete sets
     plateCompletion = np.array(
         [plate.getPlateCompletion(includeIncompleteSets=True)
-         for plate in newPlates])
+         for plate in plates])
 
     maxPlateCompletion = plateCompletion.max()
 
     # Selects the plates with maximum completion
-    platesMaxCompletion = newPlates[np.where(
+    platesMaxCompletion = plates[np.where(
         plateCompletion == maxPlateCompletion)]
 
     if len(platesMaxCompletion) == 1:
