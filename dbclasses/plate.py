@@ -823,6 +823,26 @@ class Plate(plateDB.Plate):
 
         return np.rad2deg(np.arcsin(sinAlt))
 
+    def getLSTRangeAboveAltitude(self, altitude):
+        """Returns the LST range in which the plate is above ``altitude`` [deg]
+        """
+
+        altRad = np.deg2rad(altitude)
+        latRad = np.deg2rad(site.latitude)
+        decRad = np.deg2rad(self.dec)
+
+        xx = ((np.sin(altRad) - np.sin(latRad) * np.sin(decRad)) /
+              (np.cos(latRad) * np.cos(decRad)))
+
+        if xx > 1 or xx < -1:
+            return np.array([0, 0])
+
+        HA = np.rad2deg(np.arccos(xx))
+
+        LSTRange = [(-HA + self.ra) % 360. / 15., (HA + self.ra) % 360. / 15.]
+
+        return np.array(LSTRange)
+
     def getNumberPermutations(self):
         """Returns the number of permutations for a brute-force set
         rearrangement."""
