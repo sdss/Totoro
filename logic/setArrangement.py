@@ -496,7 +496,10 @@ def fixBadSets(plate, setQuality=None):
     for exposure in exposuresToAssign:
         validSet = getValidSet(exposure, plate, setQuality=newSetQuality)
 
-        if validSet is None:
+        if validSet is False:
+            continue
+
+        elif validSet is None:
             validSet = dbclasses.Set.createMockSet(ra=plate.ra, dec=plate.dec,
                                                    silent=True)
             plate.sets.append(validSet)
