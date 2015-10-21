@@ -41,6 +41,9 @@ session = totoroDB.session
 
 def getPlugged(**kwargs):
 
+    kwargs.setdefault('fullCheck', False)
+    kwargs.setdefault('updateSets', False)
+
     with session.begin(subtransactions=True):
         activePluggings = session.query(
             plateDB.ActivePlugging).join(
@@ -62,6 +65,9 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
              rejectLowPriority=False, raRange=None,
              rejectSpecial=True, **kwargs):
     """Gets plates at APO with various conditions."""
+
+    kwargs.setdefault('fullCheck', False)
+    kwargs.setdefault('updateSets', False)
 
     minimumPriority = config['plugger']['noPlugPriority']
 
@@ -125,6 +131,9 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
 
 def getAll(onlyIncomplete=False, **kwargs):
 
+    kwargs.setdefault('fullCheck', False)
+    kwargs.setdefault('updateSets', False)
+
     with session.begin(subtransactions=True):
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
@@ -159,6 +168,9 @@ def _getIncomplete(plates, **kwargs):
 def getComplete(**kwargs):
     """Retrieves only complete files by looking at the plugging status
     (faster than using getAll and then selecting the complete plates)."""
+
+    kwargs.setdefault('fullCheck', False)
+    kwargs.setdefault('updateSets', False)
 
     with session.begin(subtransactions=True):
         plates = session.query(plateDB.Plate).join(
@@ -317,20 +329,12 @@ class Plate(plateDB.Plate):
         """Returns a list of mangaDB.ModelClasses.Set instances with all the
         sets matching exposures in this plate. Removes duplicates."""
 
-        setPKs = []
-        sets = []
-        for platePointing in self.plate_pointings:
-            for observation in platePointing.observations:
-                for exposure in observation.exposures:
-                    for mangaDBExposure in exposure.mangadbExposure:
-                        set = mangaDBExposure.set
-                        if set is not None and set.pk not in setPKs:
-                            setPKs.append(mangaDBExposure.set.pk)
-
+        # Finds the sets for this plate
         with session.begin(subtransactions=True):
-            for setPK in setPKs:
-                set = session.query(mangaDB.Set).get(setPK)
-                sets.append(set)
+            sets = session.query(mangaDB.Set).join(
+                mangaDB.Exposure, plateDB.Exposure, plateDB.Observation,
+                plateDB.PlatePointing, plateDB.Plate).filter(
+                    plateDB.Plate.pk == self.pk).all()
 
         sets = sorted(sets, key=lambda set: set.pk)
 
@@ -357,24 +361,6 @@ class Plate(plateDB.Plate):
                                   nMaNGAExposures),
                               TotoroExpections.NoMangaExposure)
 
-            # Checks if some sets have incompletely reduced exposures. If so,
-            # removes their set_pk so that they are completely procesed again.
-            with session.begin(subtransactions=True):
-                for ss in self.sets:
-                    for exp in ss.totoroExposures:
-                        if exp._mangaExposure.status is None:
-                            if not exp.isMock:
-                                exp.mangadbExposure[0].set_pk = None
-                            ss.totoroExposures.remove(exp)
-
-                    # Checks if the sets is now empty, if so, removes it
-                    # from the object and from the DB
-                    if len(ss.totoroExposures) == 0:
-                        if not ss.isMock:
-                            setDB = session.query(mangaDB.Set).get(ss.pk)
-                            session.delete(setDB)
-                        self.sets.remove(ss)
-
     @property
     def isMaNGA(self):
 
@@ -385,6 +371,24 @@ class Plate(plateDB.Plate):
         return False
 
     def updatePlate(self, force=False, **kwargs):
+
+        # Checks if some sets have incompletely reduced exposures. If so,
+        # removes their set_pk so that they are completely procesed again.
+        with session.begin(subtransactions=True):
+            for ss in self.sets:
+                for exp in ss.totoroExposures:
+                    if exp._mangaExposure.status is None:
+                        if not exp.isMock:
+                            exp.mangadbExposure[0].set_pk = None
+                        ss.totoroExposures.remove(exp)
+
+                # Checks if the sets is now empty, if so, removes it
+                # from the object and from the DB
+                if len(ss.totoroExposures) == 0:
+                    if not ss.isMock:
+                        setDB = session.query(mangaDB.Set).get(ss.pk)
+                        session.delete(setDB)
+                    self.sets.remove(ss)
 
         # if self.isComplete:
         #     if not force:
@@ -580,16 +584,6 @@ class Plate(plateDB.Plate):
                 validSets.append(set)
 
         return validSets
-
-    # def update(self, **kwargs):
-    #     """Reloads the plate."""
-
-    #     kwargs.update(self._kwargs)
-
-    #     newSelf = Plate(self.pk, format='pk', mjd=self.mjd, **kwargs)
-    #     self = newSelf
-
-    #     log.debug('plate_id={0} has been reloaded'.format(self.plate_id))
 
     def getValidExposures(self, **kwargs):
         """Returns all valid exposures, even if they belong to an incomplete
