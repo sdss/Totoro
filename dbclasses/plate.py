@@ -252,7 +252,7 @@ class Plate(plateDB.Plate):
             self.sets = []
 
     def __repr__(self):
-        return ('<Totoro Plate (plate_id={0}, manga_tileid={1}, ' +
+        return ('<Totoro Plate (plate_id={0}, manga_tileid={1}, '
                 'completion={2:.2f})>'
                 .format(self.plate_id, self.manga_tileid,
                         self.getPlateCompletion()))

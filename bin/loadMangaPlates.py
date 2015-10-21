@@ -82,25 +82,25 @@ def loadMangaPlates():
                 except:
                     newPlate = db.mangaDB.Plate()
 
-            if plate.plate_id in mangaTileIDs:
-                newPlate.manga_tileid = mangaTileIDs[plate.plate_id]
+                if plate.plate_id in mangaTileIDs:
+                    newPlate.manga_tileid = mangaTileIDs[plate.plate_id]
 
-            if plate.plate_id in specialPlates['plateid']:
-                row = specialPlates[specialPlates['plateid'] == plate.plate_id]
-                newPlate.special_plate = True
-                newPlate.all_sky_plate = bool(row['all_sky_plate'][0])
-                newPlate.commissioning_plate = bool(
-                    row['commissioning_plate'][0])
-                newPlate.comment = row['comment'][0]
-            else:
-                newPlate.special_plate = False
-                newPlate.all_sky_plate = False
-                newPlate.commissioning_plate = False
-                newPlate.comment = ''
+                if plate.plate_id in specialPlates['plateid']:
+                    row = specialPlates[specialPlates['plateid'] ==
+                                        plate.plate_id]
+                    newPlate.special_plate = True
+                    newPlate.all_sky_plate = bool(row['all_sky_plate'][0])
+                    newPlate.commissioning_plate = bool(
+                        row['commissioning_plate'][0])
+                    newPlate.comment = row['comment'][0]
+                else:
+                    newPlate.special_plate = False
+                    newPlate.all_sky_plate = False
+                    newPlate.commissioning_plate = False
+                    newPlate.comment = ''
 
-            newPlate.platedb_plate_pk = plate.pk
+                newPlate.platedb_plate_pk = plate.pk
 
-            with db.session.begin():
                 db.session.add(newPlate)
 
     return

@@ -17,6 +17,9 @@ from __future__ import print_function
 from sdss.internal.manga.Totoro.dbclasses import getAll
 from sdss.internal.manga.Totoro import TotoroDBConnection
 import numpy as np
+import argparse
+import os
+import sys
 
 
 db = TotoroDBConnection()
@@ -63,23 +66,32 @@ def calculatePriority(dec):
     return priority
 
 
-def autoAssignPlatePriorities():
+def autoAssignPlatePriorities(dryRun=False):
     """Assigns priorities to plates in the DB based on their declination."""
 
     allPlates = getAll(onlyIncomplete=True, rejectSpecial=True)
 
-    with db.session.begin(subtransactions=True):
-        for plate in allPlates:
-            if plate.priority != 5:
-                # Skips plates with manually assigned priority.
-                continue
-            newPriority = calculatePriority(plate.dec)
-            plate.plate_pointings[0].priority = newPriority
-            print('plate_id={0} (Dec={1:.2f}) assigned priority={2}'.format(
-                  plate.plate_id, plate.dec, newPriority))
+    for plate in allPlates:
+        if plate.priority != 5:
+            # Skips plates with manually assigned priority.
+            continue
+        newPriority = calculatePriority(plate.dec)
+        if not dryRun:
+            with db.session.begin(subtransactions=True):
+                plate.plate_pointings[0].priority = newPriority
+        print('plate_id={0} (Dec={1:.2f}) assigned priority={2}'.format(
+              plate.plate_id, plate.dec, newPriority))
 
     return
 
 
 if __name__ == '__main__':
-    autoAssignPlatePriorities()
+
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     prog=os.path.basename(sys.argv[0]))
+    parser.add_argument('--dry-run', action='store_true', dest='dryrun',
+                        help='Only tests changes.')
+
+    args = parser.parse_args()
+
+    autoAssignPlatePriorities(dryRun=args.dryrun)
