@@ -15,12 +15,12 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from sdss.internal.manga.Totoro import config, log
+from sdss.internal.manga.Totoro import config
 from sdss.internal.manga.Totoro import exceptions
 import warnings
 from sdss.manga import mlhalimit as mlhalimitHours
 from collections import OrderedDict
-from astropy import time
+from sdss.utilities import Site
 
 
 def mlhalimit(dec):
@@ -72,11 +72,11 @@ def isPlateComplete(plate, format='plate_id', **kwargs):
     else:
         plateComplete = False
 
-    plugStatus = np.array(
-        [plugging.status.label for plugging in plate.pluggings])
-    if 'Good' in plugStatus or 'Overriden Good' in plugStatus:
+    plugStatus = [plugging.status.label for plugging in plate.pluggings]
+
+    if 'Good' in plugStatus or 'Overridden Good' in plugStatus:
         plugComplete = True
-    elif 'Overriden Incomplete' in plugStatus:
+    elif u'Overridden Incomplete' in plugStatus:
         plugComplete = False
     else:
         plugComplete = None
@@ -130,87 +130,6 @@ def getAPOcomplete(plates, format='plate_id', **kwargs):
                     [plate.plate_id, mjd, ss, dPos, nExp])
 
     return APOcomplete
-
-
-class Site(object):
-
-    def __init__(self, longitude=None, latitude=None, altitude=None,
-                 name=None, verbose=True, **kwargs):
-        """Similar to astropysics.obstools.Site but using astropy"""
-
-        if None in [longitude, latitude, altitude, name]:
-            assert 'observatory' in config.keys()
-
-        self.longitude = config['observatory']['longitude'] \
-            if longitude is None else float(longitude)
-        self.latitude = config['observatory']['latitude'] \
-            if latitude is None else float(latitude)
-        self.altitude = config['observatory']['altitude'] \
-            if altitude is None else float(altitude)
-
-        if name is None:
-            if 'name' not in config['observatory']:
-                self.name = ''
-            else:
-                self.name = config['observatory']['name']
-
-        if verbose:
-            log.debug('Created site with name \'{0}\''.format(self.name))
-
-    def localSiderialTime(self, *args, **kwargs):
-        """Alias for localSiderealTime observing the wrong spelling in
-        astropysics."""
-
-        return self.localSiderealTime(*args, **kwargs)
-
-    def localSiderealTime(self, inputDate=None, format='jd', **kwargs):
-        """Returns the LST for a given date."""
-
-        if inputDate is None:
-            inputDate = time.Time.now()
-
-        if isinstance(inputDate, time.Time):
-            pass
-        else:
-            try:
-                inputDate = time.Time(inputDate, scale='tai', format=format)
-            except:
-                raise exceptions.TotoroError(
-                    'inputDate format not recognised.')
-
-        inputDate.delta_ut1_utc = 0.
-
-        lst = inputDate.sidereal_time('apparent', longitude=self.longitude)
-
-        return lst.hour
-
-    def localSiderealTimeToDate(self, lst, date=None, dateFormat=None):
-        """Returns the UTC datetime for a LST at a given date."""
-
-        if date is None:
-            date = time.Time.now()
-
-        lst = np.atleast_1d(lst)
-
-        if isinstance(date, time.Time):
-            pass
-        else:
-            try:
-                date = time.Time(date, format=dateFormat, scale='tai')
-            except:
-                raise exceptions.TotoroError('date format not recognised.')
-
-        LST0 = self.localSiderealTime(date)
-
-        lstDelta = lst - LST0
-
-        UTDates = date + time.TimeDelta(lstDelta * 3600, format='sec',
-                                        scale='tai')
-
-        if len(UTDates) == 1:
-            return UTDates[0]
-        else:
-            return UTDates
 
 
 def JDdiff(JD0, JD1):
