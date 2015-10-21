@@ -18,6 +18,7 @@ import itertools
 from mangaLogic import checkExposure
 from sdss.internal.manga.Totoro.exceptions import NoMangaExposure
 from sdss.internal.manga.Totoro import TotoroDBConnection, log, config
+from sdss.internal.manga.Totoro.utils import intervals
 from sqlalchemy import func
 from scipy.misc import factorial
 import collections
@@ -420,9 +421,36 @@ def getOptimalArrangement(plate, startDate=None,
                     nn += 1
             nIncompleteSets.append(nn)
 
-        optimumPlate = maxPlates[np.argmin(nIncompleteSets)]
+        minIncompleteSetPlates = [
+            maxPlates[ii] for ii in
+            np.where(np.array(nIncompleteSets) == np.min(nIncompleteSets))[0]]
+
+        if len(minIncompleteSetPlates) == 0:
+            optimumPlate = minIncompleteSetPlates[0]
+        else:
+            optimumPlate = getEarliestIncompletePlate(minIncompleteSetPlates)
 
     return {'sets': optimumPlate.sets, 'invalid': invalidExposures}
+
+
+def getEarliestIncompletePlate(incompletePlates):
+    """From a list of plates with incomplete sets, selects the one with the
+    incomplete set with the earliest visibility window."""
+
+    minHAs = []
+    for plate in incompletePlates:
+        minHAplate = 999.
+        for set in plate.sets:
+            if set.getQuality()[0] is not 'Incomplete':
+                continue
+            haMid = intervals.calculateMean(set.getHARange())
+            if haMid > 180:
+                haMid -= 180.
+            if haMid < minHAplate:
+                minHAplate = haMid
+        minHAs.append(minHAplate)
+
+    return incompletePlates[np.argmin(minHAs)]
 
 
 def calculatePermutations(inputList):
@@ -437,8 +465,7 @@ def calculatePermutations(inputList):
 
     indices = [[element[0] for element in sP] for sP in splitPairs]
 
-    indices[0] = [indices[0]]
-    indices[1:] = [list(itertools.permutations(idx)) for idx in indices[1:]]
+    indices = [list(itertools.permutations(idx)) for idx in indices[0:]]
 
     cartesianProduct = itertools.product(*indices)
     for prod in cartesianProduct:
