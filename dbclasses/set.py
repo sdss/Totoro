@@ -188,15 +188,21 @@ class Set(mangaDB.Set):
                  for exposure in self.totoroExposures if exposure.valid])
             return np.array(utils.getIntervalFromPoints(midPoints))
 
-    def getHARange(self, mjd=None, **kwargs):
+    def getHARange(self, intersect=False, mjd=None, **kwargs):
         """Returns the HA limits to add more exposures to the set."""
 
         ha = self.getHA()
         haRange = np.array([np.max(ha) - 15., np.min(ha) + 15.]) % 360.
 
+        plateHALimit = utils.mlhalimit(self.dec)
+
+        haRangePlate = utils.getIntervalIntersection(
+            haRange, np.array([-plateHALimit, plateHALimit]), wrapAt=360.)
+
+        if intersect is False:
+            return haRangePlate
+
         if mjd is None:
-            return haRange
-        elif mjd == 'now':
             mjd = time.Time.now().mjd
         else:
             mjd = int(mjd)
@@ -206,15 +212,12 @@ class Set(mangaDB.Set):
 
         mangaHARange = (mangaLSTRange * 15. - self.ra) % 360.
 
-        haRange = utils.getIntervalIntersection(haRange, mangaHARange,
+        haRange = utils.getIntervalIntersection(haRangePlate, mangaHARange,
                                                 wrapAt=360.)
         if haRange is False:
             return False
-
-        plateHALimit = utils.mlhalimit(self.dec)
-
-        return utils.getIntervalIntersection(
-            haRange, np.array([-plateHALimit, plateHALimit]), wrapAt=360.)
+        else:
+            return haRange
 
     def getDitherPositions(self):
         """Returns a list of dither positions in the set."""
@@ -339,7 +342,7 @@ class Set(mangaDB.Set):
 
         lst0, lst1 = lstRange
 
-        if mjd is None or mjd == 'now':
+        if mjd is None:
             date = time.Time.now()
         else:
             date = time.Time(mjd, format='mjd', scale='tai')

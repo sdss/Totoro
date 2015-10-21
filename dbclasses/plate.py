@@ -391,16 +391,17 @@ class Plate(plateDB.Plate):
 
         return validExposures
 
-    def getHARange(self, mjd=None, **kwargs):
+    def getHARange(self, intersect=False, mjd=None, **kwargs):
 
         ha0 = -self.mlhalimit
         ha1 = self.mlhalimit
 
-        haRange = np.array([ha0, ha1])
+        haRange = np.array([ha0, ha1]) % 360.
+
+        if intersect is False:
+            return haRange
 
         if mjd is None:
-            return haRange
-        elif mjd == 'now':
             mjd = time.Time.now().mjd
         else:
             mjd = int(mjd)
@@ -441,7 +442,7 @@ class Plate(plateDB.Plate):
 
         lst0, lst1 = self.getLSTRange(mjd=mjd, **kwargs)
 
-        if mjd is None or mjd == 'now':
+        if mjd is None:
             date = time.Time.now()
         else:
             date = time.Time(mjd, format='mjd', scale='tai')
