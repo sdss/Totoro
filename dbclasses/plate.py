@@ -185,6 +185,7 @@ class Plate(plateDB.Plate):
         self.isMock = mock
         self._kwargs = kwargs
         self.mjd = mjd
+        self.manga_tileid = None
 
         if 'dust' in kwargs:
             self.dust = kwargs['dust']
@@ -339,7 +340,11 @@ class Plate(plateDB.Plate):
         if self._complete is not None:
             return self._complete
         else:
-            return utils.isPlateComplete(self)
+            status = utils.isPlateComplete(self)
+            # If the plate is mock, caches the status.
+            # if status is True and self.isMock:
+            #     self._complete = status
+            return status
 
     def copy(self):
         return deepcopy(self)
@@ -601,7 +606,7 @@ class Plate(plateDB.Plate):
         if not self.isMock:
             return self.plate_pointings[0].priority
         else:
-            return 5
+            return config['defaultPriority']
 
     @property
     def isPlugged(self):
@@ -615,6 +620,10 @@ class Plate(plateDB.Plate):
         return utils.getAPOcomplete(self)
 
     def getMangaTileID(self):
+
+        if hasattr(self, 'manga_tileid') and self.manga_tileid is not None:
+            return self.manga_tileid
+
         if len(self.design.inputs) == 0:
             return None
         else:

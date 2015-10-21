@@ -100,8 +100,7 @@ class Timeline(object):
             unallocatedTime += (interval[1]-interval[0])
         return unallocatedTime * 24.
 
-    def schedule(self, plates, mode='plugger', allowIncomplete=False,
-                 **kwargs):
+    def schedule(self, plates, mode='plugger', allowComplete=False, **kwargs):
         """Schedules a list of plates in the LST ranges not yet observed in the
         timeline."""
 
@@ -110,14 +109,13 @@ class Timeline(object):
         log.debug('scheduling LST range {0} using {1} plates, mode={2}'
                   .format(self.unallocatedExps.tolist(), len(plates), mode))
 
-        if not allowIncomplete:
+        if not allowComplete:
             plates = [plate for plate in plates if not plate.isComplete]
 
-        while self.remainingTime > 0 and len(plates) > 0:
-            platesToSchedule = [plate for plate in plates
-                                if plate not in self.plates]
+        while self.remainingTime > 0:
+
             optimalPlate = logic.getOptimalPlate(
-                platesToSchedule, self.unallocatedExps,
+                plates, self.unallocatedExps,
                 prioritisePlugged=prioritisePlugged, mode=mode)
 
             if optimalPlate is None:
@@ -125,8 +123,11 @@ class Timeline(object):
             else:
                 self.plates.append(optimalPlate)
                 nExp = self.allocateJDs(plates=[optimalPlate])
-                log.debug('Found optimal plate: plate_id={0}, ({1} new '
-                          'exposures)'.format(optimalPlate.plate_id, nExp))
+                log.info('...... found optimal plate: plate_id={0}, '
+                         'manga_tiledid={1} ({2} new exposures)'
+                         .format(optimalPlate.plate_id,
+                                 optimalPlate.getMangaTileID(),
+                                 nExp))
 
         if self.remainingTime == 0:
             return True

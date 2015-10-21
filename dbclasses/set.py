@@ -68,6 +68,8 @@ class Set(mangaDB.Set):
     def __init__(self, inp=None, format='pk', mock=False,
                  silent=False, mjd=None, *args, **kwargs):
 
+        self._quality = None
+
         self.isMock = mock
         if inp is None:
             self.isMock = True
@@ -286,7 +288,15 @@ class Set(mangaDB.Set):
     def getQuality(self, silent=True, **kwargs):
         """Returns the quality of the set."""
 
-        return logic.checkSet(self, silent=silent, **kwargs)
+        if self._quality is not None:
+            return self._quality
+
+        quality = logic.checkSet(self, silent=silent, **kwargs)
+
+        # if self.isMock and quality[0] != 'Incomplete':
+        #     self._quality = quality
+
+        return quality
 
     def getValidExposures(self, **kwargs):
 

@@ -42,7 +42,8 @@ def initLog():
         logLevel=config['logging']['logLevel'].upper(),
         logFileLevel=config['logging']['logFileLevel'].upper(),
         logFilePath=config['logging']['logFilePath'],
-        mode=config['logging']['mode'])
+        mode=config['logging']['mode'],
+        wrapperLength=config['logging']['wrapperLength'])
 
     return log
 
@@ -149,9 +150,9 @@ class TotoroLogger(Logger):
         # else:
         #     record.message = '{0} [{1:s}]'.format(record.msg, record.origin)
 
-        if len(record.message) > 70:
+        if len(record.message) > self.wrapperLength:
             tw = TextWrapper()
-            tw.width = 70
+            tw.width = self.wrapperLength
             tw.subsequent_indent = ' ' * (len(record.levelname)+2)
             tw.break_on_hyphens = False
             msg = '\n'.join(tw.wrap(record.message))
@@ -163,7 +164,8 @@ class TotoroLogger(Logger):
                       logLevel='WARNING',
                       logFileLevel='INFO',
                       logFilePath='~/.totoro/totoro.log',
-                      mode='append'):
+                      mode='append',
+                      wrapperLength=70):
         """Reset logger to its initial state."""
 
         # Remove all previous handlers
@@ -177,6 +179,8 @@ class TotoroLogger(Logger):
         self.sh = logging.StreamHandler()
         self.sh.emit = self._stream_formatter
         self.addHandler(self.sh)
+
+        self.wrapperLength = wrapperLength
 
         # Set up the main log file handler if requested (but this might fail if
         # configuration directory or log file is not writeable).

@@ -240,7 +240,15 @@ class Exposure(plateDB.Exposure):
     def isValid(self, flag=True, **kwargs):
         """Checks if an exposure is valid."""
 
-        return logic.checkExposure(self, flag=flag, **kwargs)
+        if self._valid is not None:
+            return (self._valid, -1)
+
+        status = logic.checkExposure(self, flag=flag, **kwargs)
+
+        # if self.isMock:
+        #     self._valid = status[0]
+
+        return status
 
     @property
     def ditherPosition(self):

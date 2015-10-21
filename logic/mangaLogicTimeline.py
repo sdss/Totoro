@@ -23,12 +23,17 @@ expTime = config['exposure']['exposureTime']
 maxAlt = config['exposure']['maxAltitude']
 
 
-def getOptimalPlate(plates, jdRanges, prioritisePlugged=True, mode='plugger',
+def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
+                    prioritiseDrilled=True, mode='plugger',
                     **kwargs):
     """Gets the optimal plate to observe in a range of JDs."""
 
     jdRanges = np.atleast_2d(jdRanges).copy()
-    incompletePlates = [plate for plate in plates if plate.isComplete is False]
+
+    observablePlates = [plate for plate in plates
+                        if isObservable(plate, jdRanges)]
+    incompletePlates = [plate for plate in observablePlates
+                        if plate.isComplete is False]
 
     if prioritisePlugged:
 
@@ -43,18 +48,19 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True, mode='plugger',
         if len(pluggedPlates) > 0:
             observedFlag = simulatePlates(pluggedPlates, jdRanges, mode=mode)
             if observedFlag is True:
-                optimal = selectOptimal(pluggedPlates)
+                optimal = selectOptimal(pluggedPlates, jdRanges)
                 cleanupPlates(pluggedPlates, optimal)
                 return optimal
     else:
         notPlugged = incompletePlates
 
     startedPlates = [plate for plate in notPlugged
-                     if plate.getPlateCompletion() > 0]
+                     if len(plate.getTotoroExposures()) > 0]
+
     if len(startedPlates) > 0:
         observedFlag = simulatePlates(startedPlates, jdRanges, mode=mode)
         if observedFlag is True:
-            optimal = selectOptimal(startedPlates)
+            optimal = selectOptimal(startedPlates, jdRanges)
             cleanupPlates(startedPlates, optimal)
             return optimal
 
@@ -62,13 +68,13 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True, mode='plugger',
     if observedFlag is False:
         return None
 
-    optimal = selectOptimal(notPlugged)
+    optimal = selectOptimal(notPlugged, jdRanges)
     cleanupPlates(notPlugged, optimal)
 
     return optimal
 
 
-def selectOptimal(plates, **kwargs):
+def selectOptimal(plates, jdRanges, **kwargs):
     """Returns the optimal plate to observe."""
 
     plates = np.array(plates)
@@ -81,7 +87,7 @@ def selectOptimal(plates, **kwargs):
                 newPlates.append(plate)
                 break
     newPlates = np.array(newPlates)
-
+    # print(newPlates)
     # First tries to select the complete plate with the fewer number
     # of exposures
     completedPlates = [plate for plate in newPlates if plate.isComplete]
@@ -93,7 +99,9 @@ def selectOptimal(plates, **kwargs):
     # If no completed plates, calculates the plate completion using only
     # complete sets
     plateCompletion = np.array(
-        [plate.getPlateCompletion() for plate in newPlates])
+        [plate.getPlateCompletion(includeIncompleteSets=True)
+         for plate in newPlates])
+
     maxPlateCompletion = plateCompletion.max()
 
     # Selects the plates with maximum completion
@@ -104,12 +112,16 @@ def selectOptimal(plates, **kwargs):
         # If only one plate with maximum completion
         return platesMaxCompletion[0]
     else:
+        nExposures = [len(plate.getTotoroExposures()) / plate.priority
+                      for plate in platesMaxCompletion]
+        return platesMaxCompletion[np.argmin(nExposures)]
+
         # If several plates with maximum completion, returns that with the
         # maximum overall completion (including incomplete sets).
-        plateCompletionIncomplete = np.array(
-            [plate.getPlateCompletion(includeIncompleteSets=True)
-             for plate in platesMaxCompletion])
-        return platesMaxCompletion[plateCompletionIncomplete.argmax()]
+        # plateCompletionIncomplete = np.array(
+        #     [plate.getPlateCompletion(includeIncompleteSets=True)
+        #      for plate in platesMaxCompletion])
+        # return platesMaxCompletion[plateCompletionIncomplete.argmax()]
 
     return None
 
@@ -123,22 +135,26 @@ def simulatePlates(plates, jdRanges, mode='plugger'):
     expTimeEff = expTime / config[mode]['efficiency']
 
     for plate in plates:
+
         plateLST = plate.getLSTRange()
+        stopPlate = False
+
         for jdRange in jdRanges:
-            # Requires the plate to be observable at least for two exposues.
-            if not isObservable(plate, jdRange, minExpTime=2*expTimeEff):
-                continue
+
             jd = jdRange[0]
             while jd < jdRange[1]:
 
-                if plate.isComplete and observedFlag is True:
-                    return observedFlag
+                if plate.isComplete:
+                    stopPlate = True
+                    break
 
                 lst = site.localSiderealTime(jd)
+
                 if (not utils.isPointInInterval(lst, plateLST, wrapAt=24)):
                     pass
                 elif plate.getAltitude(lst) > maxAlt:
-                    return observedFlag
+                    stopPlate = True
+                    break
                 else:
                     result = plate.addMockExposure(
                         set=None, startTime=jd, expTime=expTimeEff,
@@ -149,22 +165,22 @@ def simulatePlates(plates, jdRanges, mode='plugger'):
 
                 jd += expTimeEff / 86400
 
+            if stopPlate:
+                break
+
     return observedFlag  # True if we have added at least one exposure
 
 
-def isObservable(plate, jdRanges, minExpTime=0):
+def isObservable(plate, jdRanges):
     """Returns True if a plate is observable in a range of JDs."""
 
     jdRanges = np.atleast_2d(jdRanges)
+    plateLSTRange = plate.getLSTRange()
 
     for jdRange in jdRanges:
-        plateLSTRange = plate.getLSTRange()
         lstRange = site.localSiderealTime(jdRange)
-
-        intersectionLength = utils.getIntervalIntersectionLength(
-            plateLSTRange, lstRange, wrapAt=24.)
-
-        if intersectionLength > minExpTime / 3600.:
+        if (utils.getIntervalIntersection(plateLSTRange, lstRange, wrapAt=24.)
+                is not False):
             return True
 
     return False

@@ -91,63 +91,10 @@ class Planner(BaseScheduler):
         self._plannerScheduler = PlannerScheduler(self.observingBlocks)
         self._plannerScheduler.schedule(**kwargs)
 
-    #     self.fields = self.getFields(**kwargs)
-
-    # def getFields(self, rejectDrilled=True, **kwargs):
-    #     """Gets a table with the fields that can be scheduled."""
-
-    #     from sdss.internal.manga.Totoro import dbclasses
-
-    #     log.info('finding fields with rejectDrilled={0}'
-    #              .format(rejectDrilled))
-    #     fields = dbclasses.Fields(rejectDrilled=rejectDrilled, **kwargs)
-
-    #     return fields
-
-    # def getExposures(self):
-    #     """Returns a table with the simulated exposures."""
-
-    #     if not hasattr(self, 'timelines'):
-    #         raise TotoroError('scheduleTimelines must be run before '
-    #                           'getExposures')
-
-    #     tableExposures = table.Table(None,
-    #                                  names=['manga_tileid', 'RA',
-    #                                         'Dec', 'JD0', 'JD1'],
-    #                                  dtype=[int, float, float, float, float])
-
-    #     for field in self.fields:
-    #         for exposure in field.getValidExposures():
-    #             if exposure._tmp is True:
-    #                 continue
-    #             JD0, JD1 = exposure.getJD()
-    #             tableExposures.add_row((field.manga_tileid, field.ra,
-    #                                     field.dec, JD0, JD1))
-
-    #     tableExposures.sort('JD0')
-
-    #     return tableExposures
-
-    # def scheduleTimelines(self):
-    #     """Creates simulated timelines for the observing blocks."""
-
-    #     self.timelines = Timelines(
-    #         self.observingBlocks, plates=self.fields, mode='planner')
-    #     self.timelines.schedule()
-
 
 class Plugger(object):
 
     def __init__(self, startDate, endDate, **kwargs):
-
-        # Not necessary for now.
-        # super(Plugger, self).__init__(startDate=startDate, endDate=endDate,
-        #                               scope='plugger', **kwargs)
-        # if len(self.observingBlocks) == 0:
-        #     raise TotoroError('no observing blocks found.')
-        # elif len(self.observingBlocks) > 1:
-        #     raise TotoroError('Plugger must be run only for one night. '
-        #                       'Multiple observing blocks found.')
 
         assert startDate < endDate
 
@@ -188,11 +135,6 @@ class Nightly(object):
     def __init__(self, startDate=None, endDate=None, plates=None, **kwargs):
 
         log.info('entering NIGHTLY mode.')
-
-        # Not necessary, as we don't really use the schedule for now.
-        # super(Nightly, self).__init__(startDate=startDate,
-        #                               endDate=endDate, scope='nightly',
-        #                               **kwargs)
 
         self.startDate = startDate
         self.endDate = endDate
