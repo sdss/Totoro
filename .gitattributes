@@ -2,6 +2,7 @@
 /README.md -text
 /__init__.py -text
 /apoDB.py -text
+bin/loadMangaPlates.py -text
 bin/mangaPluggingRequest.py -text
 bin/rearrangeSets.py -text
 core/__init__.py -text
@@ -13,6 +14,7 @@ data/FinalSchedAPO.dat -text
 data/Sch_base.6yrs.txt.frm.dat -text
 data/finalTilingCatalogue_v0.5.fits -text
 data/platesIgnore.dat -text
+data/specialPlates.dat -text
 data/tilesBeingDrilled.dat -text
 data/tmpSchedule.dat -text
 dbclasses/__init__.py -text
