@@ -18,8 +18,9 @@ from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
 from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro import exceptions as TotoroExpections
 from sdss.internal.manga.Totoro import logic
-from sdss.internal.manga.Totoro import log, config, dustMap, site
+from sdss.internal.manga.Totoro import log, config, dustMap, site, readPath
 from sdss.internal.manga.Totoro.scheduler import observingPlan
+from sdss.utilities import yanny
 import warnings
 from astropy import time
 import set as TotoroSet
@@ -27,6 +28,7 @@ from exposure import Exposure
 import numpy as np
 from copy import deepcopy
 import os
+import glob
 
 
 __ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plates',
@@ -36,6 +38,19 @@ __ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plates',
 totoroDB = TotoroDBConnection()
 plateDB = totoroDB.plateDB
 mangaDB = totoroDB.mangaDB
+
+
+mangacorePath = readPath(config['fields']['mangacore'])
+plateTargets = glob.glob(
+    os.path.join(mangacorePath, 'platedesign/platetargets/plateTargets-*.par'))
+
+mangaTileIDs = {}
+for plateTargetsFile in plateTargets:
+    pT = yanny.yanny(plateTargetsFile, np=True)['PLTTRGT']
+    for target in pT:
+        if (target['plateid'] not in mangaTileIDs and
+                target['manga_tileid'] > 0):
+            mangaTileIDs[target['plateid']] = target['manga_tileid']
 
 
 def getPlugged(onlyIncomplete=False, **kwargs):
@@ -410,14 +425,8 @@ class Plate(plateDB.Plate):
         """Returns a list of mangaDB.Exposure objects with all the exposures
         for this plate."""
 
-        session = totoroDB.Session()
-        with session.begin(subtransactions=True):
-            mangaExposures = session.query(totoroDB.mangaDB.Exposure).join(
-                plateDB.Exposure,
-                plateDB.Observation,
-                plateDB.Plugging,
-                plateDB.Plate).filter(
-                    plateDB.Plate.pk == self.pk).all()
+        scienceExps = self.getScienceExposures()
+        mangaExposures = [exp.mangadbExposure[0] for exp in scienceExps]
 
         return mangaExposures
 
@@ -432,14 +441,21 @@ class Plate(plateDB.Plate):
 
         return scienceExps
 
-    def getTotoroExposures(self, silent=True):
+    def getTotoroExposures(self, onlySets=False, silent=True):
         """Returns a list of Totoro dbclasses.Exposure instances for this
         Plate insance."""
 
-        mangaDBExps = self.getMangadbExposures()
-        totoroExposures = [Exposure(mangaDBExp.pk, parent='mangadb',
-                                    silent=silent)
-                           for mangaDBExp in mangaDBExps]
+        totoroExposures = []
+        for ss in self.sets:
+            totoroExposures += ss.totoroExposures
+
+        if onlySets or self.isMock:
+            return totoroExposures
+
+        # Some exposures not in sets may be missing.
+        allExposures = self.getMangadbExposures()
+        totoroExposures += [Exposure(exp.pk, parent='mangadb', silent=silent)
+                            for exp in allExposures if exp.set_pk is None]
 
         return totoroExposures
 
@@ -646,15 +662,9 @@ class Plate(plateDB.Plate):
         if hasattr(self, 'manga_tileid') and self.manga_tileid is not None:
             return self.manga_tileid
 
-        if len(self.design.inputs) == 0:
-            return None
+        if self.plate_id in mangaTileIDs:
+            return mangaTileIDs[self.plate_id]
         else:
-            for input in self.design.inputs:
-                basename = os.path.basename(input.filepath)
-                if 'mangaScience' not in basename:
-                    continue
-                noExt = os.path.splitext(basename)[0]
-                return int(noExt.split('_')[1])
             return None
 
     def getAltitude(self, LST=None):

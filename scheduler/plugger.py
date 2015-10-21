@@ -261,11 +261,17 @@ class PluggerScheduler(object):
 
     def allocateCarts(self, plates, **kwargs):
 
+        from sdss.internal.manga.Totoro.dbclasses import Plate
+
         def logCartAllocation(cartNumber, plate, messages=''):
             """Convenience function to log the cart allocation."""
 
             if plate is None:
-                log.important('Cart #{0} -> empty'.format(cartNumber))
+                if messages == '':
+                    log.important('Cart #{0} -> empty'.format(cartNumber))
+                else:
+                    log.important('Cart #{0} -> {1}'
+                                  .format(cartNumber, messages))
                 return
 
             if not isinstance(messages, (list, tuple)):
@@ -370,8 +376,14 @@ class PluggerScheduler(object):
                 if plate is None:
                     cartPlateMessage[cart] = (None, '')
                 else:
+                    # In principle, the cart is left untouched
                     self.carts[cart] = plate.plate_id
                     cartPlateMessage[cart] = (plate, 'unchanged')
+                    if utils.isMaNGA_Led(plate) and Plate(plate).isComplete:
+                        # If plate is complete, sets the cart to None and
+                        # requests it to be unplugged
+                        self.carts[cart] = None
+                        cartPlateMessage[cart] = (None, 'unplug')
 
         # Logs the allocation
         for cart in sorted(cartPlateMessage.keys()):

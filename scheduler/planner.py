@@ -85,7 +85,7 @@ class PlannerScheduler(object):
 
             tilesBeingDrilledRaw = open(
                 readPath(config['planner']['tilesBeingDrilled']), 'r') \
-                .read().splitlines()
+                .read().strip().splitlines()
 
             if len(tilesBeingDrilledRaw) > 0 and tilesBeingDrilledRaw[0] != '':
                 tilesBeingDrilled = map(int, tilesBeingDrilledRaw)

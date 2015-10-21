@@ -48,12 +48,12 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
         if len(pluggedPlates) > 0:
             return getOptimalPlate(pluggedPlates, jdRanges,
                                    prioritisePlugged=False, mode=mode,
-                                   **kwargs)
+                                   efficiency=efficiency, **kwargs)
     else:
         notPlugged = incompletePlates
 
     startedPlates = [plate for plate in notPlugged
-                     if len(plate.getTotoroExposures()) > 0]
+                     if len(plate.getTotoroExposures(onlySets=True)) > 0]
 
     if len(startedPlates) > 0:
         observedFlag = simulatePlates(startedPlates, jdRanges, mode=mode,
@@ -68,7 +68,7 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
     if observedFlag is False:
         return None
 
-    optimal = selectOptimal(notPlugged, jdRanges, efficiency=efficiency)
+    optimal = selectOptimal(notPlugged, jdRanges)
     cleanupPlates(notPlugged, optimal)
 
     return optimal
@@ -81,7 +81,7 @@ def selectOptimal(plates, jdRanges, **kwargs):
 
     newPlates = []
     for plate in plates:
-        exps = plate.getTotoroExposures()
+        exps = plate.getTotoroExposures(onlySets=True)
         for exp in exps:
             if hasattr(exp, '_tmp') and exp._tmp is True:
                 newPlates.append(plate)
@@ -107,8 +107,9 @@ def selectOptimal(plates, jdRanges, **kwargs):
     # of exposures
     completedPlates = [plate for plate in newPlates if plate.isComplete]
     if len(completedPlates) > 0:
-        nExposures = [len(plate.getTotoroExposures()) / plate.priority
-                      for plate in completedPlates]
+        nExposures = [
+            len(plate.getTotoroExposures(onlySets=True)) / plate.priority
+            for plate in completedPlates]
         return completedPlates[np.argmin(nExposures)]
 
     marked = np.array([plate for plate in newPlates
@@ -141,8 +142,9 @@ def _getOptimalFromList(plates):
         # If only one plate with maximum completion
         return platesMaxCompletion[0]
     else:
-        nExposures = [len(plate.getTotoroExposures()) / plate.priority
-                      for plate in platesMaxCompletion]
+        nExposures = [
+            len(plate.getTotoroExposures(onlySets=True)) / plate.priority
+            for plate in platesMaxCompletion]
         return platesMaxCompletion[np.argmin(nExposures)]
 
         # If several plates with maximum completion, returns that with the
