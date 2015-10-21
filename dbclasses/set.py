@@ -43,7 +43,7 @@ def getPlateSets(inp, format='plate_id', **kwargs):
             plateDB.Plate).filter(
                 eval('plateDB.Plate.{0} == {1}'.format(format, inp))).all()
 
-    return [Set(set.pk, **kwargs) for set in sets]
+    return [Set(set, **kwargs) for set in sets]
 
 
 class Set(mangaDB.Set):
@@ -55,10 +55,13 @@ class Set(mangaDB.Set):
 
         base = cls.__bases__[0]
 
-        with session.begin(subtransactions=True):
-            instance = session.query(base).filter(
-                eval('{0}.{1} == {2}'.format(base.__name__, format, input))
-                ).one()
+        if isinstance(input, base):
+            instance = input
+        else:
+            with session.begin(subtransactions=True):
+                instance = session.query(base).filter(
+                    eval('{0}.{1} == {2}'.format(base.__name__, format, input))
+                    ).one()
 
         instance.__class__ = cls
 

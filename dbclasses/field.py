@@ -70,7 +70,7 @@ class Fields(list):
         based on the coordinates of drilled plates."""
 
         plates = plate.getAll(onlyIncomplete=False, silent=True,
-                              updateSets=False)
+                              updateSets=False, fullCheck=False)
 
         alreadyDrilled = []
         for pp in plates:
