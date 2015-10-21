@@ -61,7 +61,7 @@ def getPlugged(onlyIncomplete=False, **kwargs):
         return Plates(plates, **kwargs)
 
 
-def getAtAPO(onlyIncomplete=False, **kwargs):
+def getAtAPO(onlyIncomplete=False, onlyMarked=False, **kwargs):
 
     session = totoroDB.Session()
     with session.begin(subtransactions=True):
@@ -71,7 +71,14 @@ def getAtAPO(onlyIncomplete=False, **kwargs):
                 plateDB.SurveyMode.label == 'MaNGA dither'
             ).join(plateDB.PlateLocation).filter(
                 plateDB.PlateLocation.label == 'APO').order_by(
-                    plateDB.Plate.plate_id).all()
+                    plateDB.Plate.plate_id)
+
+        if onlyMarked is False:
+            plates = plates.all()
+        else:
+            plates = plates.join(plateDB.PlateToPlateStatus,
+                                 plateDB.PlateStatus).filter(
+                plateDB.PlateStatus.label == 'Accepted').all()
 
     plates = [plate.pk for plate in plates]
 

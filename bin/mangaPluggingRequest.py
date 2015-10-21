@@ -24,7 +24,7 @@ from sdss.internal.manga.Totoro.scheduler.observingPlan import ObservingPlan
 from sdss.internal.manga.Totoro import log
 
 
-def mangaPluggingRequest(mjd=None):
+def mangaPluggingRequest(mjd=None, marked=False):
     """Creates a `Plugger` instance for the requested mjd and returns the
     output. If `mjd=None`, the current MJD will be used."""
 
@@ -43,7 +43,7 @@ def mangaPluggingRequest(mjd=None):
         raise TotoroError('not MaNGA observations scheduled for '
                           'MJD={0:d}'.format(printMJD))
 
-    plugger = Plugger(jd0, jd1)
+    plugger = Plugger(jd0, jd1, onlyMarked=marked)
     plugger.getOutput()
 
 
@@ -53,6 +53,9 @@ def main(argv=None):
                                      prog=os.path.basename(sys.argv[0]))
     parser.add_argument('-m', '--mjd', metavar='MJD', type=int, default=None,
                         help='The MJD for which the plugging is requested.')
+    parser.add_argument('-k', '--marked', dest='marked',
+                        action='store_true',
+                        help='if set, only marked plates will be considered.')
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
                         help='Print lots of extra output.')
 
@@ -61,7 +64,7 @@ def main(argv=None):
     if args.verbose is True:
         log.sh.setLevel('DEBUG')
 
-    mangaPluggingRequest(mjd=args.mjd)
+    mangaPluggingRequest(mjd=args.mjd, marked=args.marked)
 
     return
 

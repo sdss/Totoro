@@ -190,6 +190,22 @@ class PluggerScheduler(object):
 
     def allocateCarts(self, plates=None, **kwargs):
 
+        def logCartAllocation(cartNumber, plate, messages=None):
+            if isinstance(messages, basestring):
+                messages = [messages]
+            plateid = plate.plate_id
+            status = plate.statuses[0].label
+            if status == 'Shipped' and plate.location.label == 'APO':
+                msg = 'plate has not been marked'
+                if messages is None:
+                    messages = [msg]
+                else:
+                    messages.append(msg)
+            msgStr = '({0})'.format(', '.join(messages)) \
+                if messages is not None else ''
+            log.important('Cart #{0} -> plate_id={1} {2}'
+                          .format(cartNumber, plateid, msgStr))
+
         plates = plates if plates is not None else self._platesToAllocate
 
         mjd = int(self.timeline.endDate - 2400000.5)
@@ -213,8 +229,7 @@ class PluggerScheduler(object):
 
                 self.carts[cartNumber] = plate.plate_id
 
-                log.important('Cart #{0} -> plate_id={1} (already plugged)'
-                              .format(cartNumber, plate.plate_id))
+                logCartAllocation(cartNumber, plate, 'already plugged')
 
                 allocatedPlates.append(plate)
 
@@ -229,20 +244,16 @@ class PluggerScheduler(object):
                     self.carts[cartNumber] = plate.plate_id
 
                     if status == 'empty':
-                        log.important('Cart #{0} -> plate_id={1} (empty cart)'
-                                      .format(cartNumber, plate.plate_id))
+                        logCartAllocation(cartNumber, plate, 'empty cart')
                     elif status == 'noMaNGAPlate':
-                        log.important('Cart #{0} -> plate_id={1} (replacing '
-                                      'no-MaNGA plate)'.format(
-                                          cartNumber, plate.plate_id))
+                        logCartAllocation(cartNumber, plate,
+                                          'replacing no-MaNGA plate')
                     elif status == 'complete':
-                        log.important('Cart #{0} -> plate_id={1} (replacing '
-                                      'complete plate)'.format(
-                                          cartNumber, plate.plate_id))
+                        logCartAllocation(cartNumber, plate,
+                                          'replacing complete plate')
                     elif status == 'notStarted':
-                        log.important('Cart #{0} -> plate_id={1} (replacing '
-                                      'not started plate)'.format(
-                                          cartNumber, plate.plate_id))
+                        logCartAllocation(cartNumber, plate,
+                                          'replacing non stated plate')
 
                     allocatedPlates.append(plate)
 
@@ -257,8 +268,7 @@ class PluggerScheduler(object):
             bestCartIdx = np.argmin(cartPriority)
             cart = unallocatedCarts[bestCartIdx]
             self.carts[cart] = plate.plate_id
-            log.important('Cart #{0} -> plate_id={1} (replacing '
-                          'MaNGA plate)'.format(cart, plate.plate_id))
+            logCartAllocation(cart, plate, 'replacing MaNGA plate')
 
             cartPriority = np.delete(cartPriority, bestCartIdx)
             unallocatedCarts.pop(bestCartIdx)
@@ -270,5 +280,4 @@ class PluggerScheduler(object):
                     log.important('Cart #{0} -> no plate'.format(cart))
                 else:
                     self.carts[cart] = plate.plate_id
-                    log.important('Cart #{0} -> plate_id={1} (kept plugged)'
-                                  .format(cart, plate.plate_id))
+                    logCartAllocation(cart, plate, 'kept plugged')
