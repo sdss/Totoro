@@ -103,6 +103,8 @@ class Timeline(object):
         """Schedules a list of plates in the LST ranges not yet observed in the
         timeline."""
 
+        from sdss.internal.manga.Totoro.dbclasses import Field
+
         prioritisePlugged = True if mode == 'plugger' else False
 
         log.debug('scheduling LST range {0} using {1} plates, mode={2}'
@@ -124,20 +126,31 @@ class Timeline(object):
                 self.plates.append(optimalPlate)
                 nExp = self.allocateJDs(plates=[optimalPlate])
 
-                locationFlag = ''
+                flags = []
+
+                if (optimalPlate.drilled is False and
+                        not isinstance(optimalPlate, Field)):
+                    flags.append(_color_text('plate not yet drilled', 'white'))
+
                 location = optimalPlate.getLocation()  # May be None
-                if location and location != 'APO' and location != 'Cosmic':
-                    locationFlag = _color_text(
-                        '** Plate not on the mountain **', 'red')
-                elif location and location == 'Cosmic':
-                    locationFlag = _color_text(
-                        '** Plate in Cosmic **', 'red')
+                if not location:
+                    flags.append(_color_text('unknown location', 'red'))
+                elif location != 'APO' and location != 'Cosmic':
+                    flags.append(
+                        _color_text('plate not on the mountain', 'red'))
+                elif location == 'Cosmic':
+                    flags.append(_color_text('plate in Cosmic', 'red'))
+
+                if len(flags) > 0:
+                    flags = u'** {0} **'.format(', '.join(flags))
+                else:
+                    flags = ''
 
                 log.info('...... found optimal plate: plate_id={0}, '
                          'manga_tiledid={1} ({2} new exposures) {3}'
                          .format(optimalPlate.plate_id,
                                  optimalPlate.getMangaTileID(),
-                                 nExp, locationFlag))
+                                 nExp, flags))
 
         if showUnobservedTimes:
             if (self.remainingTime <=

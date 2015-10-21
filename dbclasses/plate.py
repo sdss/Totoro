@@ -222,6 +222,7 @@ class Plate(plateDB.Plate):
                  updateSets=True, mjd=None, fullCheck=True, **kwargs):
 
         self._complete = None
+        self._drilled = None
         self.isMock = mock
         self._kwargs = kwargs
         self.mjd = mjd
@@ -753,3 +754,18 @@ class Plate(plateDB.Plate):
         if self.location is None:
             return None
         return self.location.label
+
+    @property
+    def drilled(self):
+        """Property to record if a plate has already been drilled."""
+        if self._drilled is not None:
+            return self._drilled
+        else:
+            if self.plate_id is not None:
+                return True
+            else:
+                return False
+
+    @drilled.setter
+    def drilled(self, value):
+        self._drilled = value
