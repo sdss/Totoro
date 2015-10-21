@@ -183,7 +183,7 @@ class Set(mangaDB.Set):
             return np.array([-plateHALimit, plateHALimit])
         elif len(exposures) >= 1:
             expHAs = np.array([exp.getHA() for exp in exposures])
-            return utils.getMinMaxIntervalSequence(expHAs)
+            return np.array(utils.getMinMaxIntervalSequence(expHAs))
 
     def getHARange(self, intersect=False, mjd=None,
                    maxHARange=config['set']['maxHARange'], **kwargs):
