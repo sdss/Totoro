@@ -156,7 +156,7 @@ def createSite(longitude=None, latitude=None, altitude=None,
             name = config['observatory']['name']
 
     site = obstools.Site(latitude, longitude, name=name, alt=altitude)
-    site.localSiderialTime = lambda jd: _calculateLST(site, jd)
+    # site.localSiderialTime = lambda jd: _calculateLST(site, jd)
 
     if verbose:
         log.info('Created site with name \'{0}\''.format(name))
@@ -164,17 +164,17 @@ def createSite(longitude=None, latitude=None, altitude=None,
     return site
 
 
-def _calculateLST(site, jd):
-    """Not-to-be-used-directly function to replace the imprecise
-    locaSiderialTime in astropysics."""
+# def _calculateLST(site, jd):
+#     """Not-to-be-used-directly function to replace the imprecise
+#     locaSiderialTime in astropysics."""
 
-    tmpTime = time.Time(jd, format='jd', scale='tai')
-    tmpTime.delta_ut1_utc = 0.
+#     tmpTime = time.Time(jd, format='jd', scale='tai')
+#     tmpTime.delta_ut1_utc = 0.
 
-    lst = tmpTime.sidereal_time('apparent',
-                                longitude=float(site.longitude.degrees))
+#     lst = tmpTime.sidereal_time('apparent',
+#                                 longitude=float(site.longitude.degrees))
 
-    return lst.hour
+#     return lst.hour
 
 
 def JDdiff(JD0, JD1):
