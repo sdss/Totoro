@@ -52,7 +52,7 @@ class Timeline(object):
 
         self.startDate = startDate
         self.endDate = endDate
-        self.plates = []
+        self.scheduled = []
 
         self.unallocatedRange = np.array([self.startDate, self.endDate])
 
@@ -133,10 +133,10 @@ class Timeline(object):
                 break
             else:
 
-                if optimalPlate in self.plates:
-                    # Removes old version of optimalPlate in self.plates.
-                    self.plates.remove(optimalPlate)
-                self.plates.append(optimalPlate)
+                if optimalPlate in self.scheduled:
+                    # Removes old version of optimalPlate in self.scheduled.
+                    self.scheduled.remove(optimalPlate)
+                self.scheduled.append(optimalPlate)
 
                 self.allocateJDs(newExposures)
 
