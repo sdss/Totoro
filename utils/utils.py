@@ -85,7 +85,7 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
     if plugComplete is not None and forceCheckCompletion is False:
         return plugComplete
 
-    if plate.getPlateCompletion(includeIncompleteSets=False) > 1.:
+    if plate.getPlateCompletion(includeIncompleteSets=False) >= 1.:
         plateComplete = True
     else:
         plateComplete = False

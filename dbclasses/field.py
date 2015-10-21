@@ -125,3 +125,14 @@ class Field(plate.Plate):
 
     def __repr__(self):
         return '<Field: manga_tileid={0:d}>'.format(self.manga_tileid)
+
+    @property
+    def isComplete(self):
+        if self._complete is not None:
+            return self._complete
+        else:
+            if self.getPlateCompletion(includeIncompleteSets=False) >= 1.:
+                self._complete = True
+                return True
+            else:
+                return False

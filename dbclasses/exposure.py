@@ -137,7 +137,7 @@ class Exposure(plateDB.Exposure):
 
         return newExposure
 
-    def simulateObservedParamters(self, factor=None, **kwargs):
+    def simulateObservedParamters(self, factor=None, dust=None, **kwargs):
         """Simulates the SN2 of the exposure, using dust extinction and airmass
         values."""
 
@@ -146,10 +146,13 @@ class Exposure(plateDB.Exposure):
         if factor is None:
             factor = config['simulation']['factor']
 
-        if dustMap is not None:
-            self._dust = dustMap(self.ra, self.dec)
+        if dust is not None:
+            self._dust = dust
         else:
-            self._dust = {'iIncrease': [1], 'gIncrease': [1]}
+            if dustMap is not None:
+                self._dust = dustMap(self.ra, self.dec)
+            else:
+                self._dust = {'iIncrease': [1], 'gIncrease': [1]}
 
         haRange = self.getHA()
         ha = utils.calculateMean(haRange)
@@ -260,8 +263,8 @@ class Exposure(plateDB.Exposure):
 
         status = checkExposure(self, flag=flag, **kwargs)
 
-        # if self.isMock:
-        #     self._valid = status[0]
+        if self.isMock:
+            self._valid = status[0]
 
         return status
 
