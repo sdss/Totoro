@@ -19,7 +19,7 @@ from numbers import Real
 from astropy.coordinates import Longitude
 from astropy import units as uu
 from .exposure import Exposure
-from ..core.defaults import DITHERPOS, SN2_FACTOR_SET
+from ..core.defaults import DITHER_POSITIONS_NEEDED, SN2_FACTOR_SET
 from ..core.defaults import SEEING_POOR, SEEING_EXCELLENT, MAX_DIFF_SEEING_SET
 
 
@@ -86,8 +86,8 @@ class Set(list):
         validExp = self.getValidExposures()
 
         ditherPos = [exp.ditherPos for exp in validExp]
-        if (all([dd in DITHERPOS() for dd in ditherPos]) and
-                all([dd in ditherPos for dd in DITHERPOS()])):
+        if (all([dd in DITHER_POSITIONS_NEEDED() for dd in ditherPos]) and
+                all([dd in ditherPos for dd in DITHER_POSITIONS_NEEDED()])):
             ditherPosOK = True
 
         if (self.get_HA_minmax() is not None and

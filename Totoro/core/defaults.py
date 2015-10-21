@@ -86,9 +86,14 @@ B_SN2_EXPOSURE = ConfigObject(
 SN2_FACTOR_SET = ConfigObject(
     'sn2FactorSet', 2., section='SN')
 
-DITHERPOS = ConfigObject('ditherPos', ['N', 'S', 'E'],
-                         'Needed dither positions for a dither to be compete.')
+DITHER_POSITIONS_NEEDED = ConfigObject(
+    'ditherPositionsNeeded', ['N', 'S', 'E'],
+    'Needed dither positions for a dither to be compete.')
 NDITHERS = ConfigObject('nDithers', 3, 'Minimum number of exposures in a set.')
+DITHER_POSITIONS = ConfigObject(
+    'ditherPosition', ['C', 'E', 'S', 'N'], 'Accepted dither positions.')
+EXPTYPES = ConfigObject('obsTypes', ['sci', 'cal'], 'Accepted exposure types.')
+
 
 DEFAULT_PLAN_FILE = ConfigObject('defaultPlanFile',
                                  os.path.join(

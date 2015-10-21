@@ -16,14 +16,12 @@ from __future__ import division
 from __future__ import print_function
 from ..core.defaults import EXPTIME, AVG_SEEING, MIN_SEEING_EXPOSURE, \
     R_SN2_EXPOSURE, B_SN2_EXPOSURE
+from ..core.defaults import EXPTYPES, DITHER_POSITIONS
 from numbers import Real
 from astropy import time
 from astropy import coordinates as coo
 from astropy import units as uu
 import numpy as np
-
-OBSTYPES = ['sci', 'cal']
-DITHER_POSITIONS = ['C', 'E', 'S', 'N']
 
 
 class Exposure(object):
@@ -45,12 +43,12 @@ class Exposure(object):
         self.expTime = expTime
 
         self.ditherPos = ditherPos.upper()
-        if self.ditherPos not in DITHER_POSITIONS:
+        if self.ditherPos not in DITHER_POSITIONS():
             raise ValueError(
                 'invalid dither position {0}.'.format(self.ditherPos))
 
         self.obsType = obsType.lower()
-        if self.obsType not in OBSTYPES:
+        if self.obsType not in EXPTYPES():
             raise ValueError('invalid obsType {0}.'.format(self.obsType))
 
         self.set = Set
