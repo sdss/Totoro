@@ -72,7 +72,7 @@ def getCartStatus(activePluggings, cartNumber):
         return (cartNumber, totoroPlate, 3,
                 cartStatusCodes[3], 0.)  # Non-stated MaNGA plate
     else:
-        return (cartNumber, 4, totoroPlate, cartStatusCodes[4],
+        return (cartNumber, totoroPlate, 4, cartStatusCodes[4],
                 totoroPlate.getPlateCompletion())  # Started MaNGA plate
 
     return (cartNumber, None, 10, cartStatusCodes[10], 0)  # Unknown
