@@ -106,8 +106,8 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
 
     # Checks dither position
     if (exposure.ditherPosition not in
-            config['exposure']['validDitherPositions']
-            and exposure.ditherPosition is not None):
+            config['exposure']['validDitherPositions'] and
+            exposure.ditherPosition is not None):
         return flagHelper(False, 1,
                           'Invalid exposure. plateDB.Exposure.pk={0} '
                           'has dither position {1}'
@@ -154,7 +154,7 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
                                   visibilityWindow[0], visibilityWindow[1]))
 
     # Checks altitude of the object
-    if not exposure.isMock:
+    if config['exposure']['checkTwilight'] is True and not exposure.isMock:
         # Avoids this check for mock exposures as it slows down simulations.
         maxSunAltitude = config['exposure']['maxSunAltitude']
         exposureDate = time.Time(exposure.getJD(), format='jd', scale='tai')
@@ -295,8 +295,8 @@ def checkSet(input, flag=True, flagExposures=None, silent=False,
     if set.isMock:
         flag = False
 
-    if (set.isMock is False and set.set_status_pk is not None
-            and not forceReflag):
+    if (set.isMock is False and set.set_status_pk is not None and
+            not forceReflag):
         return (set.status.label, 10)
 
     def flagHelper(statusLabel, errorCode, message=None):
