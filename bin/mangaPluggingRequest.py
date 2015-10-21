@@ -20,7 +20,7 @@ import argparse
 from astropy import time
 from sdss.internal.manga.Totoro.exceptions import TotoroError
 from sdss.internal.manga.Totoro.scheduler import Plugger
-from sdss.internal.manga.Totoro.scheduler.observingPlan import ObservingPlan
+from sdss.internal.manga.Totoro.scheduler import observingPlan
 from sdss.internal.manga.Totoro import log
 
 
@@ -36,7 +36,6 @@ def mangaPluggingRequest(mjd=None, marked=False):
     printMJD = int(tt.jd) - 2400000
 
     log.info('creating plugging request for MJD={0:d}'.format(printMJD))
-    observingPlan = ObservingPlan()
     jd0, jd1 = observingPlan.getJD(jd=int(tt.jd))
 
     if jd0 is None or jd1 is None:
@@ -44,7 +43,7 @@ def mangaPluggingRequest(mjd=None, marked=False):
                           'MJD={0:d}'.format(printMJD))
 
     plugger = Plugger(jd0, jd1, onlyMarked=marked)
-    plugger.getOutput()
+    log.info('returned dictionary: {0}'.format(plugger.getOutput()))
 
 
 def main(argv=None):

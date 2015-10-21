@@ -19,7 +19,7 @@ from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro import exceptions as TotoroExpections
 from sdss.internal.manga.Totoro import logic
 from sdss.internal.manga.Totoro import log, config, dustMap, site
-from sdss.internal.manga.Totoro.scheduler.observingPlan import ObservingPlan
+from sdss.internal.manga.Totoro.scheduler import observingPlan
 import warnings
 from astropy import time
 import set as TotoroSet
@@ -36,8 +36,6 @@ __ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'Plates', 'Plate',
 totoroDB = TotoroDBConnection()
 plateDB = totoroDB.plateDB
 mangaDB = totoroDB.mangaDB
-
-observingPlan = ObservingPlan()
 
 
 def getPlugged(onlyIncomplete=False, **kwargs):
@@ -271,7 +269,8 @@ class Plate(plateDB.Plate):
     def isMaNGA(self):
 
         for survey in self.surveys:
-            if survey.label == 'MaNGA':
+            if (survey.label == 'MaNGA' and
+                    self.currentSurveyMode.label == 'MaNGA dither'):
                 return True
 
         return False

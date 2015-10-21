@@ -165,6 +165,7 @@ class PluggerScheduler(object):
                                    mode='plugger')
 
         self.allocateCarts(plates=self.timeline.plates)
+        self._cleanUpNoMaNGA()  # Removes cart without MaNGA plates
 
         remainingTime = self.timeline.remainingTime
         if remainingTime > 0:
@@ -374,3 +375,19 @@ class PluggerScheduler(object):
         for cart in sorted(cartPlateMessage.keys()):
             logCartAllocation(cart, cartPlateMessage[cart][0],
                               cartPlateMessage[cart][1])
+
+    def _cleanUpNoMaNGA(self):
+        """Removes the key in the self.cart dictionary that contain a
+        non MaNGA plate or None."""
+
+        keysToRemove = []
+        for key in self.carts:
+            if self.carts[key] is None:
+                keysToRemove.append(key)
+            elif not utils.isMaNGA(self.carts[key]):
+                keysToRemove.append(key)
+            else:
+                pass
+
+        for key in keysToRemove:
+            self.carts.pop(key)
