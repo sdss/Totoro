@@ -96,18 +96,20 @@ class testSets(unittest.TestCase):
 
         plate8486.addMockExposure(startTime=2457137.9535648148)
         self.assertEqual(len(plate8486.sets), 3)
-        self.assertEqual(plate8486.sets[2].getStatus()[0], 'Incomplete')
+        statuses = [ss.getStatus()[0] for ss in plate8486.sets]
+        self.assertEqual(statuses.count('Incomplete'), 1)
 
         plate8486.addMockExposure(startTime=2457137.9535648148,
                                   plugging=plate8486.getActivePlugging())
         self.assertEqual(len(plate8486.sets), 4)
-        self.assertEqual(plate8486.sets[3].getStatus()[0], 'Incomplete')
+        statuses = [ss.getStatus()[0] for ss in plate8486.sets]
+        self.assertEqual(statuses.count('Incomplete'), 2)
 
         plate8486.addMockExposure(startTime=2457137.9535648148,
                                   plugging=plate8486.getActivePlugging())
         self.assertEqual(len(plate8486.sets), 4)
-        self.assertEqual(plate8486.sets[3].getStatus()[0], 'Incomplete')
-        self.assertEqual(len(plate8486.sets[3].totoroExposures), 2)
+        statuses = [ss.getStatus()[0] for ss in plate8486.sets]
+        self.assertEqual(statuses.count('Incomplete'), 2)
 
 
 if __name__ == '__main__':

@@ -198,7 +198,7 @@ class Timeline(object):
 
         if showUnobservedTimes:
             if (self.remainingTime <=
-                    config['exposure']['exposureTime'] / 3600.):
+                    (2 * config['exposure']['exposureTime'] / 3600.)):
                 return True
             else:
                 log.info('... unobserved times: {0}'.format(

@@ -234,7 +234,8 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
         raise exceptions.TotoroError('scope={0} is invalid'.format(scope))
 
     # Rejects invalid exposures:
-    exposures = [exp for exp in exposures if exp.isPlateDBValid()]
+    exposures = [exp for exp in exposures if exp.isMock or
+                 exp.isPlateDBValid()]
 
     # Does some logging.
     logMode('plate_id={0}: rearranging sets, mode=\'{1}\', '

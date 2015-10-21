@@ -247,6 +247,7 @@ class Plate(plateDB.Plate):
 
         self._complete = None
         self._drilled = None
+        self._priority = None
         self.isMock = mock
         self._kwargs = kwargs
         self.mjd = mjd
@@ -701,6 +702,7 @@ class Plate(plateDB.Plate):
         if newSet:
             self.sets.append(validSet)
         validSet.totoroExposures.append(exposure)
+        self.rearrangeSets(mode='optimal', scope='incomplete', silent=True)
 
         return exposure
 
@@ -748,10 +750,21 @@ class Plate(plateDB.Plate):
 
     @property
     def priority(self):
-        if not self.isMock:
+        if not self.isMock and self._priority is None:
             return self.plate_pointings[0].priority
         else:
-            return config['defaultPriority']
+            if self._priority is None:
+                return config['defaultPriority']
+            else:
+                return self._priority
+
+    @priority.setter
+    def priority(self, value):
+        if not self.isMock:
+            with session.begin(subtransactions=True):
+                self.plate_pointings[0].priority = value
+        else:
+            self._priority = value
 
     @property
     def isPlugged(self):

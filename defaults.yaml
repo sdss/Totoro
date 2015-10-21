@@ -79,6 +79,7 @@ plugger:
     noPlugPriority: 1
     forcePlugPriority: 10
     maxAltitude: 85
+    minSchedulingTimeHours: 0.75
     onlyVisiblePlates: true
     simulationFactor: 1.15
 
