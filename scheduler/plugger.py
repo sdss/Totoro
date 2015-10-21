@@ -140,6 +140,11 @@ class Plugger(object):
 
     def __init__(self, startDate=None, endDate=None, **kwargs):
 
+        if startDate == 0.:
+            startDate = None
+        if endDate == 0.:
+            endDate = None
+
         if startDate is None and endDate is None:
             self._initNoManga()
         elif ((startDate is None and endDate is not None) or
