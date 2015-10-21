@@ -233,7 +233,7 @@ class Plugger(object):
 
         # We change the Totoro.Plate instances to plate_ids
         for key in self.carts:
-            if key != 'cart_order':
+            if key != 'cart_order' and self.carts[key] is not None:
                 self.carts[key] = self.carts[key].plate_id
 
         return self.carts
@@ -529,6 +529,8 @@ class Plugger(object):
         forcePlug = []
 
         for cart, plate in self.carts.iteritems():
+            if plate is None:
+                continue
             if plate.priority == forcePlugPriority:
                 forcePlug.append((cart, plate))
             elif plate.isComplete:
