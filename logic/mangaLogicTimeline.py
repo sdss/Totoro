@@ -19,8 +19,7 @@ from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro import config, site
 
 
-expTime = (config['exposure']['exposureTime'] /
-           config['plugger']['efficiency'])
+expTime = config['exposure']['exposureTime']
 maxAlt = config['exposure']['maxAltitude']
 
 
@@ -137,7 +136,7 @@ def simulatePlates(plates, jdRanges):
                         observedFlag = True
                         result._tmp = True
 
-                jd += expTime / 86400.
+                jd += expTime / config['plugger']['efficiency'] / 86400.
 
     return observedFlag  # True if we have added at least one exposure
 
