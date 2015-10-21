@@ -81,7 +81,7 @@ class Planner(BaseScheduler):
     def getFields(self, rejectDrilled=True, **kwargs):
         """Gets a table with the fields that can be scheduled."""
 
-        from Totoro import dbclasses
+        from sdss.internal.manga.Totoro import dbclasses
 
         log.info('finding fields with rejectDrilled={0}'.format(rejectDrilled))
         fields = dbclasses.Fields(rejectDrilled=rejectDrilled, **kwargs)
@@ -107,7 +107,7 @@ class Plugger(BaseScheduler):
 
     def getPlatesAtAPO(self, rejectComplete=True):
 
-        from Totoro import dbclasses
+        from sdss.internal.manga.Totoro import dbclasses
 
         log.info('getting plates at APO with rejectComplete={0}'.format(
                  rejectComplete))
