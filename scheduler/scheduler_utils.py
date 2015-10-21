@@ -94,7 +94,7 @@ def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
     # this manner, exposures in incomplete sets are not rearranged after a new
     # mock exposure is added.
     simulatePlates(observablePlates, jdRange, mode, **kwargs)
-    optimalPlate = selectPlate(observablePlates, jdRange)
+    optimalPlate = selectPlate(observablePlates, jdRange, normalise=True)
 
     # Cleans up all plates
     newExps = cleanupPlates(observablePlates, optimalPlate, jdRange)
@@ -167,7 +167,7 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
         plateWindowLenghtNormalised = (plateWindowLength /
                                        np.min(plateWindowLength))
 
-        _completionFactor(plates, 1.0 / plateWindowLenghtNormalised)
+        _completionFactor(plates, plateWindowLenghtNormalised)
 
         # Now we normalise plate completion using a metric that gives higher
         # priority to plates for which we have patched incomplete sets.
@@ -198,7 +198,7 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
     # We check if any of the plate is complete after the simulation.
     # If so, we return the one with fewer new exposures.
     completePlates = [plate for plate in plates
-                      if plate._after['completion'] > 1]
+                      if plate._after['realCompletion'] > 1]
     nNewExposures = [plate._after['nNewExposures'] for plate in completePlates]
     if len(completePlates) > 0:
         return completePlates[np.argmin(nNewExposures)]
