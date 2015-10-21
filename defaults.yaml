@@ -1,0 +1,96 @@
+---
+logging:
+    logLevel: INFO
+    logFileLevel: DEBUG
+    logFilePath: '~/.totoro/totoro.log'
+
+dbConnectionProduction: &dbConnectionProduction
+    user: sdssdb_admin
+    password: 4-photometry
+    host: sdss4-db
+    port: 5432
+    database: apodb
+
+dbConnectionLocal: &dbConnectionLocal
+    user: sdssdb_admin
+    password: 4-photometry
+    host: localhost
+    port: 5432
+    database: apodb
+
+dbConnectionDev: &dbConnectionDev
+    user: sdssdb_admin
+    password: 4-photometry
+    host: localhost
+    port: 5440
+    database: apo_platedb
+
+dbConnectionTunnel: &dbConnectionTunnel
+    user: sdssdb_admin
+    password: 4-photometry
+    host: localhost
+    port: 6432
+    database: apodb
+
+dbConnection: *dbConnectionProduction
+
+observingPlan:
+    schedule: +../../../../schedules/Sch_base.6yrs.txt.frm.dat
+
+fields:
+    tilingCatalogue: $MANGA_TILING_CATALOGUE
+
+observatory:
+    longitude: 254.179722   # In East degrees
+    latitude: 32.766666667
+    altitude: 2788
+    name: APO
+
+dustMap:
+    useGrid: false
+    mapDir: $DUST_DIR/maps
+    maps: [SFD_dust_4096_ngp.fits, SFD_dust_4096_sgp.fits]
+    grid: +data/IGincrease.fits
+
+planner:
+    nCarts: 4
+    efficiency: 0.85
+    maxLeftoverTime: 900.
+
+plugger:
+    nCarts: 2
+    efficiency: 0.75
+    maxLeftoverTime: 900.
+    pluggedPlatePriority: 10
+    defaultPlatePriority: 5
+
+simulation:
+    blueSN2: 3.6
+    alphaBlue: 1.0
+    redSN2: 7.5
+    alphaRed: 1.25
+
+SN2thresholds:
+    plateRed: 60
+    plateBlue: 25
+    exposureRed: 3.0
+    exposureBlue: 0.8
+
+exposure:
+    exposureTime: 900
+    minExpTime: 899
+    maxSeeing: 2.5
+    validDitherPositions: ['N', 'S', 'E']
+
+set:
+    excellentSeeing: 1.5
+    poorSeeing: 2
+    maxHARange: 15
+    maxSeeingRange: 0.8
+    maxSN2Factor: 2
+    ditherPositions: ['N', 'S', 'E']
+
+setArrangement:
+    exposureLimit: 15
+    forceRearrangementMinExposures: 3
+
