@@ -16,15 +16,14 @@ from __future__ import division
 from __future__ import print_function
 import itertools
 from .mangaLogic import checkExposure
-from ..exceptions import TotoroError, NoMangaExposure
+from ..exceptions import NoMangaExposure
 from .. import TotoroDBConnection
-from .. import log, site, config
+from .. import log, config
 from sqlalchemy import func
 from scipy.misc import factorial
 import collections
 import warnings
 import numpy as np
-from astropy.time import Time
 
 
 def updateSets(plate, **kwargs):
@@ -63,51 +62,43 @@ def updateSets(plate, **kwargs):
         return False
 
 
-def getValidSet(totoroExp, plate):
+def getValidSet(totoroExp, plate, setStatus=None):
 
     from ..dbclasses import Set
 
     if not totoroExp.isValid()[0]:
         return False
 
-    completeSets = []
-    incompleteSets = []
+    if setStatus is None:
+        setStatus = [set.getQuality()[0] for set in plate.sets]
 
-    for set in plate.sets:
-        quality = set.getQuality(flag=False)[0]
-        if quality in ['Excellent', 'Good']:
-            continue
-        if quality == 'Bad':
-            log.info('one bad set found (pk={0}). Triggering rearrangement.'
-                     .format(set.pk))
-            rearrangeSets(plate)  # This is probably not enough. Test.
-            continue
-        if quality == 'Incomplete':
-            set.totoroExposures.append(totoroExp)
-            tmpSetQuality = set.getQuality(flag=False)[0]
-            if tmpSetQuality in ['Excellent', 'Good']:
-                completeSets.append(set)
-            elif tmpSetQuality == 'Incomplete':
-                incompleteSets.append(set)
-            set.totoroExposures.remove(totoroExp)
+    incompleteSets = [set for nn, set in enumerate(plate.sets)
+                      if setStatus[nn].lower() == 'incomplete']
 
-    newSet = Set.fromExposures([totoroExp], silent=True)
+    distanceToEndOfVisibilityWindow = [
+        plate.getLSTRange()[1] - np.mean(set.getLSTRange())
+        for set in incompleteSets]
+    order = np.argsort(distanceToEndOfVisibilityWindow)
+    incompleteSetsSorted = [incompleteSets[ii] for ii in order]
 
-    if len(completeSets) > 0:
-        validSet = completeSets[
-            np.argmax([np.sum(set.getSN2Array()) for set in completeSets])]
-    elif len(incompleteSets) > 0:
-        validSet = incompleteSets[
-            np.argmax([np.sum(set.getSN2Array()) for set in incompleteSets])]
-    else:
-        validSet = newSet
+    mockSetQuality = []
+    for set in incompleteSetsSorted:
+        mockSet = Set.fromExposures(set.totoroExposures + [totoroExp],
+                                    silent=True)
+        mockSetQuality.append(mockSet.getQuality()[0])
+        if mockSetQuality[-1] in ['Good', 'Excellent']:
+            return set
 
-    return validSet
+    try:
+        firstIncompleteSet = mockSetQuality.index('Incomplete')
+        return incompleteSetsSorted[firstIncompleteSet]
+    except ValueError:
+        return None
 
 
 def addExposure(exp, plate):
 
-    from ..dbclasses import Exposure
+    from ..dbclasses import Exposure, Set
 
     if not isinstance(exp, Exposure):
         totoroExp = Exposure(exp, silent=True)
@@ -115,18 +106,25 @@ def addExposure(exp, plate):
         totoroExp = exp
 
     validSet = getValidSet(exp, plate)
-    if not validSet:
+    if validSet is False:
         return False
+    elif validSet is None:
+        validSet = Set()
+        plate.sets.append(validSet)
+
+    validSet.totoroExposures.append(totoroExp)
 
     db = TotoroDBConnection()
     session = db.Session()
 
     with session.begin():
         if validSet.pk is None:
+            validSet.pk = getNewSetPK()
             session.add(validSet)
             session.flush()
         totoroExp._mangaExposure.set_pk = validSet.pk
         session.add(totoroExp)
+        session.flush()
 
     if validSet.pk is not None:
         log.info('adding mangaDB exposure pk={0} to set {1} -> {2} set.'
@@ -134,6 +132,19 @@ def addExposure(exp, plate):
                          validSet.getQuality(flag=False)[0]))
 
     return True
+
+
+def getNewSetPK():
+    """Gets the lowest available set pk."""
+
+    db = TotoroDBConnection()
+    session = db.Session()
+
+    with session.begin(subtransactions=True):
+        setPKs = session.query(db.mangaDB.Set.pk).all()
+
+    setPKs = np.unique(setPKs)
+    return [xx for xx in np.arange(1, np.max(setPKs)+1) if xx not in setPKs][0]
 
 
 def getNewExposures(plate):
@@ -212,6 +223,7 @@ def updateSet(set):
 
     with session.begin():
         newSet = db.mangaDB.Set()
+        newSet.pk = getNewSetPK()
         session.add(newSet)
         session.flush()
         for exposure in set.totoroExposures:
@@ -316,9 +328,11 @@ def getOptimalArrangement(plate, startDate=None,
         del set
 
         ra, dec = sets[-1].getCoordinates()
-        plate = Plate.fromSets(sets, ra=ra, dec=dec, dust=None, silent=True)
-        plates.append(plate)
-        del plate
+        mockPlate = Plate.fromSets(sets, ra=ra, dec=dec, dust=None,
+                                   silent=True)
+
+        plates.append(mockPlate)
+        del mockPlate
 
         # Instead of using Plate.getPlateCompletion, we calculate the plate
         # completion here using the setQuality dictionary. Way faster this
@@ -337,6 +351,7 @@ def getOptimalArrangement(plate, startDate=None,
     completion = np.array(completion)
     plates = np.array(plates)
 
+    # Selects plates that have 0.9 the maximum completion or higher
     validPlates = plates[completion >= 0.9 * maxCompletion]
     validCompletion = completion[completion >= 0.9 * maxCompletion]
     sortCompletion = np.argsort(validCompletion)[::-1]
@@ -345,30 +360,30 @@ def getOptimalArrangement(plate, startDate=None,
     log.debug('{0} plates with completion > 0.9*maxCompletion'.format(
               len(maxPlates)))
 
+    # For the selected plates, checks if they have bad sets and, in that case
+    # breaks them into incomplete sets.
+    for maxPlate in maxPlates:
+        setStatus = [setQuality[getSetId(set)] for set in maxPlate.sets]
+        if 'Bad' in setStatus:
+            fixBadSets(maxPlate, setStatus=setStatus)
+
     if len(maxPlates) == 1:
         optimumPlate = maxPlates[0]
 
     else:
 
-        incompleteMaxPlates = [createIncompleteSets(plate)
-                               for plate in maxPlates]
+        # If several plates have been selected in the previous step, selects
+        # the one with the fewest number of incomplete sets.
+        nIncompleteSets = []
+        for tmpPlate in maxPlates:
+            nn = 0
+            for set in tmpPlate.sets:
+                if set.getQuality()[0] == 'Incomplete':
+                    nn += 1
+            nIncompleteSets.append(nn)
 
-        for plate in incompleteMaxPlates:
-            for set in plate.sets:
-                print(set.totoroExposures)
-            print()
+        optimumPlate = maxPlates[np.argmin(nIncompleteSets)]
 
-        # maxDitherIncomplete = [getMaxNDitherIncomplete(plate)
-        #                        for plate in incompleteMaxPlates]
-
-        # validIncomplete = [incompleteMaxPlates[ii]
-        #                    for ii in np.where(maxDitherIncomplete ==
-        #                                       np.max(maxDitherIncomplete))[0]]
-
-        optimumPlate = getMinDistancePlate(validIncomplete)
-
-    for set in optimumPlate.sets:
-        print(set.totoroExposures)
     return {'sets': optimumPlate.sets, 'invalid': invalidExposures}
 
 
@@ -390,128 +405,35 @@ def calculatePermutations(inputList):
         yield list(itertools.izip_longest(*prod))
 
 
-def createIncompleteSets(plate):
+def fixBadSets(plate, setStatus=None):
 
     from ..dbclasses import Set
 
-    while 'Bad' in [set.getQuality()[0] for set in plate.sets]:
+    if setStatus is None:
+        setStatus = [set.getQuality()[0] for set in plate.sets]
 
-        status = [set.getQuality()[0] for set in plate.sets]
-        badSet = status.index('Bad')
-        exposures = plate.sets[badSet].totoroExposures
-        plate.sets.pop(badSet)
+    exposuresToAssign = []
+    setsToRemove = []
+    newSetStatus = []
 
-        for exp in exposures:
-            newSet = getValidSet(exp, plate)
-            # print(plate.sets[0].totoroExposures)
-            print(exp, newSet.totoroExposures, id(newSet), [id(xx) for xx in plate.sets])
-            if id(newSet) in [id(xx) for xx in plate.sets]:
-                for set in plate.sets:
-                    if id(set) == id(newSet):
-                        plate.sets.remove(set)
-                plate.sets.append(newSet)
-            else:
-                print('hi')
-                plate.sets.append(newSet)
+    for nn, set in enumerate(plate.sets):
+        if setStatus[nn].lower() == 'bad':
+            exposuresToAssign += set.totoroExposures
+            setsToRemove.append(set)
+        else:
+            newSetStatus.append(setStatus[nn])
 
+    map(plate.sets.remove, setsToRemove)
 
-    # toRemove = []
+    for exposure in exposuresToAssign:
+        validSet = getValidSet(exposure, plate, setStatus=newSetStatus)
 
-    # for ii in range(len(plate.sets)):
+        if validSet is None:
+            validSet = Set.createMockSet(ra=plate.ra, dec=plate.dec,
+                                         silent=True)
+            plate.sets.append(validSet)
+            newSetStatus.append('Incomplete')
 
-    #     set = plate.sets[ii]
-
-    #     if set.getQuality()[0] == 'Bad':
-
-    #         toRemove.append(set)
-
-    #         if len(set.totoroExposures) == 2:
-    #             for exp in set.totoroExposures:
-    #                 plate.sets.append(Set.fromExposures([exp], silent=True))
-
-    #         elif len(set.totoroExposures) == 3:
-
-    #             twoComb = False
-    #             for expIter in itertools.combinations(set.totoroExposures, 2):
-
-    #                 tmpSet = Set.fromExposures(expIter, silent=True)
-
-    #                 if tmpSet.getQuality()[0] == 'Incomplete':
-
-    #                     plate.sets.append(tmpSet)
-
-    #                     for exp in set.totoroExposures:
-    #                         if exp not in expIter:
-    #                             plate.sets.append(
-    #                                 Set.fromExposures([exp], silent=True))
-
-    #                     twoComb = True
-
-    #                     break
-
-    #             if not twoComb:
-    #                 for exp in set.totoroExposures:
-    #                     plate.sets.append(Set.fromExposures([exp],
-    #                                                         silent=True))
-
-    #         else:
-    #             raise TotoroError('Bad set found with either 1 or more than 3'
-    #                               ' exposure. Something went wrong.')
-
-    # for ss in toRemove:
-    #     plate.sets.remove(ss)
+        validSet.totoroExposures.append(exposure)
 
     return plate
-
-
-def getMaxNDitherIncomplete(plate):
-
-    nDither = np.array([len(set.totoroExposures) for set in plate.sets])
-
-    if np.min(nDither) == 3:
-        return 3
-    else:
-        return np.max(nDither[nDither < 3])
-
-
-def getMinDistancePlate(plates, startDate=None):
-
-    distanceFromBeginningOfWindow = []
-
-    for plate in plates:
-
-        distances = []
-
-        for set in plate.sets:
-
-            if set.getQuality()[0] == 'Incomplete':
-                distances.append(getDistance(set, startDate=startDate))
-
-        minDistance = np.min(distances) if len(distances) > 0 else 0.
-        distanceFromBeginningOfWindow.append(minDistance)
-
-    optimumPlate = plates[np.argmin(distanceFromBeginningOfWindow)]
-
-    return optimumPlate
-
-
-def getDistance(set, startDate):
-
-    if startDate is None:
-        startDate = Time.now().jd
-
-    nExpNeeded = 3 - len(set.totoroExposures)
-    minLength = nExpNeeded * config['exposure']['exposureTime'] / 3600.
-
-    setLST = set.getLSTRange()
-    startDateLST = site.localSiderialTime(startDate)
-
-    distance = setLST[1] - startDateLST
-
-    if distance < 0:
-        return distance % 24
-    else:
-        if distance > minLength:
-            return distance % 24
-        else:
-            return (setLST[0] - startDateLST) % 24
