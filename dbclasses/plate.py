@@ -348,12 +348,12 @@ class Plate(plateDB.Plate):
 
         if self.isComplete:
             if not force:
-                log.debug('plate_id={0} is marked complete. Not updating sets.'
-                          .format(self.plate_id))
+                log.info('plate_id={0} is marked complete. Not updating sets.'
+                         .format(self.plate_id))
                 return False
             else:
-                log.debug('plate_id={0} is marked complete but force=True.'
-                          .format(self.plate_id))
+                log.info('plate_id={0} is marked complete but force=True.'
+                         .format(self.plate_id))
 
         if (self.currentSurveyMode is None or
                 self.currentSurveyMode.label != 'MaNGA dither'):
