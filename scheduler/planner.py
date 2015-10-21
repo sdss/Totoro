@@ -26,6 +26,7 @@ import numpy as np
 
 expTime = config['exposure']['exposureTime']
 expTimeEff = expTime / config['planner']['efficiency']
+minimumPlugPriority = config['planner']['noPlugPriority']
 
 
 class PlannerScheduler(object):
@@ -37,10 +38,15 @@ class PlannerScheduler(object):
         log.debug('created PlannerScheduler with {0} timelines'
                   .format(len(self.timelines)))
 
-        allPlates, self.plates, self._completed = self.getPlates(
-            updateSets=False, silent=True, **kwargs)
+        # Selects all valid plates, including complete ones.
+        allPlates = self.getPlates(**kwargs)
 
-        drilling = [plate for plate in self.plates if plate.isMock]
+        # Selects only plates that are incomplete and have enough priority
+        self.plates = [plate for plate in allPlates
+                       if len(plate.getTotoroExposures()) == 0 and
+                       plate.priority > minimumPlugPriority]
+
+        drilling = [plate for plate in self.plates if not plate.drilled]
 
         if len(drilling) > 0:
             txtDrilling = _color_text(
@@ -54,8 +60,6 @@ class PlannerScheduler(object):
             self.createFields(allPlates)
         else:
             self.fields = []
-
-        del allPlates  # Not needed anymore
 
     def createFields(self, allPlates):
         """Creates a field list from a tiling catalogue."""
@@ -77,7 +81,7 @@ class PlannerScheduler(object):
         from sdss.internal.manga.Totoro.dbclasses import Fields
 
         tmpFields = Fields(rejectDrilled=False)
-        tileIDPlates = [plate.getMangaTileID() for plate in allPlates]
+        tileIDPlates = [plate.manga_tileid for plate in allPlates]
 
         self.fields = []
 
@@ -104,42 +108,28 @@ class PlannerScheduler(object):
                      'been drilled or have no targets.'.format(nFieldsDrilled))
 
     @staticmethod
-    def getPlates(**kwargs):
+    def getPlates(useDesigns=True, **kwargs):
         """Gets plates that are already drilled or in process of being so,
         with some filtering."""
 
         from sdss.internal.manga.Totoro.dbclasses import (getAll, Plate,
                                                           getTilingCatalogue)
 
-        useDesigns = kwargs.pop('useDesigns', True)
-
-        allPlates = getAll(rejectSpecial=True,
-                           updateSets=False, silent=True, fullCheck=False)
+        allPlates = getAll(rejectSpecial=True, updateSets=False, silent=True,
+                           fullCheck=False)
 
         # Selects plates with valid statuses
         validPlates = []
         for plate in allPlates:
             validPlate = True
             for status in plate.statuses:
-                if status.label not in ['Design', 'Accepted', 'Measured',
-                                        'Shipped', 'Drilled']:
+                if status.label in ['Rejected', 'Unobservable']:
                     validPlate = False
                 if (not useDesigns and
                         plate.getLocation() not in ['APO', 'Cosmic']):
                     validPlate = False
             if validPlate:
                 validPlates.append(plate)
-
-        # Selects only non-started plates with priority > minimum
-        minimumPlugPriority = config['planner']['noPlugPriority']
-        plates = [plate for plate in validPlates
-                  if plate.getPlateCompletion() == 0.0
-                  and plate.priority > minimumPlugPriority
-                  and len(plate.getTotoroExposures()) == 0
-                  and plate.plate_id > 7800]
-
-        completed = [plate for plate in validPlates
-                     if plate.isComplete is True]
 
         # Adds tiles being drilled from file
         if ('tilesBeingDrilled' in config['fields'] and
@@ -173,8 +163,7 @@ class PlannerScheduler(object):
                 mockPlate.manga_tileid = tile
                 mockPlate.drilled = False
 
-                plates.append(mockPlate)
-                allPlates.append(mockPlate)
+                validPlates.append(mockPlate)
 
         # Plates to be rejected.
         if ('platesIgnore' in config['planner'] and
@@ -182,10 +171,10 @@ class PlannerScheduler(object):
             platesIgnore = map(
                 int, open(readPath(config['planner']['platesIgnore']), 'r')
                 .read().splitlines())
-            plates = [plate for plate in plates
-                      if plate.plate_id not in platesIgnore]
+            validPlates = [plate for plate in validPlates
+                           if plate.plate_id not in platesIgnore]
 
-        return allPlates, plates, completed
+        return validPlates
 
     def schedule(self, useFields=True, goodWeatherFraction=None, **kwargs):
         """Runs the scheduling simulation."""

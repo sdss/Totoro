@@ -245,7 +245,7 @@ def setExposureStatus(exposure, status, silent=False, **kwargs):
     return True
 
 
-def checkSet(input, flag=True, flagExposures=True, silent=False,
+def checkSet(input, flag=True, flagExposures=None, silent=False,
              forceReflag=False, **kwargs):
     """Checks if a set meets MaNGA's quality criteria. Returns one of the
     following values: 'Good', 'Excellent', 'Poor', 'Bad', 'Incomplete'.
@@ -268,12 +268,16 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
 
     from sdss.internal.manga.Totoro import dbclasses
 
+    if flagExposures is None:
+        flagExposures = flag
+
     if isinstance(input, dbclasses.Set):
         set = input
-        if set.isMock:
-            flag = False
     else:
-        set = dbclasses.Set(input, silent=silent)
+        set = dbclasses.Set(input, silent=silent, **kwargs)
+
+    if set.isMock:
+        flag = False
 
     if (set.isMock is False and set.set_status_pk is not None
             and not forceReflag):
@@ -284,7 +288,12 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
         if not silent and message is not None:
             log.debug(message)
         if flag:
-            setSetStatus(set, statusLabel)
+            if (statusLabel in ['Incomplete', 'Unplugged'] and
+                    set.set_status_pk is None and not forceReflag):
+                # Avoids calling setSetStatus if there is nothing to flag
+                pass
+            else:
+                setSetStatus(set, statusLabel)
 
         return (statusLabel, errorCode)
 

@@ -38,14 +38,17 @@ def getMangaTileIDs():
         raise TotoroError('no plateTargets files found.')
 
     mangaTileIDs = {}
+    neverobserve = {}
     for plateTargetsFile in plateTargets:
         pT = yanny.yanny(plateTargetsFile, np=True)['PLTTRGT']
         for target in pT:
             if (target['plateid'] not in mangaTileIDs and
                     target['manga_tileid'] > 0):
                 mangaTileIDs[target['plateid']] = target['manga_tileid']
+            if target['plateid'] not in neverobserve:
+                neverobserve[target['plateid']] = target['neverobserve']
 
-    return mangaTileIDs
+    return mangaTileIDs, neverobserve
 
 
 def readSpecialPlates():
@@ -62,7 +65,7 @@ def readSpecialPlates():
 def loadMangaPlates():
     """Loads plate information into mangaDB.Plate"""
 
-    mangaTileIDs = getMangaTileIDs()
+    mangaTileIDs, neverobserve = getMangaTileIDs()
 
     specialPlates = readSpecialPlates()
     specialPlates['comment'].fill_value = ''
@@ -103,6 +106,11 @@ def loadMangaPlates():
                 newPlate.all_sky_plate = False
                 newPlate.commissioning_plate = False
                 newPlate.comment = ''
+
+            if plate.plate_id in neverobserve:
+                newPlate.neverobserve = bool(neverobserve[plate.plate_id])
+            else:
+                newPlate.neverobserve = False
 
             newPlate.platedb_plate_pk = plate.pk
 
