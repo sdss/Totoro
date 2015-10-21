@@ -192,6 +192,10 @@ class PluggerScheduler(object):
 
         plates = plates if plates is not None else self._platesToAllocate
 
+        mjd = int(self.timeline.endDate - 2400000.5)
+        log.important('Plugging allocation for MJD={0:d} follows.'
+                      .format(mjd))
+
         if len(plates) > len(self.carts):
             warnings.warn('{0} plates to allocate but only {1} carts '
                           'available. Using the first {1} plates.'
