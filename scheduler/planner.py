@@ -48,8 +48,9 @@ class PlannerScheduler(object):
 
         # Selects only non-started plates with priority > 1
         plates = [plate for plate in plates
-                  if plate.getPlateCompletion() == 0.0 and plate.priority > 1
-                  and len(plate.getTotoroExposures()) == 0]
+                  if plate.getPlateCompletion() == 0.0 and plate.priority > 2
+                  and len(plate.getTotoroExposures()) == 0
+                  and plate.plate_id > 8000]
 
         tilesBeingDrilled = map(
             int, open(
