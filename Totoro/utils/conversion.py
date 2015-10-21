@@ -12,66 +12,45 @@ between different types of data.
 
 """
 
-__ALL__ = ['utc2lmst', 'lmst2utc']
+__ALL__ = ['jd2lmst', 'lmst2time']
 
-from astropy.coordinates.angles import Longitude
-from ..exceptions import TotoroError
-from astropy.units import degree, hour, hourangle
-from astropy.coordinates import Angle
 from astropy import time
+from astropy import coordinates as coo
+from astropy import units as uu
 from ..core.defaults import LONGITUDE
 
 
-def utc2lmst(utc, format='jd', longitude=LONGITUDE()):
-    """Returns the LMST for a UTC time.
+def jd2lmst(jd, longitude=LONGITUDE()):
 
-    This function returns the LMST for a certain UTC time
-    assuming that delta_ut1_utc=0.0.
+    if isinstance(jd, time.Time):
+        jd = jd.jd
 
-    Parameters
-    ----------
-    utc : `astropy.time.Time` object or float
-        The UTC time.
-    format : str, optional
-        If utc is a float, this format will be used to create a `Time` object.
-    longitude : float or `Longitude` object, optional
-        The longitude of the site at which the LMST
-        is calculated. If not define, APO longitude will
-        be used. East longitudes with longitude in the range
-        [0, 360) degrees should be used.
+    jd0 = int(jd) + 0.5
+    dd0 = jd0 - 2451545.
+    dd = jd - 2451545.
+    tt = dd / 36525
+    hh = (jd - jd0) * 24.
 
-    Returns
-    -------
-    lmst : `astropy.coordinates.angle.Longitude` object
-        The LMST for the input UTC at the specified longitude.
+    gmst = 6.697374558 + 0.06570982441908 * dd0 + 1.00273790935 * hh + \
+        0.000026 * tt**2
+    gmstL = coo.Longitude(gmst * uu.hour)
 
-    """
+    if not isinstance(longitude, coo.Longitude):
+        longitude = coo.Longitude(longitude * uu.degree)
 
-    if isinstance(longitude, Longitude):
-        pass
-    else:
-        try:
-            longitude = Longitude(longitude, unit=degree)
-        except:
-            raise TotoroError('longitude cannot be understood.')
-
-    if not isinstance(utc, time.Time):
-        utc = time.Time(utc, format=format, scale='utc')
-
-    utc.delta_ut1_utc = 0.0
-    utc.lon = longitude
-
-    return utc.sidereal_time('mean')
+    return coo.Longitude(gmstL + longitude)
 
 
-def lmst2utc(lmst, mjd, longitude=LONGITUDE()):
+def lmst2time(lmst, mjd, longitude=LONGITUDE()):
     """Inverse function for utc2lmst().
 
     Parameters
     ----------
-    lmst : `astropy.coordinates.angle.Longitude` object or float
-        The LMST in astropy Longitude format or as a float in hours.
-    longitude : float or `astropy.coordinates.angles.Longitude` object
+    lmst : float
+        The LMST in hours.
+    mjd : float
+        The modified julian day of the observation.
+    longitude : float or `astropy.coordinates.angles.Longitude`, optional
         The longitude of the site at which the LMST
         is calculated. If not define, APO longitude will
         be used. East longitudes with longitude in the range
@@ -84,36 +63,19 @@ def lmst2utc(lmst, mjd, longitude=LONGITUDE()):
 
     """
 
-    if not isinstance(lmst, Longitude):
-        lmst = Angle(lmst, unit=hourangle)
+    lmst = coo.Longitude(lmst, unit=uu.hour)
 
-    if isinstance(longitude, Longitude):
-        pass
-    else:
-        try:
-            longitude = Longitude(longitude, unit=degree)
-        except:
-            raise TotoroError('longitude cannot be understood.')
+    if not isinstance(longitude, coo.Longitude):
+        longitude = coo.Longitude(longitude, unit=uu.degree)
 
-    # Rewraps longitude to the range -180 to 180
-    longitude.wrap_angle = 180 * degree
-
-    if isinstance(mjd, time.Time):
-        pass
-    else:
-        mjd = time.Time(mjd, format='mjd', scale='utc')
+    mjd = time.Time(mjd, format='mjd', scale='utc')
 
     # Calculates the sidereal time at the previous midnight
     midNight = time.Time(mjd.jd1, format='jd', scale='utc')
-    midNightSidTime = utc2lmst(midNight, longitude=longitude)
+    midNightSidTime = jd2lmst(midNight, longitude=longitude)
 
     # Calculates UTC
     utc = lmst - midNightSidTime
-
-    if utc.hour > 24.:
-        utc -= Angle(24, unit=hour)
-    elif utc.hour < 0.:
-        utc += Angle(24, unit=hour)
 
     # Corrects for the difference between sidereal and UTC seconds
     utc = utc * 365.25 / 366.25

@@ -75,7 +75,8 @@ class Exposure(object):
     @property
     def HAend(self):
         return coo.Longitude(
-            self.HAstart.hour + self.expTime / 60, unit=uu.hour)
+            self.HAstart.hour + self.expTime / 60, unit=uu.hour,
+            wrap_angle='180d')
 
     @property
     def valid(self):

@@ -8,6 +8,7 @@ Copyright (c) 2013. All rights reserved.
 Licensed under a 3-clause BSD license.
 
 """
+
 import warnings
 from sqlalchemy import exc as sa_exc
 
@@ -16,4 +17,6 @@ warnings.filterwarnings('ignore', 'Predicate of partial index')
 
 __all__ = ['Connect']
 
-from .connection import DatabaseConnection as Connect
+from .connection import DatabaseConnection
+db = DatabaseConnection()
+session = db.session

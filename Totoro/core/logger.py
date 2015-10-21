@@ -9,419 +9,101 @@ from __future__ import print_function
 import os
 import sys
 import logging
+from logging import FileHandler
 import warnings
 from . import colourPrint
-from ..exceptions import TotoroWarning, TotoroUserWarning
 import shutil
-
-__all__ = ['log', 'initLog', 'LoggingError']
-
-
-LOG_LEVEL = 'INFO'
-LOG_EXCEPTIONS = False
-LOG_TO_FILE = True
-LOG_FILE_PATH = ''
-LOG_DIR = os.path.expanduser('~/.totoro')
-LOG_FILE_LEVEL = 'INFO'
-LOG_FILE_MODE = 'w'
-LOG_FILE_FORMAT = '%(asctime)s - %(levelname)s [%(origin)s]: %(message)s'
-
+from .defaults import *
 
 # Initialize by calling initLog()
 log = None
 
 
-class LoggingError(Exception):
-    """
-    This exception is for various errors that occur in the logger,
-    typically when activating or deactivating logger-related features.
-    """
-
-
-class _TotoroLogIPYExc(Exception):
-    """
-    An exception that is used only as a placeholder to indicate to the
-    IPython exception-catching mechanism that the astropy
-    exception-capturing is activated. It should not actually be used as
-    an exception anywhere.
-    """
-
-
-def _patched_getmodule(object, _filename=None):
-    """Return the module an object was defined in, or None if not found.
-
-    This replicates the functionality of the stdlib `inspect.getmodule`
-    function but includes a fix for a bug present in Python 3.1 and 3.2.
-    """
-    #these imports mock up what would otherwise have been in inspect
-    from inspect import modulesbyfile, _filesbymodname, getabsfile, ismodule
-
-    if ismodule(object):
-        return object
-    if hasattr(object, '__module__'):
-        return sys.modules.get(object.__module__)
-    # Try the filename to modulename cache
-    if _filename is not None and _filename in modulesbyfile:
-        return sys.modules.get(modulesbyfile[_filename])
-    # Try the cache again with the absolute file name
-    try:
-        file = getabsfile(object, _filename)
-    except TypeError:
-        return None
-    if file in modulesbyfile:
-        return sys.modules.get(modulesbyfile[file])
-    # Update the filename to module name cache and check yet again
-    # Copy sys.modules in order to cope with changes while iterating
-    # This is where the fix is made - the adding of the "list" call:
-    for modname, module in list(sys.modules.items()):
-        if ismodule(module) and hasattr(module, '__file__'):
-            f = module.__file__
-            if f == _filesbymodname.get(modname, None):
-                # Have already mapped this module, so skip it
-                continue
-            _filesbymodname[modname] = f
-            f = getabsfile(module)
-            # Always map to the name the module knows itself by
-            modulesbyfile[f] = modulesbyfile[
-                os.path.realpath(f)] = module.__name__
-    if file in modulesbyfile:
-        return sys.modules.get(modulesbyfile[file])
-    # Check the main module
-    main = sys.modules['__main__']
-    if not hasattr(object, '__name__'):
-        return None
-    if hasattr(main, object.__name__):
-        mainobject = getattr(main, object.__name__)
-        if mainobject is object:
-            return main
-    # Check builtins
-    builtin = sys.modules['builtins']
-    if hasattr(builtin, object.__name__):
-        builtinobject = getattr(builtin, object.__name__)
-        if builtinobject is object:
-            return builtin
-
-inspect_getmodule = None
-"""
-An alias to `inspect.getmodule`, or a patched version that replicates the
-functionality with a bugfix for Python 3.1 and 3.2.
-"""
-
-#This assigns the stdlib inspect.getmodule to the variable name
-#`inspect_getmodule` if it's not buggy, and uses the matched version if it is.
-if sys.version_info[0] < 3 or sys.version_info[1] > 2:
-    #in 2.x everythig is fine, as well as >=3.3
-    from inspect import getmodule as inspect_getmodule
-else:
-    inspect_getmodule = _patched_getmodule
-
-
 def initLog():
-    """Initializes the log."""
 
-    global log
-
-    orig_logger_cls = logging.getLoggerClass()
     logging.setLoggerClass(TotoroLogger)
-    try:
-        log = logging.getLogger('Totoro')
-        log._set_defaults()
-    finally:
-        logging.setLoggerClass(orig_logger_cls)
+    log = logging.getLogger('Totoro')
+    log._set_defaults()
 
     return log
 
 
-def _teardown_log():
-    """Shut down exception and warning logging (if enabled) and clear all
-    Astropy loggers from the logging module's cache.
+class MyFormatter(logging.Formatter):
 
-    This involves poking some logging module interals, so much if it is 'at
-    your own risk' and is allowed to pass silently if any exceptions occur.
-    """
+    warning_fmp = '%(asctime)s - %(levelname)s: %(message)s [%(origin)s]'
+    info_fmt = '%(asctime)s - %(levelname)s: %(message)s'
 
-    global log
+    def __init__(self, fmt='%(levelno)s: %(msg)s'):
+        logging.Formatter.__init__(self, fmt)
 
-    if log.exception_logging_enabled():
-        log.disable_exception_logging()
+    def format(self, record):
 
-    if log.warnings_logging_enabled():
-        log.disable_warnings_logging()
+        # Save the original format configured by the user
+        # when the logger formatter was instantiated
+        format_orig = self._fmt
 
-    del log
+        # Replace the original format with one customized by logging level
+        if record.levelno == logging.DEBUG:
+            self._fmt = MyFormatter.info_fmt
 
-    # Now for the fun stuff...
-    try:
-        logging._acquireLock()
-        try:
-            loggerDict = logging.Logger.manager.loggerDict
-            for key in loggerDict.keys():
-                if key == 'astropy' or key.startswith('astropy.'):
-                    del loggerDict[key]
-        finally:
-            logging._releaseLock()
-    except:
-        pass
+        elif record.levelno == logging.INFO:
+            self._fmt = MyFormatter.info_fmt
+
+        elif record.levelno == logging.ERROR:
+            self._fmt = MyFormatter.info_fmt
+
+        elif record.levelno == logging.WARNING:
+            self._fmt = MyFormatter.warning_fmp
+
+        # Call the original formatter class to do the grunt work
+        result = logging.Formatter.format(self, record)
+
+        # Restore the original format configured by the user
+        self._fmt = format_orig
+
+        return result
 
 
 Logger = logging.getLoggerClass()
+fmt = MyFormatter()
 
 
 class TotoroLogger(Logger):
-    '''
-    This class is used to set up the logging system.
+    """This class is used to set up the logging system.
 
     The main functionality added by this class over the built-in
     logging.Logger class is the ability to keep track of the origin of the
     messages, the ability to enable logging of warnings.warn calls and
     exceptions, and the addition of colorized output and context managers to
     easily capture messages to a file or list.
-    '''
 
-    def recordMsg(self, msg, mute=False):
-
-        removedHandlers = []
-
-        for handler in self.handlers[:]:
-            if isinstance(handler, logging.FileHandler):
-                formatter = logging.Formatter('%(asctime)s: %(message)s')
-                handler.setFormatter(formatter)
-            else:
-                if mute:
-                    removedHandlers.append(handler)
-
-        for handler in removedHandlers:
-            self.removeHandler(handler)
-
-        self.info(msg, extra={'origin': ''})
-
-        for handler in self.handlers[:]:
-            formatter = logging.Formatter(LOG_FILE_FORMAT)
-            handler.setFormatter(formatter)
-
-        for handler in removedHandlers:
-            self.addHandler(handler)
+    """
 
     def saveLog(self, path):
-
-        if not LOG_TO_FILE:
-            warnings.warn(TotoroUserWarning('Logging is not enabled.'))
-            return
-
         shutil.copyfile(self.logFilename, os.path.expanduser(path))
-
-    _showwarning_orig = None
 
     def _showwarning(self, *args, **kwargs):
 
-        # Bail out if we are not catching a warning from Astropy
-        if not isinstance(args[0], TotoroWarning):
-            return self._showwarning_orig(*args, **kwargs)
-
         warning = args[0]
-        # Deliberately not using isinstance here: We want to display
-        # the class name only when it's not the default class,
-        # AstropyWarning.  The name of subclasses of AstropyWarning should
-        # be displayed.
-        if type(warning) not in (TotoroWarning, TotoroUserWarning):
-            message = '{0}: {1}'.format(warning.__class__.__name__, args[0])
-        else:
-            message = unicode(args[0])
-
+        message = '{0}: {1}'.format(warning.__class__.__name__, args[0])
         mod_path = args[2]
-        # Now that we have the module's path, we look through
-        # sys.modules to find the module object and thus the
-        # fully-package-specified module name.  On Python 2, the
-        # module.__file__ is the compiled file name, not the .py, so
-        # we have to ignore the extension.  On Python 3,
-        # module.__file__ is the original source file name, so things
-        # are more direct.
+
         mod_name = None
-        if sys.version_info[0] < 3:  # pragma: py2
-            for name, mod in sys.modules.items():
-                if getattr(mod, '__file__', '') == mod_path:
-                    mod_name = mod.__name__
-                    break
-        else:  # pragma: py3
-            mod_path, ext = os.path.splitext(mod_path)
-            for name, mod in sys.modules.items():
-                path = os.path.splitext(getattr(mod, '__file__', ''))[0]
-                if path == mod_path:
-                    mod_name = mod.__name__
-                    break
+        mod_path, ext = os.path.splitext(mod_path)
+        for name, mod in sys.modules.items():
+            path = os.path.splitext(getattr(mod, '__file__', ''))[0]
+            if path == mod_path:
+                mod_name = mod.__name__
+                break
 
         if mod_name is not None:
             self.warning(message, extra={'origin': mod_name})
         else:
             self.warning(message)
 
-    def warnings_logging_enabled(self):
-        return self._showwarning_orig is not None
-
-    def enable_warnings_logging(self):
-        '''
-        Enable logging of warnings.warn() calls
-
-        Once called, any subsequent calls to ``warnings.warn()`` are
-        redirected to this logger and emitted with level ``WARN``. Note that
-        this replaces the output from ``warnings.warn``.
-
-        This can be disabled with ``disable_warnings_logging``.
-        '''
-        if self.warnings_logging_enabled():
-            raise LoggingError("Warnings logging has already been enabled")
-        self._showwarning_orig = warnings.showwarning
-        warnings.showwarning = self._showwarning
-
-    def disable_warnings_logging(self):
-        '''
-        Disable logging of warnings.warn() calls
-
-        Once called, any subsequent calls to ``warnings.warn()`` are no longer
-        redirected to this logger.
-
-        This can be re-enabled with ``enable_warnings_logging``.
-        '''
-        if not self.warnings_logging_enabled():
-            raise LoggingError("Warnings logging has not been enabled")
-        if warnings.showwarning != self._showwarning:
-            raise LoggingError("Cannot disable warnings logging: "
-                               "warnings.showwarning was not set by this "
-                               "logger, or has been overridden")
-        warnings.showwarning = self._showwarning_orig
-        self._showwarning_orig = None
-
-    _excepthook_orig = None
-
-    def _excepthook(self, etype, value, traceback):
-
-        if traceback is None:
-            mod = None
-        else:
-            tb = traceback
-            while tb.tb_next is not None:
-                tb = tb.tb_next
-            mod = inspect_getmodule(tb)
-
-        # include the the error type in the message.
-        if len(value.args) > 0:
-            message = '{0}: {1}'.format(etype.__name__, str(value))
-        else:
-            message = unicode(etype.__name__)
-
-        if mod is not None:
-            self.error(message, extra={'origin': mod.__name__})
-        else:
-            self.error(message)
-        self._excepthook_orig(etype, value, traceback)
-
-    def exception_logging_enabled(self):
-        '''
-        Determine if the exception-logging mechanism is enabled.
-
-        Returns
-        -------
-        exclog : bool
-            True if exception logging is on, False if not.
-        '''
-        try:
-            ip = get_ipython()
-        except NameError:
-            ip = None
-
-        if ip is None:
-            return self._excepthook_orig is not None
-        else:
-            return 'logger' in ip.custom_exceptions
-
-    def enable_exception_logging(self):
-        '''
-        Enable logging of exceptions
-
-        Once called, any uncaught exceptions will be emitted with level
-        ``ERROR`` by this logger, before being raised.
-
-        This can be disabled with ``disable_exception_logging``.
-        '''
-        try:
-            ip = get_ipython()
-        except NameError:
-            ip = None
-
-        if self.exception_logging_enabled():
-            raise LoggingError("Exception logging has already been enabled")
-
-        if ip is None:
-            #standard python interpreter
-            self._excepthook_orig = sys.excepthook
-            sys.excepthook = self._excepthook
-        else:
-            #IPython has its own way of dealing with excepthook
-
-            #We need to locally define the function here, because IPython
-            #actually makes this a member function of their own class
-            def ipy_exc_handler(ipyshell, etype, evalue, tb, tb_offset=None):
-                # First use our excepthook
-                self._excepthook(etype, evalue, tb)
-
-                # Now also do IPython's traceback
-                ipyshell.showtraceback((etype, evalue, tb),
-                                       tb_offset=tb_offset)
-
-            #now register the function with IPython
-            #note that we include _AstLogIPYExc so `disable_exception_logging`
-            #knows that it's disabling the right thing
-            ip.set_custom_exc((BaseException, _TotoroLogIPYExc), ipy_exc_handler)
-
-            #and set self._excepthook_orig to a no-op
-            self._excepthook_orig = lambda etype, evalue, tb: None
-
-    def disable_exception_logging(self):
-        '''
-        Disable logging of exceptions
-
-        Once called, any uncaught exceptions will no longer be emitted by this
-        logger.
-
-        This can be re-enabled with ``enable_exception_logging``.
-        '''
-        try:
-            ip = get_ipython()
-        except NameError:
-            ip = None
-
-        if not self.exception_logging_enabled():
-            raise LoggingError("Exception logging has not been enabled")
-
-        if ip is None:
-            #standard python interpreter
-            if sys.excepthook != self._excepthook:
-                raise LoggingError("Cannot disable exception logging: "
-                                   "sys.excepthook was not set by this "
-                                   "logger, or has been overridden")
-            sys.excepthook = self._excepthook_orig
-            self._excepthook_orig = None
-        else:
-            #IPython has its own way of dealing with exceptions
-            ip.set_custom_exc(tuple(), None)
-
-    def enable_color(self):
-        '''
-        Enable colorized output
-        '''
-        self._use_color = True
-
-    def disable_color(self):
-        '''
-        Disable colorized output
-        '''
-        self._use_color = False
-
     def _stream_formatter(self, record):
-        '''
-        The formatter for standard output
-        '''
-        if record.levelno < logging.DEBUG or not self._use_color:
+        """The formatter for standard output."""
+        if record.levelno < logging.DEBUG:
             print(record.levelname, end='')
         elif(record.levelno < logging.INFO):
             colourPrint(record.levelname, 'magenta', end='')
@@ -432,151 +114,52 @@ class TotoroLogger(Logger):
         else:
             colourPrint(record.levelname, 'red', end='')
 
-        if record.origin == '':
-            record.message = "{0}".format(record.msg)
+        if not hasattr(record, 'origin') or record.origin == '':
+            record.message = '{0}'.format(record.msg)
         else:
-            record.message = "{0} [{1:s}]".format(record.msg, record.origin)
+            record.message = '{0} [{1:s}]'.format(record.msg, record.origin)
 
-        print(": " + record.message)
-
-    def addExtraHandler(self, filename, filter_level=None, filter_origin=None):
-        '''
-        Adds an extra file handler to the logger.
-
-        Parameters
-        ----------
-        filename : str
-            The file to log messages to.
-        filter_level : str
-            If set, any log messages less important than ``filter_level`` will
-            not be output to the file. Note that this is in addition to the
-            top-level filtering for the logger, so if the logger has level
-            'INFO', then setting ``filter_level`` to ``INFO`` or ``DEBUG``
-            will have no effect, since these messages are already filtered
-            out.
-        filter_origin : str
-            If set, only log messages with an origin starting with
-            ``filter_origin`` will be output to the file.
-
-        Notes
-        -----
-
-        By default, the logger already outputs log messages to a file set in
-        the Astropy configuration file. Using this context manager does not
-        stop log messages from being output to that file, nor does it stop log
-        messages from being printed to standard output.
-
-        '''
-
-        fh = FileHandler(filename, mode='w')
-        if filter_level is not None:
-            fh.setLevel(filter_level)
-        if filter_origin is not None:
-            fh.addFilter(FilterOrigin(filter_origin))
-        f = logging.Formatter(LOG_FILE_FORMAT)
-        fh.setFormatter(f)
-        self.addHandler(fh)
-        self.extraHandler = fh
-
-    def removeExtraHandler(self):
-        self.removeHandler(self.extraHandler)
-
-    def setLevel(self, level):
-        """
-        Set the logging level of this logger.
-        """
-        self.level = _checkLevel(level)
+        print(': ' + record.message)
 
     def _set_defaults(self):
-        '''
-        Reset logger to its initial state
-        '''
-
-        # Reset any previously installed hooks
-        if self.warnings_logging_enabled():
-            self.disable_warnings_logging()
-        if self.exception_logging_enabled():
-            self.disable_exception_logging()
+        """Reset logger to its initial state."""
 
         # Remove all previous handlers
         for handler in self.handlers[:]:
             self.removeHandler(handler)
 
         # Set levels
-        self.setLevel(LOG_LEVEL)
-        self.enable_color()
+        self.setLevel('DEBUG')
 
         # Set up the stdout handler
         sh = logging.StreamHandler()
         sh.emit = self._stream_formatter
         self.addHandler(sh)
+        sh.setLevel(LOG_LEVEL())
 
         # Set up the main log file handler if requested (but this might fail if
         # configuration directory or log file is not writeable).
-        if LOG_TO_FILE:
 
-            log_file_path = LOG_FILE_PATH
-            if not os.path.exists(LOG_DIR):
-                os.mkdir(LOG_DIR)
+        log_file_path = LOG_FILE_PATH()
+        if not os.path.exists(LOG_DIR()):
+            os.mkdir(LOG_DIR())
 
-            try:
-                if log_file_path == '':
-                    log_file_path = os.path.join(
-                        LOG_DIR, "totoro.log")
-                else:
-                    log_file_path = os.path.expanduser(log_file_path)
-
-                fh = FileHandler(log_file_path, mode=LOG_FILE_MODE)
-            except (IOError, OSError) as e:
-                warnings.warn(
-                    'log file {0!r} could not be opened for writing: '
-                    '{1}'.format(log_file_path, unicode(e)), RuntimeWarning)
+        try:
+            if log_file_path == '':
+                log_file_path = os.path.join(
+                    LOG_DIR(), 'totoro.log')
             else:
-                formatter = logging.Formatter(LOG_FILE_FORMAT)
-                fh.setFormatter(formatter)
-                fh.setLevel(LOG_FILE_LEVEL)
-                self.addHandler(fh)
+                log_file_path = os.path.expanduser(log_file_path)
 
-            self.logFilename = log_file_path
+            fh = FileHandler(log_file_path, mode=LOG_FILE_MODE())
+        except (IOError, OSError) as e:
+            warnings.warn(
+                'log file {0!r} could not be opened for writing: '
+                '{1}'.format(log_file_path, unicode(e)), RuntimeWarning)
+        else:
+            fh.setFormatter(fmt)
+            fh.setLevel(LOG_FILE_LEVEL())
+            self.addHandler(fh)
 
-        self.enable_warnings_logging()
-
-        if LOG_EXCEPTIONS:
-            self.enable_exception_logging()
-
-
-# The following function is copied from the source code of Python 2.7 and 3.2.
-# This function is not included in Python 2.6 and 3.1, so we have to include it
-# here to provide uniform behavior across versions.
-def _checkLevel(level):
-    '''
-    '''
-    if isinstance(level, int):
-        rv = level
-    elif str(level) == level:
-        if level not in logging._levelNames:
-            raise ValueError("Unknown level: %r" % level)
-        rv = logging._levelNames[level]
-    else:
-        raise TypeError("Level not an integer or a valid string: %r" % level)
-    return rv
-
-
-# We now have to be sure that we overload the setLevel in FileHandler, again
-# for compatibility with Python 2.6 and 3.1.
-
-class FileHandler(logging.FileHandler):
-    def setLevel(self, level):
-        """
-        Set the logging level of this handler.
-        """
-        self.level = _checkLevel(level)
-
-
-class FilterOrigin(object):
-    '''A filter for the record origin'''
-    def __init__(self, origin):
-        self.origin = origin
-
-    def filter(self, record):
-        return record.message.startswith(self.origin)
+        self.logFilename = log_file_path
+        warnings.showwarning = self._showwarning

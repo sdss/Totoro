@@ -17,20 +17,25 @@ from __future__ import print_function
 import numpy as np
 from numbers import Real
 from astropy.coordinates import Longitude
+from astropy import coordinates as coo
 from astropy import units as uu
+from astropy import time
 from .exposure import Exposure
-from ..core.defaults import DITHER_POSITIONS_NEEDED, SN2_FACTOR_SET
-from ..core.defaults import SEEING_POOR, SEEING_EXCELLENT, MAX_DIFF_SEEING_SET
+from ..core.defaults import *
+from ..utils import jd2lmst
+from .. import log
 
 
 class Set(list):
 
     def __init__(self, ID=None, exposures=None, complete=None, avgSeeing=None,
-                 SN_red=None, SN_blue=None, HAlimits=None,
-                 visibilityWindow=None, setQuality=None, **kwargs):
+                 SN_red=None, SN_blue=None, HAlimits=None, quality=None,
+                 plugging=None, **kwargs):
 
         if exposures is not None:
             list.__init__(self, exposures)
+
+        self.plugging = plugging
 
         self.ID = ID
         self._complete = complete
@@ -38,43 +43,49 @@ class Set(list):
         self._SN_red = SN_red
         self._SN_blue = SN_blue
         self._HAlimits = HAlimits
-
-        if visibilityWindow is None:
-            self.visibilityWindow = visibilityWindow
-        elif isinstance(visibilityWindow,
-                        (Longitude, tuple, list, np.ndarray)):
-            self.visibilityWindow = Longitude(visibilityWindow, unit=uu.hour)
-        else:
-            raise ValueError('visibilityWindow must be a list.')
-
-        self._setQuality = setQuality
+        self._quality = quality
         self._kwargs = kwargs
 
-    def addExposure(self, **kwargs):
-        self.append(Exposure(Set=self, **kwargs))
+    def addExposures(self, startTime, nExposures=NDITHERS(), **kwargs):
+
+        ditherPos = DITHER_POSITIONS_NEEDED()
+
+        expTimeDelta = time.TimeDelta(EXPTIME() / EFFICIENCY(), format='sec')
+        for nn in range(nExposures):
+
+            SN_red = np.array([AVG_SN_RED(), AVG_SN_RED()])
+            SN_blue = np.array([AVG_SN_BLUE(), AVG_SN_BLUE()])
+            HAstart = self.getHA(startTime)
+
+            self.append(Exposure(Set=self, startTime=startTime,
+                        expTime=EXPTIME(), SN_blue=SN_blue, SN_red=SN_red,
+                        ditherPos=ditherPos[nn], HAstart=HAstart, **kwargs))
+
+            log.info('Added exposure with dither position {0}'.format(
+                ditherPos[nn]) + ' at HA={0:.4f} to set {1}.'.format(
+                HAstart.hour, self.ID))
+
+            startTime = startTime + expTimeDelta
+
+        return startTime
+
+    # def estimateSN(self, tt):
+
+    def getHA(self, tt):
+        ha = coo.Longitude(
+            jd2lmst(tt).hour - self.plugging.parent.centre.ra.hour,
+            unit=uu.hour, wrap_angle='180d')
+        return ha
 
     def getValidExposures(self):
 
-        assert self.visibilityWindow is None or isinstance(
-            self.visibilityWindow, (list, tuple, np.ndarray, Longitude))
-
-        if self.visibilityWindow is None:
-            newList = [exp for exp in self if exp.valid is True
-                       and exp.obsType == 'sci']
-        else:
-            newList = []
-            visWindow = Longitude(self.visibilityWindow, unit=uu.hour)
-            for exp in self:
-                if (exp.HAstart >= visWindow[0] and
-                        exp.HAend <= visWindow[1] and
-                        exp.valid is True and
-                        exp.obsType == 'sci'):
-                    newList.append(exp)
+        newList = [exp for exp in self if exp.valid is True
+                   and exp.obsType == 'sci']
 
         return Set(ID=self.ID, exposures=newList, complete=self._complete,
                    avgSeeing=self._avgSeeing, SN_red=self._SN_red,
                    SN_blue=self._SN_blue, HAlimits=self._HAlimits,
-                   setQuality=self._setQuality, **self._kwargs)
+                   quality=self._quality, **self._kwargs)
 
     def _getCompletionStatus(self):
 
@@ -139,6 +150,12 @@ class Set(list):
         minSNblue = np.min(SN_blue, axis=0)
 
         return np.array([minSNblue, maxSNblue, minSNred, maxSNred])
+
+    @property
+    def missingDither(self):
+        if 'ditherPositions' in self.getFailedTests():
+            return True
+        return False
 
     def get_HA_minmax(self, exposures=None):
 
@@ -214,8 +231,6 @@ class Set(list):
 
         HAmaxmin = self.get_HA_minmax()
         if HAmaxmin is None:
-            if self.visibilityWindow is not None:
-                return self.visibilityWindow
             return None
 
         oneHour = Longitude('1h')
@@ -223,7 +238,7 @@ class Set(list):
             return HAmaxmin
 
         return Longitude(
-            [Longitude(HAmaxmin[1]-oneHour), Longitude(HAmaxmin[0]+oneHour)])
+            [HAmaxmin[1]-oneHour, HAmaxmin[0]+oneHour], wrap_angle='180d')
 
     @HAlimits.setter
     def HAlimits(self, value):
@@ -231,9 +246,9 @@ class Set(list):
         self._HAlimits = np.array(value)
 
     @property
-    def setQuality(self):
-        if self._setQuality is not None:
-            return self._setQuality
+    def quality(self):
+        if self._quality is not None:
+            return self._quality
 
         if self.complete is False:
             return 'bad'
@@ -246,11 +261,11 @@ class Set(list):
         else:
             return 'excellent'
 
-    @setQuality.setter
-    def setQuality(self, value):
+    @quality.setter
+    def quality(self, value):
         assert isinstance(value, basestring)
         value = value.lower()
-        self._setQuality = value
+        self._quality = value
         if value in ['good', 'excellent', 'poor']:
             self.complete = True
         elif value == 'bad':

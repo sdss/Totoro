@@ -19,13 +19,13 @@ import subprocess
 USER = 'albireo'
 PASSWORD = ''
 
-SCHEMA = os.path.join(os.path.dirname(__file__), 'plateDB_Test.dump')
-# SCHEMA = os.path.join(os.path.dirname(__file__), '../ignore/platedb.sql')
+# SCHEMA = os.path.join(os.path.dirname(__file__), 'plateDB_Test.dump')
+SCHEMA = os.path.join(os.path.dirname(__file__), '../ignore/platedb.sql')
 MANGADB_SCHEMA = os.path.join(os.path.dirname(__file__), 'mangaDB.sql')
 OVERWRITE = True
-DBNAME = 'plateDB_Test'
-# DBNAME = 'apo_platedb'
-ADD_LABELS = True
+# DBNAME = 'plateDB_Test'
+DBNAME = 'apo_platedb'
+ADD_LABELS = False
 ADD_TILES = True
 
 

@@ -14,7 +14,14 @@ Default values for commonly used parameters.
 from .configuration import ConfigObject
 import os
 
-EXPTIME = ConfigObject('expTime', 15, 'Exposure time in minutes.')
+LOG_LEVEL = ConfigObject('logLevel', 'WARNING', section='logger')
+LOG_FILE_PATH = ConfigObject('logFilePath', '', section='logger')
+LOG_DIR = ConfigObject(
+    'logDir', os.path.expanduser('~/.totoro/'), section='logger')
+LOG_FILE_LEVEL = ConfigObject('logFileLevel', 'DEBUG', section='logger')
+LOG_FILE_MODE = ConfigObject('logFileMode', 'w', section='logger')
+
+EXPTIME = ConfigObject('expTime', 900, 'Exposure time in seconds.')
 EFFICIENCY = ConfigObject('efficiency', 0.75, 'Observation efficiency')
 NDITHERS = ConfigObject('nDithers', 3, 'Number of dithers')
 
@@ -87,11 +94,11 @@ SN2_FACTOR_SET = ConfigObject(
     'sn2FactorSet', 2., section='SN')
 
 DITHER_POSITIONS_NEEDED = ConfigObject(
-    'ditherPositionsNeeded', ['N', 'S', 'E'],
+    'ditherPositionsNeeded', 'NSE',
     'Needed dither positions for a dither to be compete.')
 NDITHERS = ConfigObject('nDithers', 3, 'Minimum number of exposures in a set.')
 DITHER_POSITIONS = ConfigObject(
-    'ditherPosition', ['C', 'E', 'S', 'N'], 'Accepted dither positions.')
+    'ditherPosition', 'CESN', 'Accepted dither positions.')
 EXPTYPES = ConfigObject('obsTypes', ['sci', 'cal'], 'Accepted exposure types.')
 
 
@@ -121,7 +128,13 @@ INCREASE_MAPS = ConfigObject(
     'The g- and i-band increase maps.')
 INCREASE_MAPS_FORMAT = ConfigObject('increaseMapsFormat', 'grid')
 
-SKY_PRIORITY = ConfigObject('skyPriority', 4, section='Observing Logic')
+SKY_PRIORITY = ConfigObject('skyPriority', 2, section='Observing Logic')
 
-COMPLETION_PRIORITY = ConfigObject('completionPriority', 6,
+COMPLETION_PRIORITY = ConfigObject('completionPriority', 4,
                                    section='Observing Logic')
+
+MISSING_DITHER_PRIORITY = ConfigObject('missingDitherPriority', 4)
+
+MAX_CARTRIDGES = ConfigObject('maxCartridges', 6)
+
+MAX_AIRMASS = ConfigObject('maxAirmass', 1.3)

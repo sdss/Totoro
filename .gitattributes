@@ -6,6 +6,7 @@ Totoro/core/colourPrint.py -text
 Totoro/core/configuration.py -text
 Totoro/core/defaults.py -text
 Totoro/core/logger.py -text
+Totoro/core/logger.py.bak -text
 Totoro/core/setupTools.py -text
 Totoro/data/IGincrease.fits -text
 Totoro/data/nightly.D.txt -text
@@ -26,6 +27,7 @@ Totoro/scheduler/__init__.py -text
 Totoro/scheduler/exposure.py -text
 Totoro/scheduler/fields.py -text
 Totoro/scheduler/observingPlan.py -text
+Totoro/scheduler/plugging.py -text
 Totoro/scheduler/scheduler.py -text
 Totoro/scheduler/set.py -text
 Totoro/tests/__init__.py -text

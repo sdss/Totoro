@@ -10,133 +10,20 @@ A collection of convenience functions to interact with plateDB.
 
 """
 
-__ALL__ = ['isPlateCompleted', 'field2plate',
-           'design2plate', 'getCompletedFields']
+
+from ..plateDB.dataModel import (Plate, MangaDB_Field_To_Plate,
+                                 Plugging, MangaDB_Field)
+from ..plateDB import session
+from ..core.defaults import LATITUDE
+import numpy as np
+from numbers import Real
 
 
-from ..exceptions import TotoroError
-from ..plateDB.dataModel import Plate, MangaDB_Field_To_Plate
-from .. import session
-from ..core.defaults import R_SN2, B_SN2
-
-
-def isPlateCompleted(locationIDs=None, plateIDs=None, designIDs=None):
-    """Determines if a plate has been completed.
-
-    This function accepts a list of loactionIDs, plateIDs or designIDs
-    and determines if they have been completed. Either ``locationIDs``
-    or ``plateIDs`` or ``designIDs`` must be specified with an integer
-    or a list of integers. If more than one of the parameters is defined,
-    an error is raised. The returned value is a bool or tuple of bools
-    of the same size as the input. True indicates that the plate has
-    been completed, False that it has not been observed. None values
-    indicate that the input location, plate or design does not exist
-    in plateDB.
-
-    Parameters
-    ----------
-    locationIDs : int or list of ints, optional
-        The locationID(s) to be checked.
-    plateIDs : int or list of ints, optional
-        The plateID(s) to be checked.
-    designIDs : int or list of ints, optional
-        The designID(s) to be checked.
-
-    Result
-    ------
-    isCompleted : bool, None or tuple
-        If the design, plate or location is in plateDB and has been
-        completed, returns True; False otherwise. None indicates that
-        the input value cannot be found in plateDB. If the input value
-        is a list, a tuple of the same size is returned.
-
-    """
-
-    if locationIDs is None and plateIDs is None and designIDs is None:
-        raise TotoroError('no input.')
-
-    elif (locationIDs is not None and plateIDs is not None) or \
-            (locationIDs is not None and designIDs is not None) or \
-            (plateIDs is not None and designIDs is not None):
-        raise TotoroError('only one type of input is permitted.')
-
-    elif locationIDs is not None:
-        inputs = locationIDs
-        inputType = 'location'
-
-    elif plateIDs is not None:
-        inputs = plateIDs
-        inputType = 'plate'
-
-    elif designIDs is not None:
-        inputs = designIDs
-        inputType = 'design'
-
-    if hasattr(inputs, '__getitem__'):
-        isList = True
-    else:
-        isList = False
-        inputs = [inputs]
-
-    if inputType == 'location':
-        plates = [field2plate(ii) for ii in inputs]
-    elif inputType == 'design':
-        plates = [design2plate(ii) for ii in inputs]
-    else:
-        plates = [plateid2platepk(ii) for ii in inputs]
-
-    completed = []
-    for plate in plates:
-
-        if not hasattr(ii, '__getitem__'):
-            completed.append(_isPlateCompleted(plate))
-        else:
-            completed.append([_isPlateCompleted(pp) for pp in plate])
-
-    for ii in range(len(completed)):
-        if hasattr(completed[ii], '__getitem__'):
-            if None in completed[ii]:
-                completed[ii] = None
-            elif False in completed[ii]:
-                completed[ii] = False
-            else:
-                completed[ii] = True
-
-    if isList:
-        return completed
-    else:
-        return completed[0]
-
-
-def _isPlateCompleted(platePK):
-    """Helper function to determine if a plate is completed."""
-
-    if platePK is None:
-        return None
-
-    plate = session.query(Plate).filter(Plate.plate_pk == platePK)
-    if plate.count() == 0:
-        return None
-
-    dataCubeQuery = plate[0].mangaDB_dataCube
-
-    if len(dataCubeQuery) == 0:
-        return None
-
-    dataCube = dataCubeQuery[0]
-
-    if dataCube.r1_sn2 >= R_SN2 and dataCube.r2_sn2 >= R_SN2 and \
-            dataCube.b1_sn2 >= B_SN2 and dataCube.b2_sn2 >= B_SN2:
-        return True
-    else:
-        return False
-
-
-def field2plate(field):
+def field2plate(field_pk):
     """Determines the plateID(s) for a field."""
 
     query = session.query(MangaDB_Field_To_Plate).filter(
-        MangaDB_Field_To_Plate.field_pk == field)
+        MangaDB_Field_To_Plate.field_pk == field_pk)
     if query.count() == 0:
         return None
     else:
@@ -162,15 +49,76 @@ def plateid2platepk(plateid):
         return query.all()
 
 
-def getCompletedFields():
+def areFieldsDone(field_pks):
+    """Checks if a field is flagged good in plateDB.
 
-    fields = session.query(MangaDB_Field_To_Plate)
+    This function checks all the plates drilled for a field and
+    all the pluggings for each plate and returns True if all
+    have been flagged as good.
 
-    if fields.count() == 0:
-        return []
+    """
+
+    isList = True
+    if not isinstance(field_pks, (list, tuple, np.ndarray)):
+        field_pks = [field_pks]
+        isList = False
+
+    qq = session.query(
+        MangaDB_Field.pk, Plugging.plugging_status_pk).join(
+        MangaDB_Field_To_Plate).join(Plate).join(Plugging).all()
+
+    qq = np.array(qq)
+
+    doneStatus = []
+    for ff in field_pks:
+
+        if len(qq) == 0:
+            doneStatus.append(False)
+            continue
+
+        plugging_statuses = qq[qq[:, 0] == ff][:, 1]
+
+        if 1 in plugging_statuses or 3 in plugging_statuses:
+            doneStatus.append(True)
+        else:
+            doneStatus.append(False)
+
+    if isList:
+        return doneStatus
     else:
-        completed = []
-        for field in fields:
-            if _isPlateCompleted(field.plate_pk) is True:
-                completed.append(fields.location_id)
-        return completed
+        return doneStatus[0]
+
+
+def mlhalimit(dec):
+    """Returns HA limits.
+
+    Calculates the maximum HAs acceptable for a list of declinations.
+    Uses the polinomial fit by David Law and a omega limit of 0.5.
+
+    """
+
+    funcFit = np.array([1.59349, 0.109658, -0.00607871,
+                        0.000185393, -2.54646e-06, 1.16686e-08])[::-1]
+
+    if dec < -10 or dec > 80:
+        return 0.
+    else:
+        return np.abs(np.polyval(funcFit, dec))
+
+
+def computeAirmass(dec, ha, correct=[75., 10.]):
+
+    lat = LATITUDE()
+
+    airmass = (np.sin(lat * np.pi / 180.) * np.sin(dec * np.pi / 180.) +
+               np.cos(lat * np.pi / 180.) * np.cos(dec * np.pi / 180.) *
+               np.cos(ha * np.pi / 180.)) ** (-1)
+
+    if correct is not None:
+        if not isinstance(airmass, Real):
+            airmass[np.abs(ha) > correct[0]] = correct[1]
+        else:
+            if np.abs(ha) > correct[0]:
+                airmass = correct[1]
+
+    return airmass
