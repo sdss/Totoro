@@ -34,6 +34,11 @@ class TotoroUserWarning(UserWarning, TotoroWarning):
     pass
 
 
+class TotoroPluggerWarning(TotoroUserWarning):
+    """Warning for Plugger issues."""
+    pass
+
+
 class DustMapWarning(TotoroUserWarning):
     """A warning for when no dust map is present."""
     pass

@@ -73,9 +73,20 @@ class Fields(list):
         placeholder for future functionality when fields might be rejected
         based on the coordinates of drilled plates."""
 
-        allDrilled = plate.Plates.getAll(onlyIncomplete=False, silent=True,
-                                         updateSets=False)
-        mangaTileIDs = map(lambda xx: xx.getMangaTileID(), allDrilled)
+        allDrilledDB = plate.Plates.getAll(onlyIncomplete=False, silent=True,
+                                           updateSets=False)
+
+        mangaTileIDs = map(lambda xx: xx.getMangaTileID(), allDrilledDB)
+
+        if Totoro.config['fields']['drilledTiles'] is None or \
+                Totoro.config['fields']['drilledTiles'].lower() == 'none':
+            pass
+        else:
+            extraDrilled = open(
+                Totoro.readPath(Totoro.config['fields']['drilledTiles']),
+                'r').read().splitlines()
+            for mangaTileID in extraDrilled:
+                mangaTileIDs.append(int(mangaTileID))
 
         nRemoved = 0
         for mangaTileID in mangaTileIDs:

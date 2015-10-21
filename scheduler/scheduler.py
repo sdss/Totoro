@@ -14,11 +14,12 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from astropysics import obstools
 from sdss.internal.manga.Totoro.exceptions import TotoroError
-from timeline import Timelines
+from sdss.internal.manga.Totoro.scheduler.timeline import Timelines
+from sdss.internal.manga.Totoro.scheduler.plugger import PluggerScheduler
 from sdss.internal.manga.Totoro import log, site
 from sdss.internal.manga.Totoro.scheduler import observingPlan
+from astropy import table
 from astropy import time
 
 
@@ -40,8 +41,14 @@ class BaseScheduler(object):
         self.site = site
         self._setStartEndDate(startDate, endDate, **kwargs)
 
-        self.observingBlocks = self._observingPlan.getObservingBlocks(
-            self.startDate, self.endDate)
+        scope = kwargs.get('scope', 'planner')
+
+        if scope != 'plugger':
+            self.observingBlocks = self._observingPlan.getObservingBlocks(
+                self.startDate, self.endDate)
+        else:
+            self.observingBlocks = self._observingPlan._createObservingBlock(
+                self.startDate, self.endDate)
 
     def _setStartEndDate(self, startDate, endDate, scope='planner', **kwargs):
         """Sets the start and end date if they haven't been defined."""
@@ -55,15 +62,15 @@ class BaseScheduler(object):
                 startDate, endDate = self._observingPlan.getJD(startDate)
 
         elif scope == 'plugger':
-            startDate, endDate = self._observingPlan.getJD(
-                int(time.Time.now().jd) + 1)
+            if startDate >= endDate:
+                raise TotoroError('startDate must be < endDate')
 
         self.startDate = startDate
         self.endDate = endDate
-        self.currentDate = obstools.calendar_to_jd(None)
+        self.currentDate = time.Time.now().jd
 
-        log.debug('Start date: {0}'.format(self.startDate))
-        log.debug('End date: {0}'.format(self.endDate))
+        log.info('Start date: {0}'.format(self.startDate))
+        log.info('End date: {0}'.format(self.endDate))
 
 
 class Planner(BaseScheduler):
@@ -88,6 +95,30 @@ class Planner(BaseScheduler):
 
         return fields
 
+    def getExposures(self):
+        """Returns a table with the simulated exposures."""
+
+        if not hasattr(self, 'timelines'):
+            raise TotoroError('scheduleTimelines must be run before '
+                              'getExposures')
+
+        tableExposures = table.Table(None,
+                                     names=['manga_tileid', 'RA',
+                                            'Dec', 'JD0', 'JD1'],
+                                     dtype=[int, float, float, float, float])
+
+        for field in self.fields:
+            for exposure in field.getValidExposures():
+                if exposure._tmp is True:
+                    continue
+                JD0, JD1 = exposure.getJD()
+                tableExposures.add_row((field.manga_tileid, field.ra,
+                                        field.dec, JD0, JD1))
+
+        tableExposures.sort('JD0')
+
+        return tableExposures
+
     def scheduleTimelines(self):
         """Creates simulated timelines for the observing blocks."""
 
@@ -96,45 +127,65 @@ class Planner(BaseScheduler):
         self.timelines.schedule()
 
 
-class Plugger(BaseScheduler):
+class Plugger(object):
 
-    def __init__(self, date=None, **kwargs):
+    def __init__(self, startDate, endDate, **kwargs):
 
-        super(Plugger, self).__init__(startDate=date, endDate=None,
-                                      scope='plugger', **kwargs)
+        # Not necessary for now.
+        # super(Plugger, self).__init__(startDate=startDate, endDate=endDate,
+        #                               scope='plugger', **kwargs)
+        # if len(self.observingBlocks) == 0:
+        #     raise TotoroError('no observing blocks found.')
+        # elif len(self.observingBlocks) > 1:
+        #     raise TotoroError('Plugger must be run only for one night. '
+        #                       'Multiple observing blocks found.')
+
+        assert startDate < endDate
+
+        self.startDate = startDate
+        self.endDate = endDate
+        log.info('Start date: {0}'.format(self.startDate))
+        log.info('End date: {0}'.format(self.endDate))
+        log.info('Scheduling {0:.2f} hours'.format(
+                 (self.endDate - self.startDate)*24.))
 
         self.plates = self.getPlatesAtAPO()
 
-    def getPlatesAtAPO(self, rejectComplete=True):
+    def getPlatesAtAPO(self, rejectComplete=False):
 
         from sdss.internal.manga.Totoro import dbclasses
 
         log.info('getting plates at APO with rejectComplete={0}'.format(
                  rejectComplete))
 
-        plates = dbclasses.Plates.getAtAPO(onlyIncomplete=True)
+        plates = dbclasses.getAtAPO(onlyIncomplete=rejectComplete)
 
         log.info('plates found: {0}'.format(len(plates)))
 
         return plates
 
-    def getOutput(self):
+    def getOutput(self, **kwargs):
 
-        self.timelines = Timelines(
-            self.observingBlocks, plates=self.plates, mode='plugger')
+        pluggerSchedule = PluggerScheduler(
+            self.plates, self.startDate, self.endDate, **kwargs)
 
-        self.timelines.schedule()
+        return pluggerSchedule.carts
 
 
-class Nightly(BaseScheduler):
+class Nightly(object):
 
     def __init__(self, startDate=None, endDate=None, plates=None, **kwargs):
 
         log.info('entering NIGHTLY mode.')
 
-        super(Nightly, self).__init__(startDate=startDate,
-                                      endDate=endDate, scope='nightly',
-                                      **kwargs)
+        # Not necessary, as we don't really use the schedule for now.
+        # super(Nightly, self).__init__(startDate=startDate,
+        #                               endDate=endDate, scope='nightly',
+        #                               **kwargs)
+
+        self.startDate = startDate
+        self.endDate = endDate
+        self.currentDate = time.Time.now().jd
 
         if plates is None:
             self.plates = self.getPlates(**kwargs)
@@ -148,7 +199,7 @@ class Nightly(BaseScheduler):
 
         from sdss.internal.manga.Totoro import dbclasses
 
-        plates = dbclasses.Plates.getPlugged(**kwargs)
+        plates = dbclasses.getPlugged(**kwargs)
 
         if len(plates) == 0:
             log.info('no plugged plates found.')

@@ -46,7 +46,6 @@ tests/testMangaSampleParameters.py -text
 tests/testNightly.py -text
 tests/testOutput.py -text
 tests/testPlanner.py -text
-tests/testPlugger.py -text
 tests/unitTestPlates.py -text
 tests/unitTestPlugger.py -text
 tests/unitTestSets.py -text

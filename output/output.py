@@ -38,12 +38,10 @@ def getNightlyOutput(input=None, format='dict', **kwargs):
     else:
         nightly = input
 
-    # Determines the MJD for which the windows are calculated
-    if len(nightly.observingBlocks) == 0:
+    if nightly.startDate is None or nightly.endDate is None:
         mjd = None
     else:
-        jd = np.mean([nightly.observingBlocks['JD0'],
-                      nightly.observingBlocks['JD1']])
+        jd = np.mean([nightly.startDate, nightly.endDate])
         mjd = time.Time(jd, format='jd', scale='tai').mjd
 
     output = OrderedDict()

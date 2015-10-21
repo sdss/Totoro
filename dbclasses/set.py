@@ -29,11 +29,11 @@ from astropy import time
 totoroDB = TotoroDBConnection()
 plateDB = totoroDB.plateDB
 mangaDB = totoroDB.mangaDB
-session = totoroDB.Session()
 
 
 def getPlateSets(inp, format='plate_id', **kwargs):
 
+    session = totoroDB.Session()
     with session.begin(subtransactions=True):
         sets = session.query(mangaDB.Set).join(
             mangaDB.Exposure,
@@ -55,6 +55,7 @@ class Set(mangaDB.Set):
 
         base = cls.__bases__[0]
 
+        session = totoroDB.Session()
         with session.begin(subtransactions=True):
             instance = session.query(base).filter(
                 eval('{0}.{1} == {2}'.format(base.__name__, format, input))
@@ -178,7 +179,8 @@ class Set(mangaDB.Set):
         exposures = self.getValidExposures()
 
         if len(exposures) == 0:
-            return np.array([0.0, 0.0])
+            plateHALimit = utils.mlhalimit(self.dec)
+            return np.array([-plateHALimit, plateHALimit])
         elif len(exposures) >= 1:
             expHAs = np.array([exp.getHA() for exp in exposures])
             return utils.getMinMaxIntervalSequence(expHAs)
