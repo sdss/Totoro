@@ -46,11 +46,13 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
                 notPlugged.append(plate)
 
         if len(pluggedPlates) > 0:
-            return getOptimalPlate(pluggedPlates, jdRanges,
-                                   prioritisePlugged=False, mode=mode,
-                                   efficiency=efficiency, **kwargs)
-    else:
-        notPlugged = incompletePlates
+            optimalPlate = getOptimalPlate(pluggedPlates, jdRanges,
+                                           prioritisePlugged=False, mode=mode,
+                                           efficiency=efficiency, **kwargs)
+            if optimalPlate is not None:
+                return optimalPlate
+
+    notPlugged = incompletePlates
 
     startedPlates = [plate for plate in notPlugged
                      if len(plate.getTotoroExposures(onlySets=True)) > 0]

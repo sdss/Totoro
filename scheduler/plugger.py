@@ -386,7 +386,7 @@ class PluggerScheduler(object):
                     cartPlateMessage[cartNumber] = (plate, 'unchanged')
                 else:
                     # Otherwise, does nothing.
-                    cartPlateMessage[cartNumber] = (plate, '')
+                    cartPlateMessage[cartNumber] = (plate, 'same')
 
         # Logs the allocation
         for cartNumber in sorted(cartPlateMessage.keys()):
