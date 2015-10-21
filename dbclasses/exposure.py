@@ -39,8 +39,6 @@ class Exposure(plateDB.Exposure):
 
         base = cls.__bases__[0]
 
-        session = totoroDB.Session()
-
         if isinstance(input, base):
             instance = input
 
@@ -48,6 +46,7 @@ class Exposure(plateDB.Exposure):
             instance = input.platedbExposure
 
         else:
+            session = totoroDB.Session()
             if parent.lower() == 'platedb':
                 with session.begin(subtransactions=True):
                     instance = session.query(base).filter(
