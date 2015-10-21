@@ -138,7 +138,7 @@ def simulatePlates(plates, jdRanges, mode='plugger'):
                 if (not utils.isPointInInterval(lst, plateLST, wrapAt=24)):
                     pass
                 elif plate.getAltitude(lst) > maxAlt:
-                    pass
+                    return observedFlag
                 else:
                     result = plate.addMockExposure(
                         set=None, startTime=jd, expTime=expTimeEff,
