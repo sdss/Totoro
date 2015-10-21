@@ -86,7 +86,7 @@ class Set(mangaDB.Set):
                       self.pk, self.plate.plate_id))
 
     def __repr__(self):
-        return '<Totoro Set (pk={0}, status={1})'.format(
+        return '<Totoro Set (pk={0}, status={1})>'.format(
             self.pk, self.getQuality(flag=False)[0])
 
     def update(self, **kwargs):
@@ -171,9 +171,12 @@ class Set(mangaDB.Set):
             self._checkHasExposures()
             return self.totoroExposures[0].getCoordinates()
 
-    def getHA(self, midPoint=False):
+    def getHA(self, midPoint=None):
         """Returns the HA interval of the exposures in the set. If midPoint is
         set, the middle point of the exposures is used for the calculation."""
+
+        if midPoint is None:
+            midPoint = config['set']['useHAmidPoint']
 
         validExposures = self.getValidExposures()
         if not midPoint or len(validExposures) == 1:
@@ -206,20 +209,20 @@ class Set(mangaDB.Set):
 
         return setDitherPositions
 
-    def getSN2Array(self):
+    def getSN2Array(self, **kwargs):
         """Returns an array with the cumulated SN2 of the valid exposures in
         the set. The return format is [b1SN2, b2SN2, r1SN2, r2SN2]."""
 
         validExposures = []
         for exposure in self.totoroExposures:
-            if exposure.valid:
+            if exposure.isValid(**kwargs):
                 validExposures.append(exposure)
 
         if len(validExposures) == 0:
             return np.array([0.0, 0.0, 0.0, 0.0])
         else:
-            return np.sum([exp.getSN2Array() for exp in validExposures],
-                          axis=0)
+            return np.sum([exp.getSN2Array()
+                           for exp in validExposures], axis=0)
 
     def getSN2Range(self):
         """Returns the SN2 range in which new exposures may be taken."""
@@ -259,7 +262,7 @@ class Set(mangaDB.Set):
     def getQuality(self, **kwargs):
         """Returns the quality of the set."""
 
-        return checkSet(self, silent=False, **kwargs)
+        return checkSet(self, **kwargs)
 
     def getValidExposures(self):
 

@@ -22,6 +22,7 @@ from ..exceptions import TotoroError, TotoroUserWarning
 import warnings
 from sdss.manga import mlhalimit as mlhalimitHours
 from collections import OrderedDict
+from astropy import time, units
 
 
 def mlhalimit(dec):
@@ -155,11 +156,25 @@ def createSite(longitude=None, latitude=None, altitude=None,
             name = config['observatory']['name']
 
     site = obstools.Site(latitude, longitude, name=name, alt=altitude)
+    site.localSiderialTime = lambda jd: _calculateLST(site, jd)
 
     if verbose:
         log.info('Created site with name \'{0}\''.format(name))
 
     return site
+
+
+def _calculateLST(site, jd):
+    """Not-to-be-used-directly function to replace the imprecise
+    locaSiderialTime in astropysics."""
+
+    tmpTime = time.Time(jd, format='jd', scale='tai')
+    tmpTime.delta_ut1_utc = 0.
+
+    lst = tmpTime.sidereal_time('apparent',
+                                longitude=float(site.longitude.degrees))
+
+    return lst.hour
 
 
 def JDdiff(JD0, JD1):

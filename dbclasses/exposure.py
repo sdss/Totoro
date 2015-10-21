@@ -91,7 +91,7 @@ class Exposure(plateDB.Exposure):
 
     def __repr__(self):
         return ('<Totoro Exposure (mangaDB.Exposure.pk={0}, exposure_no={1}, '
-                'ditherPos={2})'
+                'ditherPos={2})>'
                 .format(self._mangaExposure.pk, self.exposure_no,
                         self.ditherPosition))
 

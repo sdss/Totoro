@@ -203,7 +203,7 @@ def setExposureStatus(exposure, status, **kwargs):
 
 
 def checkSet(input, flag=True, flagExposures=True, silent=False,
-             midPoint=False, forceReflag=False, **kwargs):
+             midPoint=None, forceReflag=False, **kwargs):
     """Checks if a set meets MaNGA's quality criteria. Returns one of the
     following values: 'Good', 'Excellent', 'Poor', 'Bad', 'Incomplete'.
 
