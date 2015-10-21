@@ -14,12 +14,12 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from Totoro.exceptions import TotoroError, NoMangaExposure
-from Totoro import TotoroDBConnection
-from Totoro import logic
-from Totoro import log, config, site, dustMap
+from sdss.internal.manga.Totoro.exceptions import TotoroError, NoMangaExposure
+from sdss.internal.manga.Totoro import TotoroDBConnection
+from sdss.internal.manga.Totoro import logic
+from sdss.internal.manga.Totoro import log, config, site, dustMap
+from sdss.internal.manga.Totoro import utils
 import numpy as np
-from Totoro import utils
 from astropy import time
 import warnings
 

@@ -15,8 +15,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from collections import OrderedDict
-from Totoro.exceptions import TotoroError
-from Totoro import scheduler
+from sdss.internal.manga.Totoro import scheduler
 import numpy as np
 import yaml
 from astropy import time
@@ -36,10 +35,8 @@ def getNightlyOutput(input=None, format='dict', **kwargs):
 
     if input is None:
         nightly = scheduler.Nightly(**kwargs)
-    elif isinstance(input, scheduler.Nightly):
-        nightly = input
     else:
-        raise TotoroError('input format not supported.')
+        nightly = input
 
     # Determines the MJD for which the windows are calculated
     if len(nightly.observingBlocks) == 0:

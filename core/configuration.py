@@ -15,13 +15,12 @@ system.
 
 import yaml
 import os
-from Totoro import __TOTORO_CONFIG_PATH__, __DEFAULT_CONFIG_FILE__
-from Totoro.exceptions import TotoroError
+from sdss.internal.manga.Totoro import exceptions
+from sdss.internal.manga.Totoro import __DEFAULT_CONFIG_FILE__
+from sdss.internal.manga.Totoro import __TOTORO_CONFIG_PATH__
 
 
 def getConfiguration(default=None):
-
-    from .. import __DEFAULT_CONFIG_FILE__, __TOTORO_CONFIG_PATH__
 
     if default is None:
         default = __DEFAULT_CONFIG_FILE__
@@ -40,8 +39,8 @@ class TotoroConfig(dict):
     def __init__(self, configurationFile):
 
         if not os.path.exists(configurationFile):
-            raise TotoroError('configuration file', configurationFile,
-                              'not found.')
+            raise exceptions.TotoroError(
+                'configuration file', configurationFile, 'not found.')
 
         self._rawData = open(configurationFile).read()
         self._initFromRaw()
@@ -86,9 +85,10 @@ class TotoroConfig(dict):
         elif isinstance(self['dbConnection'], basestring):
             result = self._assignDBConnection(self['dbConnection'])
             if result is False:
-                raise TotoroError('dbConnection could not be configured. '
-                                  'Please, check your totoro.yaml and '
-                                  '$TOTORO_DB_CONNECTION')
+                raise exceptions.TotoroError(
+                    'dbConnection could not be configured. '
+                    'Please, check your totoro.yaml and '
+                    '$TOTORO_DB_CONNECTION')
 
     def _assignDBConnection(self, value):
 

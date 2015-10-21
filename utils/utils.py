@@ -15,13 +15,12 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from Totoro import config, log
-from Totoro.exceptions import TotoroError, TotoroUserWarning
+from sdss.internal.manga.Totoro import config, log
+from sdss.internal.manga.Totoro import exceptions
 import warnings
 from sdss.manga import mlhalimit as mlhalimitHours
 from collections import OrderedDict
 from astropy import time
-from numbers import Real
 
 
 def mlhalimit(dec):
@@ -61,11 +60,11 @@ def computeAirmass(dec, ha, lat=config['observatory']['latitude'],
 def isPlateComplete(plate, format='plate_id', **kwargs):
     """Returns if a plate is complete using the MaNGA logic."""
 
-    from Totoro.dbclasses import Plate
+    from sdss.internal.manga.Totoro.dbclasses import Plate
 
     if not isinstance(plate, Plate):
         if format.lower() not in ['pk', 'plate_id']:
-            raise TotoroError('format must be plate_id or pk.')
+            raise exceptions.TotoroError('format must be plate_id or pk.')
         plate = Plate(plate, format=format.lower(), **kwargs)
 
     if plate.getPlateCompletion(includeIncompleteSets=False) > 1.:
@@ -88,7 +87,7 @@ def isPlateComplete(plate, format='plate_id', **kwargs):
                           'status is {1}.'.format(
                               'complete' if plugComplete else 'incomplete',
                               'complete' if plateComplete else 'incomplete'),
-                          TotoroUserWarning)
+                          exceptions.TotoroUserWarning)
             return plugComplete
     else:
         return plateComplete
@@ -97,11 +96,11 @@ def isPlateComplete(plate, format='plate_id', **kwargs):
 def getAPOcomplete(plates, format='plate_id', **kwargs):
     """Returns a dictionary with the APOcomplete output."""
 
-    from Totoro.dbclasses import Plate
+    from sdss.internal.manga.Totoro.dbclasses import Plate
 
     format = format.lower()
     if format.lower() not in ['pk', 'plate_id']:
-        raise TotoroError('format must be plate_id or pk.')
+        raise exceptions.TotoroError('format must be plate_id or pk.')
 
     plates = np.atleast_1d(plates)
 
@@ -115,7 +114,7 @@ def getAPOcomplete(plates, format='plate_id', **kwargs):
         if isPlateComplete(plate) is False:
             warnings.warn('plate_id={0} is not complete. APOcomplete output '
                           'must not be used.'.format(plate.plate_id),
-                          TotoroUserWarning)
+                          exceptions.TotoroUserWarning)
 
         APOcomplete[plate.plate_id] = []
 
@@ -176,7 +175,8 @@ class Site(object):
             try:
                 inputDate = time.Time(inputDate, scale='tai', format=format)
             except:
-                raise TotoroError('inputDate format not recognised.')
+                raise exceptions.TotoroError(
+                    'inputDate format not recognised.')
 
         inputDate.delta_ut1_utc = 0.
 
@@ -198,7 +198,7 @@ class Site(object):
             try:
                 date = time.Time(date, format=dateFormat, scale='tai')
             except:
-                raise TotoroError('date format not recognised.')
+                raise exceptions.TotoroError('date format not recognised.')
 
         LST0 = self.localSiderealTime(date)
 

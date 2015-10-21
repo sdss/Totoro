@@ -16,7 +16,7 @@ from __future__ import division
 from __future__ import print_function
 from astropy import table
 import numpy as np
-from Totoro.core.colourPrint import _color_text
+from sdss.internal.manga.Totoro.core.colourPrint import _color_text
 import sys
 import re
 

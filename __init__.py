@@ -1,7 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 import warnings
-from exceptions import DustMapWarning, TotoroError, TotoroUserWarning
+from exceptions import DustMapWarning, TotoroError
 # warnings.filterwarnings('ignore', module='astropy.time.core')
 warnings.filterwarnings('ignore', 'Module argparse was already imported')
 
@@ -32,4 +32,4 @@ except:
 from .utils import Site
 site = Site()
 
-from .apoDB import TotoroDBConnection
+from apoDB import TotoroDBConnection

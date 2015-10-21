@@ -12,9 +12,9 @@ Licensed under a 3-clause BSD license.
 from __future__ import division
 from __future__ import print_function
 from astropy import table, time
-from Totoro.exceptions import TotoroError, TotoroUserWarning, NoObservingBlock
+from sdss.internal.manga.Totoro import exceptions
 import warnings
-from Totoro import config, log, readPath
+from sdss.internal.manga.Totoro import config, log, readPath
 import numpy as np
 import os
 
@@ -32,7 +32,8 @@ def getScheduleFile():
         schedule = readPath(config['observingPlan']['schedule'])
         warnings.warn('The master autoscheduler could not be found. '
                       'Using a local copy of the schedule. BE CAREFUL! '
-                      'THIS FILE MIGHT BE OUTDATED!', TotoroUserWarning)
+                      'THIS FILE MIGHT BE OUTDATED!',
+                      exceptions.TotoroUserWarning)
 
     return schedule
 
@@ -72,8 +73,8 @@ class ObservingPlan(object):
             self.scheduleFile
 
         if not os.path.exists(self.scheduleFile):
-            raise TotoroError('schedule {0} not found'.format(
-                              scheduleToPrint))
+            raise exceptions.TotoroError('schedule {0} not found'.format(
+                                         scheduleToPrint))
 
         self.plan = table.Table.read(self.scheduleFile,
                                      format='ascii.no_header')
@@ -147,7 +148,7 @@ class ObservingPlan(object):
 
         if jd not in self.plan['JD']:
             warnings.warn('JD={0} not found in schedule'.format(jd),
-                          TotoroUserWarning)
+                          exceptions.TotoroUserWarning)
             return (None, None)
 
         night = self.plan[self.plan['JD'] == jd]
@@ -187,7 +188,8 @@ class ObservingPlan(object):
         jd = int(startDate if startDate is not None else time.Time.now().jd)
 
         if jd not in self.plan['JD']:
-            raise TotoroError('JD={0} not found in schedule'.format(jd))
+            raise exceptions.TotoroError(
+                'JD={0} not found in schedule'.format(jd))
 
         firstDay = self.plan[self.plan['JD'] == jd]
         runNumber = firstDay['RUN']

@@ -15,12 +15,12 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from exposure import Exposure
-from Totoro.apoDB import TotoroDBConnection
-from Totoro import log, config, site
-from Totoro.exceptions import TotoroError, EmptySet
-from Totoro import logic
-from Totoro import utils
-from Totoro import scheduler
+from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
+from sdss.internal.manga.Totoro import log, config, site
+from sdss.internal.manga.Totoro.exceptions import TotoroError, EmptySet
+from sdss.internal.manga.Totoro import logic
+from sdss.internal.manga.Totoro import utils
+from sdss.internal.manga.Totoro import scheduler
 import numpy as np
 from copy import copy
 from astropy import time
