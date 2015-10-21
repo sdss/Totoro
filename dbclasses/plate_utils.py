@@ -51,6 +51,7 @@ def updatePlate(plate, rearrangeIncomplete=True, **kwargs):
         if rearrangeIncomplete:
             result = rearrangeSets(plate, mode='optimal', scope='incomplete',
                                    silent=True)
+
             if not result:
                 return result
 
@@ -66,12 +67,6 @@ def getUnassignedExposures(plate):
 
     unassigned = []
     for scienceExp in scienceExposures:
-        # If the exposure has no status (usually because it is not completely
-        # reduced), we remove it set_pk, if any, so that it will be processed
-        # again.
-        if scienceExp.mangadbExposure[0].exposure_status_pk is None:
-            with session.begin(subtransactions=True):
-                scienceExp.mangadbExposure[0].set_pk = None
 
         # If the exposure is not assigned to a set, adds it to the list.
         if scienceExp.mangadbExposure[0].set_pk is None:
@@ -449,6 +444,7 @@ def applyArrangement(plate, arrangement):
                     if setPK is not None:
                         setDB = session.query(db.mangaDB.Set).get(setPK)
                         session.delete(setDB)
+                        session.flush()
 
                 session.flush()
 
@@ -553,8 +549,8 @@ def fixBadSets(sets):
                 'found bad set with one exposure. This is probably a bug.')
         elif len(ss.totoroExposures) == 2:
             # If the bad set has two exposures, splits it.
-            toAdd = [TotoroSet.fromExposures(exp)
-                     for exp in ss.totoroExposures]
+            toAdd += [TotoroSet.fromExposures(exp)
+                      for exp in ss.totoroExposures]
         else:
             # Tests all possible combinations of two exposures to check if one
             # of them is a valid set.
@@ -567,8 +563,8 @@ def fixBadSets(sets):
 
             if len(validSets) == 0:
                 # If no valid combinations, each exposures goes to a set.
-                toAdd = [TotoroSet.fromExposures(exp)
-                         for exp in ss.totoroExposures]
+                toAdd += [TotoroSet.fromExposures(exp)
+                          for exp in ss.totoroExposures]
             else:
                 # Otherwise, selects the combination that produces an
                 # incomplete set with maximum SN2.

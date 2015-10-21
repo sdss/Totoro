@@ -265,10 +265,10 @@ class Plate(plateDB.Plate):
         self.mlhalimit = utils.mlhalimit(self.dec)
 
         if not self.isMock:
-            self.checkPlate(full=fullCheck)
-
             self.sets = [TotoroSet(set, **kwargs)
                          for set in self.getMangaDBSets()]
+
+            self.checkPlate(full=fullCheck)
 
             if updateSets:
                 self.updatePlate(**kwargs)
@@ -356,6 +356,24 @@ class Plate(plateDB.Plate):
                                   nScienceExposures, self.plate_id,
                                   nMaNGAExposures),
                               TotoroExpections.NoMangaExposure)
+
+            # Checks if some sets have incompletely reduced exposures. If so,
+            # removes their set_pk so that they are completely procesed again.
+            with session.begin(subtransactions=True):
+                for ss in self.sets:
+                    for exp in ss.totoroExposures:
+                        if exp._mangaExposure.status is None:
+                            if not exp.isMock:
+                                exp.mangadbExposure[0].set_pk = None
+                            ss.totoroExposures.remove(exp)
+
+                    # Checks if the sets is now empty, if so, removes it from
+                    # the object and from the DB
+                    if len(ss.totoroExposures) == 0:
+                        if not ss.isMock:
+                            setDB = session.query(mangaDB.Set).get(ss.pk)
+                            session.delete(setDB)
+                        self.sets.remove(ss)
 
     @property
     def isMaNGA(self):
@@ -777,9 +795,9 @@ class Plate(plateDB.Plate):
         except:
             return False
 
-    def getAPOcomplete(self):
+    def getAPOcomplete(self, **kwargs):
         """Retuns the APOcomplete dictionary for this plate."""
-        return utils.getAPOcomplete(self)
+        return utils.getAPOcomplete(self, **kwargs)
 
     def createAPOcompleteFile(self, path=None):
         """Creates an apocomp file for the current plate."""
