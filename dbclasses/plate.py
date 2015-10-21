@@ -232,10 +232,22 @@ class Plate(plateDB.Plate):
 
         return False
 
-    def updatePlate(self):
+    def updatePlate(self, force=False):
+
+        if self.isComplete:
+            if not force:
+                log.debug('plate_id={0} is marked complete. Not updating sets.'
+                          .format(self.plate_id))
+                return False
+            else:
+                log.debug('plate_id={0} is marked complete but force=True.'
+                          .format(self.plate_id))
+
         result = logic.updatePlate(self)
         if result:
             self.update()
+
+        return True
 
     def rearrangeSets(self, startDate=None, **kwargs):
         result = logic.setArrangement.rearrangeSets(
