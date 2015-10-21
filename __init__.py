@@ -31,7 +31,7 @@ except (ImportError, ValueError):
 except:
     raise TotoroError('something went wrong while importing the dust map.')
 
-from utils import Site
+from sdss.utilities.Site import Site
 site = Site()
 
 from apoDB import TotoroDBConnection

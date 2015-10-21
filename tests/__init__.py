@@ -1,1 +1,7 @@
-# Licensed under a 3-clause BSD style license - see LICENSE.rst
+
+def setup_package():
+    pass
+
+
+def teardown_package():
+    pass

@@ -14,10 +14,11 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from sdss.internal.manga.Totoro import log, config, readPath
+from sdss.internal.manga.Totoro import log, config, readPath, site
 from sdss.internal.manga.Totoro.scheduler.timeline import Timelines
-from sdss.internal.manga.Totoro import exceptions
+from sdss.internal.manga.Totoro.scheduler import observingPlan
 from sdss.internal.manga.Totoro.core.colourPrint import _color_text
+from sdss.internal.manga.Totoro import exceptions
 from astropy import table
 from astropy import time
 import warnings
@@ -25,15 +26,35 @@ import numpy as np
 import os
 
 
+__all__ = ['Planner']
+
 expTime = config['exposure']['exposureTime']
 expTimeEff = expTime / config['planner']['efficiency']
 minimumPlugPriority = config['planner']['noPlugPriority']
 
 
-class PlannerScheduler(object):
+class Planner(object):
     """A class for field selection."""
 
-    def __init__(self, schedule, useFields=True, **kwargs):
+    def __init__(self, startDate=None, endDate=None, useFields=True,
+                 **kwargs):
+
+        log.info('entering PLANNER mode.')
+
+        if startDate is None:
+            startDate = time.Time.now().jd
+        if endDate is None:
+            endDate = observingPlan.plan[-1]['JD1']
+
+        self.startDate = startDate
+        self.endDate = endDate
+
+        assert self.startDate < self.endDate, 'startDate > endDate'
+
+        schedule = observingPlan.getObservingBlocks(self.startDate,
+                                                    self.endDate)
+
+        assert len(schedule) >= 1, 'no observing blocks selected'
 
         self.timelines = Timelines(schedule, **kwargs)
         log.debug('created PlannerScheduler with {0} timelines'
@@ -97,7 +118,7 @@ class PlannerScheduler(object):
                 scienceCatRows = scienceCatalogue[
                     scienceCatalogue['MANGA_TILEID'] == field.manga_tileid]
 
-                if len(scienceCatRows) == 0:
+                if len(scienceCatRows) < 12:
                     log.debug('no targets for manga_tileid={0}. Skipping.'
                               .format(field.manga_tileid))
                     continue
@@ -179,15 +200,6 @@ class PlannerScheduler(object):
 
                     validPlates.append(mockPlate)
 
-        # Plates to be rejected.
-        if ('platesIgnore' in config['planner'] and
-                config['planner']['platesIgnore'].lower() != 'none'):
-            platesIgnore = map(
-                int, open(readPath(config['planner']['platesIgnore']), 'r')
-                .read().splitlines())
-            validPlates = [plate for plate in validPlates
-                           if plate.plate_id not in platesIgnore]
-
         return validPlates
 
     def schedule(self, useFields=True, goodWeatherFraction=None, **kwargs):
@@ -216,8 +228,11 @@ class PlannerScheduler(object):
             startDate = time.Time(timeline.startDate, format='jd')
             totalTime = 24. * (timeline.endDate - timeline.startDate)
 
-            log.info('Scheduling timeline {0:.3f}-{1:.3f} [{2}] ({3:.1f}h). '
+            log.info('Scheduling timeline {0:.3f}-{1:.3f} ({2:.2f}-{3:.2f}) '
+                     '[{4}] ({5:.1f}h). '
                      .format(timeline.startDate, timeline.endDate,
+                             site.localSiderealTime(timeline.startDate),
+                             site.localSiderealTime(timeline.endDate),
                              startDate.iso.split()[0], totalTime))
 
             if nn not in goodWeatherIdx:
@@ -233,17 +248,17 @@ class PlannerScheduler(object):
             timeline.schedule(self.plates, mode='planner', **kwargs)
 
             remainingTime = timeline.remainingTime
-            log.info('... plates observed: {0} (Unused time {1:.1f}h)'
+            log.info('... plates observed: {0} (Unused time {1:.2f}h)'
                      .format(len(timeline.plates), remainingTime))
 
             nAssigned += len(timeline.plates)
 
-            if remainingTime > expTimeEff / 3600. and useFields:
+            if remainingTime > expTimeEff / 2. / 3600. and useFields:
                 log.info(_color_text('now scheduling fields', 'yellow'))
                 timeline.schedule(self.fields, mode='planner', **kwargs)
                 nFields = len(timeline.plates) - nAssigned
                 remainingTime = timeline.remainingTime
-                log.info('... fields observed: {0} (unused time {1:.1f}h)'
+                log.info('... fields observed: {0} (unused time {1:.2f}h)'
                          .format(nFields, remainingTime))
                 nAssigned += nFields
 
