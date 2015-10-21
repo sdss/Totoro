@@ -225,7 +225,7 @@ class Plate(plateDB.Plate):
         self.isMock = mock
         self._kwargs = kwargs
         self.mjd = mjd
-        self._manga_tileid = None
+        self._manga_tileid = kwargs.pop('manga_tileid', None)
 
         if 'dust' in kwargs:
             self.dust = kwargs['dust']
@@ -252,8 +252,10 @@ class Plate(plateDB.Plate):
             self.sets = []
 
     def __repr__(self):
-        return ('<Totoro Plate (plate_id={0}, pk={1}, completion={2:.2f})>'
-                .format(self.plate_id, self.pk, self.getPlateCompletion()))
+        return ('<Totoro Plate (plate_id={0}, manga_tileid={1}, ' +
+                'completion={2:.2f})>'
+                .format(self.plate_id, self.manga_tileid,
+                        self.getPlateCompletion()))
 
     @classmethod
     def fromSets(cls, sets, silent=False, **kwargs):
