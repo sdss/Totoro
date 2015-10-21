@@ -108,6 +108,7 @@ def selectOptimal(plates, jdRanges, **kwargs):
         return completedPlates[np.argmin(nExposures)]
 
     marked = np.array([plate for plate in newPlates
+                       if len(plate.statuses) > 0
                        if plate.statuses[0].label == 'Accepted'])
     markedOptimal = _getOptimalFromList(marked) if len(marked) > 0 else None
 

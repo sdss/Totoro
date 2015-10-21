@@ -16,7 +16,7 @@ from __future__ import division
 from __future__ import print_function
 import itertools
 from mangaLogic import checkExposure
-from sdss.internal.manga.Totoro.exceptions import NoMangaExposure
+from sdss.internal.manga.Totoro.exceptions import NoMangaExposure, TotoroError
 from sdss.internal.manga.Totoro import TotoroDBConnection, log, config, site
 from sdss.internal.manga.Totoro.utils import intervals
 from sqlalchemy import func
@@ -27,8 +27,12 @@ import numpy as np
 import time
 
 
-def updatePlate(plate, **kwargs):
+def updatePlate(plate, nExposuresMax=None, **kwargs):
     """Finds missing exposures """
+
+    nExposuresMax = \
+        config['setArrangement']['forceRearrangementMinExposures'] \
+        if nExposuresMax is None else nExposuresMax
 
     log.debug('plate_id={0}: updating sets'.format(plate.plate_id))
     # print(plate)
@@ -47,8 +51,7 @@ def updatePlate(plate, **kwargs):
                      ', '.join([str(exp.mangadbExposure[0].pk)
                                 for exp in newExposures])))
 
-        if len(newExposures) >= \
-                config['setArrangement']['forceRearrangementMinExposures']:
+        if nExposuresMax is not False and len(newExposures) >= nExposuresMax:
             log.info('plate_id={0}: more than {1} new exposures found. '
                      'Triggering a complete set rearrangement.'
                      .format(plate.plate_id,
@@ -197,31 +200,50 @@ def getNewExposures(plate, silent=True, **kwargs):
     return newExposures
 
 
-def rearrangeSets(plate, **kwargs):
+def rearrangeSets(plate, mode='optimal', **kwargs):
     """Assigns a set to each exposure for a given plate. Overwrites any current
     assignment"""
 
-    log.info('plate_id={0}: rearranging sets'.format(plate.plate_id))
+    mode = mode.lower()
 
-    t0 = time.time()
-    optimalArrangement = getOptimalArrangement(plate, **kwargs)
+    if mode not in ['optimal', 'sequential']:
+        raise TotoroError('rearrangeSets mode={0} is not valid.'.format(mode))
 
-    if optimalArrangement is False:
-        return False
+    log.info('plate_id={0}: rearranging sets. Mode={1}'.format(
+             plate.plate_id, mode))
 
-    for exposure in optimalArrangement['invalid']:
-        removeSet(exposure._mangaExposure.set_pk)
+    if mode == 'optimal':
 
-    for set in optimalArrangement['sets']:
-        updateSet(set)
+        t0 = time.time()
+        optimalArrangement = getOptimalArrangement(plate, **kwargs)
 
-    removeOrphanSets()
+        if optimalArrangement is False:
+            return False
 
-    t1 = time.time()
-    log.info('plate_id={0}: rearrangement was successful (took {1:.5f}s).'
-             .format(plate.plate_id, t1-t0))
+        for exposure in optimalArrangement['invalid']:
+            removeSet(exposure._mangaExposure.set_pk)
 
-    return True
+        for set in optimalArrangement['sets']:
+            updateSet(set)
+
+        removeOrphanSets()
+
+        t1 = time.time()
+        log.info('plate_id={0}: rearrangement was successful (took {1:.5f}s).'
+                 .format(plate.plate_id, t1-t0))
+
+        return True
+
+    elif mode == 'sequential':
+
+        log.info('plate_id={0}: removing all sets'.format(plate.plate_id))
+
+        for ss in plate.sets:
+            removeSet(ss.pk)
+
+        plate.update(silent=True)
+
+        return updatePlate(plate, nExposuresMax=False, **kwargs)
 
 
 def removeSet(set_pk, orphan=False):

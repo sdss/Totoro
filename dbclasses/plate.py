@@ -274,7 +274,7 @@ class Plate(plateDB.Plate):
 
         return False
 
-    def updatePlate(self, silent=False, force=False):
+    def updatePlate(self, silent=False, force=False, **kwargs):
 
         if self.isComplete:
             if not force:
@@ -291,15 +291,15 @@ class Plate(plateDB.Plate):
                       'Not updating sets.')
             return False
 
-        result = logic.updatePlate(self, silent=silent)
+        result = logic.updatePlate(self, silent=silent, **kwargs)
         if result:
             self.update(silent=silent)
 
         return True
 
-    def rearrangeSets(self, LST=None, **kwargs):
+    def rearrangeSets(self, LST=None, mode='optimal', **kwargs):
         result = logic.setArrangement.rearrangeSets(
-            self, LST=LST, **kwargs)
+            self, LST=LST, mode=mode, **kwargs)
         if result is True:
             self.update()
         return result

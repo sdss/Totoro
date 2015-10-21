@@ -375,12 +375,12 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
                           'set pk={0} is incomplete.'.format(set.pk))
 
     # Set is valid: assigns status
-    # if np.mean(seeing) > config['set']['goodSeeing']:
-    #     return flagHelper('Bad', 7)
+    if np.mean(seeing) > config['set']['goodSeeing']:
+        return flagHelper('Bad', 7)
     # elif np.mean(seeing) <= config['set']['excellentSeeing']:
     #     return flagHelper('Excellent', 0)
-    # else:
-    return flagHelper('Good', 0)
+    else:
+        return flagHelper('Good', 0)
 
 
 def getCurrentPlugging(exposure):

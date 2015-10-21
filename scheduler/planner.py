@@ -19,6 +19,7 @@ from sdss.internal.manga.Totoro.scheduler.timeline import Timelines
 from sdss.internal.manga.Totoro import exceptions
 from astropy import time
 import warnings
+import numpy as np
 
 
 expTime = config['exposure']['exposureTime']
@@ -36,7 +37,9 @@ class PlannerScheduler(object):
         log.debug('created PlannerScheduler with {0} timelines'
                   .format(len(self.timelines)))
 
-        self.plates = self.getPlates(updateSets=False, silent=True, **kwargs)
+        self.plates, self._completed = self.getPlates(
+            updateSets=False, silent=True, **kwargs)
+
         drilling = [plate for plate in self.plates if plate.isMock]
         log.info('Plates found: {0} ({1} in process of being drilled)'
                  .format(len(self.plates), len(drilling)))
@@ -64,15 +67,17 @@ class PlannerScheduler(object):
         from sdss.internal.manga.Totoro.dbclasses import (getAll, Plate,
                                                           getTilingCatalogue)
 
-        plates = getAll(updateSets=False, silent=True)
+        allPlates = getAll(updateSets=False, silent=True)
 
         # Selects only non-started plates with priority > minimum
         minimumPlugPriority = config['planner']['noPlugPriority']
-        plates = [plate for plate in plates
+        plates = [plate for plate in allPlates
                   if plate.getPlateCompletion() == 0.0
                   and plate.priority > minimumPlugPriority
                   and len(plate.getTotoroExposures()) == 0
                   and plate.plate_id > 7800]
+
+        completed = [plate for plate in allPlates if plate.isComplete is True]
 
         # Adds tiles being drilled from file
         if ('tilesBeingDrilled' in config['planner'] and
@@ -110,10 +115,19 @@ class PlannerScheduler(object):
             plates = [plate for plate in plates
                       if plate.plate_id not in platesIgnore]
 
-        return plates
+        return plates, completed
 
-    def schedule(self, useFields=True, **kwargs):
+    def schedule(self, useFields=True, goodWeatherFraction=None, **kwargs):
         """Runs the scheduling simulation."""
+
+        goodWeatherFraction = goodWeatherFraction \
+            if goodWeatherFraction is not None \
+            else config['planner']['goodWeatherFraction']
+
+        log.info('Good weather fraction: {0:.2f}'.format(goodWeatherFraction))
+
+        goodWeatherIdx = self.getGoodWeatherIndices(goodWeatherFraction,
+                                                    **kwargs)
 
         for nn, timeline in enumerate(self.timelines):
 
@@ -125,6 +139,13 @@ class PlannerScheduler(object):
             log.info('Scheduling timeline {0:.3f}-{1:.3f} [{2}] ({3:.1f}h). '
                      .format(timeline.startDate, timeline.endDate,
                              startDate.iso.split()[0], totalTime))
+
+            if nn not in goodWeatherIdx:
+                log.info('... skipping timeline because of bad weather.')
+                timeline.observed = False
+                continue
+
+            timeline.observed = True
 
             timeline.schedule(self.plates, mode='planner', **kwargs)
 
@@ -148,3 +169,15 @@ class PlannerScheduler(object):
                 warnings.warn('more plates ({0}) scheduled than carts '
                               'available ({1})'.format(nAssigned, nCarts),
                               exceptions.TotoroWarning)
+
+    def getGoodWeatherIndices(self, goodWeatherFraction, seed=None, **kwargs):
+        """Returns random indices with good weather."""
+
+        np.random.seed(seed if seed is not None
+                       else config['planner']['seed'])
+
+        nTimelines = int(len(self.timelines) * goodWeatherFraction)
+        indices = np.random.choice(np.arange(len(self.timelines)), nTimelines,
+                                   replace=False)
+
+        return np.sort(indices)
