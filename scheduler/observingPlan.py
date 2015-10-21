@@ -62,14 +62,13 @@ class ObservingPlan(object):
 
     """
 
-    def __init__(self, schedule=readPath(config['observingPlan']['schedule']),
+    def __init__(self, schedule=config['observingPlan']['schedule'],
                  **kwargs):
 
         if isinstance(schedule, basestring) and schedule.lower() == 'none':
-            schedule = None
-
-        if schedule is None:
             schedule = getScheduleFile()
+        else:
+            schedule = readPath(schedule)
 
         self.scheduleFile = os.path.realpath(schedule)
         scheduleToPrint = self.scheduleFile[:15] + '...' + \
@@ -186,6 +185,19 @@ class ObservingPlan(object):
                                                             totalTime))
 
         return validDates
+
+    def _createObservingBlock(self, startDate, endDate):
+        """Creates an observing block from start and end dates. Mainly for the
+        plugger."""
+
+        tmpPlan = self.plan.copy()
+        tmpPlan.add_row((int(startDate), startDate, endDate, -1, -1))
+
+        totalTime = (endDate - startDate) * 24.
+        log.info(('1 block (days) selected, '
+                  'making a total of {0:.2f} hours').format(totalTime))
+
+        return table.Table(tmpPlan[len(tmpPlan)-1])
 
     def getRun(self, startDate=None):
 
