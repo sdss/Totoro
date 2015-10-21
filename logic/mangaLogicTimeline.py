@@ -46,11 +46,9 @@ def getOptimalPlate(plates, jdRanges, prioritisePlugged=True,
                 notPlugged.append(plate)
 
         if len(pluggedPlates) > 0:
-            observedFlag = simulatePlates(pluggedPlates, jdRanges, mode=mode)
-            if observedFlag is True:
-                optimal = selectOptimal(pluggedPlates, jdRanges)
-                cleanupPlates(pluggedPlates, optimal)
-                return optimal
+            return getOptimalPlate(pluggedPlates, jdRanges,
+                                   prioritisePlugged=False, mode=mode,
+                                   **kwargs)
     else:
         notPlugged = incompletePlates
 
