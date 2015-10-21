@@ -30,6 +30,10 @@ class TestPlugger(unittest.TestCase):
 
         with session.begin(subtransactions=True):
 
+            # Saves the list of active pluggings
+            self.originalActivePluggings = session.query(
+                db.plateDB.ActivePlugging).all()
+
             plate8550 = session.query(db.plateDB.Plate).filter(
                 db.plateDB.Plate.plate_id == 8550).one()
             plate8550.plate_pointings[0].priority = 5
@@ -50,6 +54,17 @@ class TestPlugger(unittest.TestCase):
             plate7443 = session.query(db.plateDB.Plate).filter(
                 db.plateDB.Plate.plate_id == 7443).one()
             plate7443.plate_pointings[0].priority = 1
+
+            # Restores the list of active pluggings
+            activePluggings = session.query(db.plateDB.ActivePlugging).all()
+            for actPlug in activePluggings:
+                session.delete(actPlug)
+
+            for originalActivePlugging in self.originalActivePluggings:
+                pk = originalActivePlugging.pk
+                plugging_pk = originalActivePlugging.plugging_pk
+                session.add(db.plateDB.ActivePlugging(pk=pk,
+                                                      plugging_pk=plugging_pk))
 
     def test57157(self):
         """Tests Plugger with MJD=57157."""
@@ -86,6 +101,39 @@ class TestPlugger(unittest.TestCase):
              ('cart_order', [9, 8, 7, 2, 6, 3, 1, 4, 5])])
 
         self.assertEqual(validResult, plugger.getASOutput())
+
+    def testCartOrder(self):
+        """Tests the cart order returned by the Plugger."""
+
+        # Sets a custom list of active pluggings.
+        with session.begin(subtransactions=True):
+
+            for actPlug in self.originalActivePluggings:
+                session.delete(actPlug)
+
+            session.add(db.plateDB.ActivePlugging(plugging_pk=68904, pk=2))
+            session.add(db.plateDB.ActivePlugging(plugging_pk=70003, pk=1))
+            session.add(db.plateDB.ActivePlugging(plugging_pk=70124, pk=3))
+
+        # Calls the Plugger without dates
+        plugger = Plugger(startDate=None, endDate=None)
+
+        self.assertEqual(plugger.getASOutput()['cart_order'],
+                         [9, 8, 7, 4, 5, 6, 3, 2, 1])
+
+        # Restores list of original active plugging. For extra safety, this is
+        # also done in tearDown.
+        with session.begin(subtransactions=True):
+
+            activePluggings = session.query(db.plateDB.ActivePlugging).all()
+            for actPlug in activePluggings:
+                session.delete(actPlug)
+
+            for originalActivePlugging in self.originalActivePluggings:
+                pk = originalActivePlugging.pk
+                plugging_pk = originalActivePlugging.plugging_pk
+                session.add(db.plateDB.ActivePlugging(pk=pk,
+                                                      plugging_pk=plugging_pk))
 
 
 if __name__ == '__main__':
