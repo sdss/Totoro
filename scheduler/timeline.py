@@ -14,10 +14,8 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-import warnings
 from astropy.time import Time
-from sdss.internal.manga.Totoro import config, log, site, TotoroDBConnection
-from sdss.internal.manga.Totoro.exceptions import TotoroUserWarning
+from sdss.internal.manga.Totoro import log, TotoroDBConnection
 from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro import logic
 import numpy as np
@@ -89,10 +87,26 @@ class Timeline(object):
             self.unallocatedPlateWindow = utils.removeInterval(
                 self.unallocatedPlateWindow, jdRangePlate, wrapAt=None)
 
-    def schedule(self, plates, mode='plugger', force=False,
+    @property
+    def remainingTime(self):
+        """Returns the amount of unallocated time, in hours."""
+        unallocatedExps = np.atleast_2d(self.unallocatedExps)
+        if unallocatedExps.size == 0:
+            return 0
+        unallocatedTime = 0.0
+        for interval in unallocatedExps:
+            unallocatedTime += (interval[1]-interval[0])
+        return unallocatedTime * 24.
+
+    def schedule(self, plates=None, mode='plugger', force=False,
                  **kwargs):
         """Schedules a list of plates in the LST ranges not yet observed in the
         timeline."""
+
+        self._plates = []
+
+        plates = self._plates if plates is None else plates
+        platesCopy = list(plates)
 
         prioritisePlugged = True if mode == 'plugger' else False
 
@@ -102,12 +116,12 @@ class Timeline(object):
                           len(plates), mode, force))
 
         if not force:
-            plates = [plate for plate in plates if not plate.isComplete]
+            plates = [plate for plate in platesCopy if not plate.isComplete]
 
-        while self.unallocatedExps.size > 0 and len(plates) > 0:
+        while self.remainingTime > 0 and len(plates) > 0:
 
             optimalPlate = logic.getOptimalPlate(
-                plates, self.unallocatedExps,
+                platesCopy, self.unallocatedExps,
                 prioritisePlugged=prioritisePlugged)
 
             if optimalPlate is None:
@@ -115,56 +129,13 @@ class Timeline(object):
             else:
                 self._plates.append(optimalPlate)
                 self.allocateJDs(plates=[optimalPlate])
-                plates.remove(optimalPlate)
+                platesCopy.remove(optimalPlate)
 
-        if len(plates) > 0 and force:
+        if len(platesCopy) > 0 and force:
             self.allocateJDs(plates)
             self._plates += plates
 
-        if self.unallocatedExps.size == 0:
+        if self.remainingTime == 0:
             return True
         else:
             return False
-
-    # def schedule(self, mode='planner', **kwargs):
-
-    #     log.info('scheduling timeline with JD0={0:.4f}, JD1={1:.4f}'
-    #              .format(self.startTime, self.endTime))
-
-    #     currentTime = self.startTime
-    #     remainingTime = utils.JDdiff(currentTime, self.endTime)
-
-    #     # expTime = (config['exposure']['exposureTime'] /
-    #     #            config[mode]['efficiency'])
-
-    #     nCart = 1
-    #     totalCarts = config[mode]['nCarts']
-
-    #     while remainingTime >= 0. and nCart <= totalCarts:
-
-    #         log.info('... simulating plates for {0:.5f}'.format(currentTime))
-
-    #         optimalPlate = logic.getOptimalPlate(
-    #             self._plates, currentTime, self.endTime,
-    #             mode=mode, **kwargs)
-
-    #         if optimalPlate is None:
-
-    #             warnings.warn('no valid plates found at JD={0:.4f} '
-    #                           '(timeline ends at JD={1:.4f})'.format(
-    #                               currentTime, self.endTime),
-    #                           TotoroUserWarning)
-    #             currentTime += config['exposure']['exposureTime'] / 86400.
-
-    #         else:
-
-    #             nCart += 1
-    #             currentTime = optimalPlate.getLastExposure().getJD()[1]
-
-    #         remainingTime = utils.JDdiff(currentTime, self.endTime)
-
-    #     if nCart > totalCarts:
-    #         warnings.warn('run out of cart with {0} seconds remaining'
-    #                       .format(remainingTime), TotoroUserWarning)
-
-    #     return

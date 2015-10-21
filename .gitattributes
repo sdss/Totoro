@@ -9,8 +9,9 @@ core/logger.py -text
 core/setupTools.py -text
 data/FinalSchedAPO.dat -text
 data/Sch_base.6yrs.txt.frm.dat -text
-data/drilledMaNGATiles.dat -text
 data/finalTilingCatalogue_v0.5.fits -text
+data/platesIgnore.dat -text
+data/tilesBeingDrilled.dat -text
 data/tmpSchedule.dat -text
 dbclasses/__init__.py -text
 dbclasses/exposure.py -text
@@ -36,6 +37,7 @@ output/tabularOutput.py -text
 /readPath.py -text
 scheduler/__init__.py -text
 scheduler/observingPlan.py -text
+scheduler/planner.py -text
 scheduler/plugger.py -text
 scheduler/scheduler.py -text
 scheduler/timeline.py -text

@@ -15,11 +15,10 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro.exceptions import TotoroError
-from sdss.internal.manga.Totoro.scheduler.timeline import Timelines
-from sdss.internal.manga.Totoro.scheduler.plugger import PluggerScheduler
 from sdss.internal.manga.Totoro import log, site
-from sdss.internal.manga.Totoro.scheduler import observingPlan
-from astropy import table
+from observingPlan import ObservingPlan
+from plugger import PluggerScheduler
+from planner import PlannerScheduler
 from astropy import time
 
 
@@ -33,11 +32,12 @@ class BaseScheduler(object):
 
     def __init__(self, startDate=None, endDate=None, **kwargs):
 
-        if observingPlan is None:
+        self._observingPlan = ObservingPlan()
+
+        if self._observingPlan is None:
             raise TotoroError('observing plan not found. Not possible to '
                               'create an instance of BaseScheduler.')
 
-        self._observingPlan = observingPlan
         self.site = site
         self._setStartEndDate(startDate, endDate, **kwargs)
 
@@ -54,8 +54,10 @@ class BaseScheduler(object):
         """Sets the start and end date if they haven't been defined."""
 
         if scope == 'planner':
+            if startDate is None:
+                startDate = time.Time.now().jd
             if startDate is None or endDate is None:
-                raise TotoroError('planner requires both start and end dates.')
+                raise TotoroError('planner end date.')
 
         elif scope == 'nightly':
             if startDate is None or endDate is None:
@@ -83,48 +85,52 @@ class Planner(BaseScheduler):
                                       endDate=endDate, scope='planner',
                                       **kwargs)
 
-        self.fields = self.getFields(**kwargs)
+        self._plannerScheduler = PlannerScheduler(self.observingBlocks)
+        self._plannerScheduler.schedule(**kwargs)
 
-    def getFields(self, rejectDrilled=True, **kwargs):
-        """Gets a table with the fields that can be scheduled."""
+    #     self.fields = self.getFields(**kwargs)
 
-        from sdss.internal.manga.Totoro import dbclasses
+    # def getFields(self, rejectDrilled=True, **kwargs):
+    #     """Gets a table with the fields that can be scheduled."""
 
-        log.info('finding fields with rejectDrilled={0}'.format(rejectDrilled))
-        fields = dbclasses.Fields(rejectDrilled=rejectDrilled, **kwargs)
+    #     from sdss.internal.manga.Totoro import dbclasses
 
-        return fields
+    #     log.info('finding fields with rejectDrilled={0}'
+    #              .format(rejectDrilled))
+    #     fields = dbclasses.Fields(rejectDrilled=rejectDrilled, **kwargs)
 
-    def getExposures(self):
-        """Returns a table with the simulated exposures."""
+    #     return fields
 
-        if not hasattr(self, 'timelines'):
-            raise TotoroError('scheduleTimelines must be run before '
-                              'getExposures')
+    # def getExposures(self):
+    #     """Returns a table with the simulated exposures."""
 
-        tableExposures = table.Table(None,
-                                     names=['manga_tileid', 'RA',
-                                            'Dec', 'JD0', 'JD1'],
-                                     dtype=[int, float, float, float, float])
+    #     if not hasattr(self, 'timelines'):
+    #         raise TotoroError('scheduleTimelines must be run before '
+    #                           'getExposures')
 
-        for field in self.fields:
-            for exposure in field.getValidExposures():
-                if exposure._tmp is True:
-                    continue
-                JD0, JD1 = exposure.getJD()
-                tableExposures.add_row((field.manga_tileid, field.ra,
-                                        field.dec, JD0, JD1))
+    #     tableExposures = table.Table(None,
+    #                                  names=['manga_tileid', 'RA',
+    #                                         'Dec', 'JD0', 'JD1'],
+    #                                  dtype=[int, float, float, float, float])
 
-        tableExposures.sort('JD0')
+    #     for field in self.fields:
+    #         for exposure in field.getValidExposures():
+    #             if exposure._tmp is True:
+    #                 continue
+    #             JD0, JD1 = exposure.getJD()
+    #             tableExposures.add_row((field.manga_tileid, field.ra,
+    #                                     field.dec, JD0, JD1))
 
-        return tableExposures
+    #     tableExposures.sort('JD0')
 
-    def scheduleTimelines(self):
-        """Creates simulated timelines for the observing blocks."""
+    #     return tableExposures
 
-        self.timelines = Timelines(
-            self.observingBlocks, plates=self.fields, mode='planner')
-        self.timelines.schedule()
+    # def scheduleTimelines(self):
+    #     """Creates simulated timelines for the observing blocks."""
+
+    #     self.timelines = Timelines(
+    #         self.observingBlocks, plates=self.fields, mode='planner')
+    #     self.timelines.schedule()
 
 
 class Plugger(object):

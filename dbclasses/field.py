@@ -27,17 +27,27 @@ db = Totoro.TotoroDBConnection()
 session = db.Session()
 
 
+def getTilingCatalogue(tilingCatalogue=None):
+    tilingCatalogue = Totoro.readPath(
+        Totoro.config['fields']['tilingCatalogue']) \
+        if tilingCatalogue is None else Totoro.readPath(
+            tilingCatalogue)
+
+    if not os.path.exists(tilingCatalogue):
+            raise TotoroError('tiling catalogue {0} does not exist.'
+                              .format(os.path.realpath(tilingCatalogue)))
+
+    tiles = table.Table.read(tilingCatalogue)
+
+    return tiles
+
+
 class Fields(list):
 
     def __init__(self, tilingCatalogue=None, rejectDrilled=True, silent=False,
                  **kwargs):
 
-        self.tilingCatalogue = Totoro.readPath(
-            Totoro.config['fields']['tilingCatalogue']) \
-            if tilingCatalogue is None else Totoro.readPath(
-                tilingCatalogue)
-
-        self._tiles = self._getTiles(**kwargs)
+        self._tiles = getTilingCatalogue(tilingCatalogue=tilingCatalogue)
 
         mockFields = []
         for tile in self._tiles:
@@ -57,39 +67,38 @@ class Fields(list):
         if rejectDrilled:
             self._rejectDrilled(silent=silent, **kwargs)
 
-    def _getTiles(self, **kwargs):
-
-        if not os.path.exists(self.tilingCatalogue):
-            raise TotoroError('tiling catalogue {0} does not exist.'
-                              .format(os.path.realpath(self.tilingCatalogue)))
-
-        tiles = table.Table.read(self.tilingCatalogue)
-
-        return tiles
-
     def _rejectDrilled(self, silent=False, rejectMode='manga_tileid',
                        **kwargs):
         """Rejects plates in self that have been drilled. rejectMode is a
         placeholder for future functionality when fields might be rejected
         based on the coordinates of drilled plates."""
 
-        allDrilledDB = plate.Plates.getAll(onlyIncomplete=False, silent=True,
-                                           updateSets=False)
+        plates = plate.getAll(onlyIncomplete=False, silent=True,
+                              updateSets=False)
 
-        mangaTileIDs = map(lambda xx: xx.getMangaTileID(), allDrilledDB)
+        alreadyDrilled = []
+        for pp in plates:
+            inputFP = pp.design.inputs[0].filepath
+            try:
+                mangaTileID = int(inputFP.split('_')[1])
+                alreadyDrilled.append(mangaTileID)
+            except:
+                pass
 
-        if Totoro.config['fields']['drilledTiles'] is None or \
-                Totoro.config['fields']['drilledTiles'].lower() == 'none':
-            pass
-        else:
-            extraDrilled = open(
-                Totoro.readPath(Totoro.config['fields']['drilledTiles']),
-                'r').read().splitlines()
-            for mangaTileID in extraDrilled:
-                mangaTileIDs.append(int(mangaTileID))
+        # mangaTileIDs = map(lambda xx: xx.getMangaTileID(), allDrilledDB)
+
+        # if Totoro.config['fields']['drilledTiles'] is None or \
+        #         Totoro.config['fields']['drilledTiles'].lower() == 'none':
+        #     pass
+        # else:
+        #     extraDrilled = open(
+        #         Totoro.readPath(Totoro.config['fields']['drilledTiles']),
+        #         'r').read().splitlines()
+        #     for mangaTileID in extraDrilled:
+        #         mangaTileIDs.append(int(mangaTileID))
 
         nRemoved = 0
-        for mangaTileID in mangaTileIDs:
+        for mangaTileID in alreadyDrilled:
             result = self.removeField(mangaTileID)
             if result:
                 nRemoved += 1

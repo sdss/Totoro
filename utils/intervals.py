@@ -63,7 +63,7 @@ def isPointInInterval(point, ival, wrapAt=360):
     """Returns True if point in interval."""
 
     if wrapAt is None:
-        return (point - ival[0]) <= (ival[1] - ival[0])
+        return point >= ival[0] and point <= ival[1]
     else:
         return (point - ival[0]) % wrapAt <= (ival[1] - ival[0]) % wrapAt
 
@@ -160,7 +160,7 @@ def getIntervalFromPoints(points, wrapAt=360.):
 
     lengths = np.array(
         [intervalLength(interval) for interval in validExtremes])
-    # print(validExtremes, lengths)
+
     return validExtremes[np.argmin(lengths)]
 
 
@@ -168,6 +168,9 @@ def removeInterval(master, interToRemove, wrapAt=360.):
     """Removes an interval within another interval or set of intervals"""
 
     master = np.atleast_2d(master)
+
+    if master.size == 0:
+        return master
 
     if master.shape[0] == 1:
         if isIntervalInsideOther(master[0], interToRemove, wrapAt=wrapAt):
@@ -184,7 +187,7 @@ def removeInterval(master, interToRemove, wrapAt=360.):
             continue
 
         if intersection[0] == interval[0] and intersection[1] == interval[1]:
-            continue
+            pass
         elif intersection[0] == interval[0]:
             newMaster.append([intersection[1], interval[1]])
         elif intersection[1] == interval[1]:
