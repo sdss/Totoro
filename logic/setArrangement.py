@@ -24,6 +24,7 @@ from scipy.misc import factorial
 import collections
 import warnings
 import numpy as np
+import time
 
 
 def updatePlate(plate, **kwargs):
@@ -196,8 +197,9 @@ def rearrangeSets(plate, **kwargs):
     """Assigns a set to each exposure for a given plate. Overwrites any current
     assignment"""
 
-    log.info('plate_id={0}: reorganising sets'.format(plate.plate_id))
+    log.info('plate_id={0}: rearranging sets'.format(plate.plate_id))
 
+    t0 = time.time()
     optimalArrangement = getOptimalArrangement(plate, **kwargs)
 
     if optimalArrangement is False:
@@ -211,8 +213,9 @@ def rearrangeSets(plate, **kwargs):
 
     removeOrphanSets()
 
-    log.info('plate_id={0}: rearrangement was successful'.format(
-             plate.plate_id))
+    t1 = time.time()
+    log.info('plate_id={0}: rearrangement was successful (took {1:.5f}s).'
+             .format(plate.plate_id, t1-t0))
 
     return True
 
@@ -290,6 +293,9 @@ def getNumberPermutations(ditherPositions):
     """Estimates the number of permutations to check for a certain list of
     dithered positions."""
 
+    if len(ditherPositions) == 0:
+        return 0
+
     repDict = collections.defaultdict(int)
     for cc in ditherPositions:
         repDict[cc] += 1
@@ -303,11 +309,14 @@ def getNumberPermutations(ditherPositions):
 
 
 def getOptimalArrangement(plate, startDate=None,
-                          expLimit=config['setArrangement']['exposureLimit'],
+                          permutationLimit=None,
                           forceLimit=False, **kwargs):
     """Gets the best possible arrangement for the exposures in a plate."""
 
     from sdss.internal.manga.Totoro import dbclasses
+
+    permutationLimit = config['setArrangement']['permutationLimit'] \
+        if permutationLimit is None else permutationLimit
 
     exposures = [dbclasses.Exposure(exp.pk, parent='mangaDB', silent=True)
                  for exp in plate.getMangadbExposures()]
@@ -321,22 +330,24 @@ def getOptimalArrangement(plate, startDate=None,
             invalidExposures.append(exposure)
 
     if len(validExposures) == 0:
+        log.info('no exposures to be rearranged')
         return False
 
-    if len(validExposures) > expLimit:
+    ditherPositions = [exp.ditherPosition for exp in validExposures]
+    nPermutations = getNumberPermutations(ditherPositions)
+
+    if nPermutations > permutationLimit:
         if forceLimit is False:
-            log.info('plate_id={0}: hard limit for number of exposures '
+            log.info('plate_id={0}: hard limit for number of permutations '
                      'in rearrangement ({1}) reached. Not rearranging.'.format(
-                         plate.plate_id, expLimit))
+                         plate.plate_id, permutationLimit))
             return False
         else:
-            log.info('plate_id={0}: hard limit for number of exposures '
+            log.info('plate_id={0}: hard limit for number of permutations '
                      'in rearrangement reached but ignoring because '
                      'forceLimit=True.'.format(plate.plate_id))
 
-    ditherPositions = [exp.ditherPosition for exp in validExposures]
     permutations = calculatePermutations(ditherPositions)
-    nPermutations = getNumberPermutations(ditherPositions)
 
     log.info('plate_id={0}: testing {1} combinations for {2} exposures. '
              'This might take a while.'
@@ -350,6 +361,11 @@ def getOptimalArrangement(plate, startDate=None,
     plates = []
     setQuality = {}
     completion = []
+
+    # Counts the actual number of permutations, from the iterator.
+    # For testing purposes.
+    permutationCounter = 0
+
     for nn, permutation in enumerate(permutations):
 
         sets = []
@@ -394,6 +410,10 @@ def getOptimalArrangement(plate, startDate=None,
 
         if (nn+1)*100./nPermutations % 10 == 0:
             log.info('{0:d}% completed'.format(int((nn+1)*100./nPermutations)))
+
+        permutationCounter += 1
+
+    log.info('{0} permutations tested.'.format(permutationCounter))
 
     maxCompletion = np.max(completion)
     completion = np.array(completion)
@@ -479,7 +499,6 @@ def calculatePermutations(inputList):
 
     splitPairs = [list(bb) for aa, bb in itertools.groupby(
                   pairs, lambda value: value[1])]
-
     sortedPairs = sorted(splitPairs, key=lambda xx: len(xx))[::-1]
 
     indicesSeed = [[element[0] for element in sP] for sP in sortedPairs]
@@ -488,8 +507,12 @@ def calculatePermutations(inputList):
         if len(ii) < np.max(nExpPerDither):
             ii += [None] * (np.max(nExpPerDither)-len(ii))
 
-    indices = [[tuple(indicesSeed[0])]]
-    indices += [list(itertools.permutations(idx)) for idx in indicesSeed[1:]]
+    if len(indicesSeed) > 0:
+        indices = [[tuple(indicesSeed[0])]]
+        indices += [list(itertools.permutations(idx))
+                    for idx in indicesSeed[1:]]
+    else:
+        indices = []
 
     cartesianProduct = itertools.product(*indices)
     for prod in cartesianProduct:

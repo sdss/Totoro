@@ -284,6 +284,7 @@ class Plate(plateDB.Plate):
             self, startDate=startDate, **kwargs)
         if result is True:
             self.update()
+        return result
 
     @property
     def ra(self):
@@ -618,3 +619,18 @@ class Plate(plateDB.Plate):
                   np.cos(np.deg2rad(HA)))
 
         return np.rad2deg(np.arcsin(sinAlt))
+
+    def getNumberPermutations(self):
+        """Returns the number of permutations for a brute-force set
+        rearrangement."""
+
+        validExposures = self.getValidExposures()
+        ditherPositions = [exp.ditherPosition for exp in validExposures]
+        return logic.setArrangement.getNumberPermutations(ditherPositions)
+
+    def getPermutations(self):
+        """Returns the permutations for a brute-force set rearrangement."""
+
+        validExposures = self.getValidExposures()
+        ditherPositions = [exp.ditherPosition for exp in validExposures]
+        return logic.setArrangement.calculatePermutations(ditherPositions)

@@ -94,7 +94,7 @@ set:
     ditherPositions: ['N', 'S', 'E']
 
 setArrangement:
-    exposureLimit: 15
+    permutationLimit: 600000
     forceRearrangementMinExposures: 3
 
 carts: [1, 2, 3, 4]
