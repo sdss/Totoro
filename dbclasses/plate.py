@@ -63,7 +63,7 @@ def getPlugged(onlyIncomplete=False, **kwargs):
 
 def getAtAPO(onlyIncomplete=False, onlyMarked=False,
              rejectLowPriority=False, raRange=None,
-             **kwargs):
+             rejectSpecial=True, **kwargs):
     """Gets plates at APO with various conditions."""
 
     minimumPriority = config['plugger']['noPlugPriority']
@@ -104,6 +104,10 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
             plates = plates.join(plateDB.PlatePointing).filter(
                 plateDB.PlatePointing.priority > minimumPriority)
 
+        if rejectSpecial:
+            plates = plates.join(mangaDB.Plate).filter(
+                mangaDB.Plate.special_plate == 'False')
+
         plates = plates.order_by(plateDB.Plate.plate_id).all()
 
     if onlyIncomplete:
@@ -112,14 +116,20 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
         return Plates(plates, **kwargs)
 
 
-def getAll(onlyIncomplete=False, **kwargs):
+def getAll(onlyIncomplete=False, rejectSpecial=False, **kwargs):
 
     with session.begin(subtransactions=True):
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
             ).filter(plateDB.Survey.label == 'MaNGA',
                      plateDB.SurveyMode.label == 'MaNGA dither').order_by(
-                plateDB.Plate.plate_id).all()
+                plateDB.Plate.plate_id)
+
+    if rejectSpecial:
+        plates = plates.join(mangaDB.Plate).filter(
+            mangaDB.Plate.special_plate == 'False')
+
+    plates = plates.all()
 
     if onlyIncomplete:
         return _getIncomplete(plates, **kwargs)

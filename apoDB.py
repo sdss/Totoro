@@ -54,7 +54,7 @@ class TotoroDBConnection(object):
         # Intial database connection creation and instances to be exported.
         self.db = DatabaseConnection(
             database_connection_string=self.databaseConnectionString,
-            expire_on_commit=False)
+            expire_on_commit=True)
 
         self.engine = self.db.engine
         self.metadata = self.db.metadata

@@ -381,12 +381,15 @@ def getOptimalArrangement(plate, LST=None,
 
     plates = []
     setQuality = {}
+    setSN2 = {}
     completion = []
 
     # Counts the actual number of permutations, from the iterator.
     # For testing purposes.
     permutationCounter = 0
-    setRearrangementFactor = config['set']['setRearrangementFactor']
+    setRearrFactor = config['set']['setRearrangementFactor']
+
+    zeroSN2 = np.array([0.0, 0.0, 0.0, 0.0])
 
     for nn, permutation in enumerate(permutations):
 
@@ -405,21 +408,13 @@ def getOptimalArrangement(plate, LST=None,
             setId = getSetId(set)
             if setId not in setQuality:
                 setQuality[setId] = set.getQuality(silent=True)[0]
-
-        del set
-
-        ra, dec = sets[-1].getCoordinates()
-        mockPlate = dbclasses.Plate.fromSets(sets, ra=ra, dec=dec, dust=None,
-                                             silent=True)
+                setSN2[setId] = set.getSN2Array() \
+                    if setQuality[setId] in ['Excellent', 'Good'] \
+                    else zeroSN2
 
         # Instead of using Plate.getPlateCompletion, we calculate the plate
-        # completion here using the setQuality dictionary. Way faster this
-        # way.
-        plateSN2 = np.nansum(
-            [set.getSN2Array()
-             if setQuality[getSetId(set)] in ['Excellent', 'Good']
-             else np.array([0.0, 0.0, 0.0, 0.0])
-             for set in sets], axis=0)
+        # completion here using the setQuality dictionary. Way faster this way.
+        plateSN2 = np.nansum([setSN2[getSetId(ss)] for ss in sets], axis=0)
 
         blueSN2 = np.nanmean(plateSN2[0:2])
         blueCompletion = blueSN2 / config['SN2thresholds']['plateBlue']
@@ -428,12 +423,12 @@ def getOptimalArrangement(plate, LST=None,
         plateCompletion = np.min([blueCompletion, redCompletion])
 
         if (len(completion) == 0 or
-                plateCompletion >=
-                setRearrangementFactor * np.max(completion)):
+                plateCompletion >= setRearrFactor * np.max(completion)):
+            ra, dec = sets[-1].getCoordinates()
+            mockPlate = dbclasses.Plate.fromSets(sets, ra=ra, dec=dec,
+                                                 dust=None, silent=True)
             plates.append(mockPlate)
             completion.append(plateCompletion)
-
-        del mockPlate
 
         if (nn+1)*100./nPermutations % 10 == 0:
             log.info('{0:d}% completed'.format(int((nn+1)*100./nPermutations)))
@@ -447,21 +442,20 @@ def getOptimalArrangement(plate, LST=None,
     plates = np.array(plates)
 
     # Selects plates that have 0.9 the maximum completion or higher
-    validPlates = plates[completion >= setRearrangementFactor * maxCompletion]
+    validPlates = plates[completion >= setRearrFactor * maxCompletion]
     validCompletion = completion[completion >=
-                                 setRearrangementFactor * maxCompletion]
+                                 setRearrFactor * maxCompletion]
     sortCompletion = np.argsort(validCompletion)[::-1]
     del plates
 
     maxPlates = [validPlates[idx] for idx in sortCompletion]
     log.debug('{0} plates with completion > {1:.1f}*maxCompletion'.format(
-              len(maxPlates), setRearrangementFactor))
+              len(maxPlates), setRearrFactor))
 
     # For the selected plates, checks if they have bad sets and, in that case
     # breaks them into incomplete sets.
     for maxPlate in maxPlates:
-        maxPlateSetQuality = [setQuality[getSetId(set)]
-                              for set in maxPlate.sets]
+        maxPlateSetQuality = [setQuality[getSetId(ss)] for ss in maxPlate.sets]
         if 'Bad' in maxPlateSetQuality:
             maxPlate = fixBadSets(maxPlate, setQuality=maxPlateSetQuality)
 
