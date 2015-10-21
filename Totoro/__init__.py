@@ -2,6 +2,8 @@
 
 import warnings
 warnings.filterwarnings('ignore', module='astropy.time.core')
+warnings.filterwarnings(
+    'ignore', 'Module argparse was already imported')
 
 from .core.setupTools import generateVersion
 from .exceptions import TotoroError
@@ -24,5 +26,7 @@ except:
     raise TotoroError('Impossible to connect to plateDB.')
 
 from .scheduler.scheduler import BaseScheduler, Planner
+from .core import defaults
+from .scheduler import *
 
-__ALL__ = ['db', 'Base', 'session', 'log', 'Scheduler']
+__ALL__ = ['db', 'Base', 'session', 'log', 'Scheduler', 'defaults']

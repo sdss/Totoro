@@ -91,7 +91,7 @@ class ConfigObject(object):
         try:
             return eval(value)
         except:
-            return str(value)
+            return value
 
     def _readConfigParser(self):
         """Reads Totoro configuration file, if any."""

@@ -20,22 +20,24 @@ CREATE TABLE set_status (pk SERIAL PRIMARY KEY NOT NULL,
 CREATE TABLE exposure_status (pk SERIAL PRIMARY KEY NOT NULL,
     label TEXT);
 
-CREATE TABLE plate (pk SERIAL PRIMARY KEY NOT NULL,
-    plate_status_pk INTEGER, platedb_plate_pk INTEGER,
-    tile_pk INTEGER);
+CREATE TABLE field (pk SERIAL PRIMARY KEY NOT NULL,
+    name TEXT, center_ra REAL, center_dec REAL,
+    location_id INTEGER, expected_no_visits INTEGER,
+    shared BOOLEAN DEFAULT FALSE, field_type_pk INTEGER,
+    field_length_pk INTEGER);
 
-CREATE TABLE plate_status (pk SERIAL PRIMARY KEY NOT NULL, label TEXT);
+CREATE TABLE field_type (pk SERIAL PRIMARY KEY NOT NULL,
+    label TEXT);
 
-CREATE TABLE tile (pk SERIAL PRIMARY KEY NOT NULL,
-    id INTEGER, ra_centre REAL, dec_centre REAL,
-    name TEXT, priority INTEGER DEFAULT 4, platedb_tile_pk INTEGER);
-
-CREATE TABLE survey_mode (pk SERIAL PRIMARY KEY NOT NULL,
+CREATE TABLE field_length (pk SERIAL PRIMARY KEY NOT NULL,
     label TEXT);
 
 CREATE TABLE data_cube (pk SERIAL PRIMARY KEY NOT NULL,
     plate_pk INTEGER, r1_sn2 REAL, r2_sn2 REAL, b1_sn2 REAL,
     b2_sn2 REAL);
+
+CREATE TABLE field_to_plate (pk SERIAL PRIMARY KEY NOT NULL,
+    field_pk INTEGER, plate_pk INTEGER);
 
 CREATE TABLE spectrum (pk SERIAL PRIMARY KEY NOT NULL,
     data_cube_pk INTEGER, fiber INTEGER, exposure REAL, ifu_no INTEGER);
@@ -64,29 +66,19 @@ ALTER TABLE ONLY set
     REFERENCES set_status(pk)
     ON UPDATE CASCADE ON DELETE CASCADE;
 
-ALTER TABLE ONLY plate
-    ADD CONSTRAINT plate_status_fk FOREIGN KEY (plate_status_pk)
-    REFERENCES plate_status(pk)
+ALTER TABLE ONLY field
+    ADD CONSTRAINT field_type_fk FOREIGN KEY (field_type_pk)
+    REFERENCES field_type(pk)
     ON UPDATE CASCADE ON DELETE CASCADE;
 
-ALTER TABLE ONLY plate
-    ADD CONSTRAINT tile_fk FOREIGN KEY (tile_pk)
-    REFERENCES tile(pk)
-    ON UPDATE CASCADE ON DELETE CASCADE;
-
-ALTER TABLE ONLY plate
-    ADD CONSTRAINT platedb_plate_fk FOREIGN KEY (platedb_plate_pk)
-    REFERENCES platedb.plate(pk)
-    ON UPDATE CASCADE ON DELETE CASCADE;
-
-ALTER TABLE ONLY tile
-    ADD CONSTRAINT platedb_tile_fk FOREIGN KEY (platedb_tile_pk)
-    REFERENCES platedb.tile(pk)
+ALTER TABLE ONLY field
+    ADD CONSTRAINT field_length_fk FOREIGN KEY (field_length_pk)
+    REFERENCES field_length(pk)
     ON UPDATE CASCADE ON DELETE CASCADE;
 
 ALTER TABLE ONLY data_cube
-    ADD CONSTRAINT plate_fk FOREIGN KEY (plate_pk)
-    REFERENCES plate(pk)
+    ADD CONSTRAINT platedb_plate_fk FOREIGN KEY (plate_pk)
+    REFERENCES platedb.plate(pk)
     ON UPDATE CASCADE ON DELETE CASCADE;
 
 ALTER TABLE ONLY spectrum
@@ -94,8 +86,15 @@ ALTER TABLE ONLY spectrum
     FOREIGN KEY (data_cube_pk) REFERENCES data_cube(pk)
     ON UPDATE CASCADE ON DELETE CASCADE;
 
+ALTER TABLE ONLY field_to_plate
+    ADD CONSTRAINT field_fk
+    FOREIGN KEY (field_pk) REFERENCES field(pk)
+    ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY field_to_plate
+    ADD CONSTRAINT field_to_plate_plate_fk
+    FOREIGN KEY (plate_pk) REFERENCES platedb.plate(pk)
+    ON UPDATE CASCADE ON DELETE CASCADE;
+
 INSERT INTO set_status VALUES (0, 'Incomplete'), (1, 'Excellent'), (2, 'Good'), (3, 'Poor');
 INSERT INTO exposure_status VALUES (0, 'Good'), (1, 'Bad');
-INSERT INTO plate_status VALUES (0, 'Incomplete'), (1, 'Complete'),
-    (2, 'Force Incomplete'), (3, 'Force Complete');
-INSERT INTO survey_mode VALUES (0, 'MaNGA Dither'), (1, 'APOGEE Lead'), (2, 'Testing');

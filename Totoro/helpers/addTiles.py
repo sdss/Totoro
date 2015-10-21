@@ -5,51 +5,62 @@ mangaDB from a tiling catalogue.
 """
 
 from __future__ import print_function
-from ..plateDB.dataModel import *
-from ..exceptions import TotoroError
+from ..plateDB.dataModel import MangaDB_Field, db, session
+# from ..exceptions import TotoroError
+from astropy import table
+import numpy as np
 
+engine = db.engine
 
 __all__ = ['addFromTilingCatalogue']
 
-
 # Grouping values for different indexes and keys
-TILE_ID_ROOT = 20000
+TILE_ID_ROOT = 0
 
 
-def addFromTilingCatalogue(catalogue):
+def addFromTilingCatalogue(catalogue, isSample=True):
     """Reads a tiling catalogue and adds the information to plateDB.
 
-    This function reads a tiling catalogue and uptates plateDB to include
-    the tiles as plates in design phase.
+    This function reads a sample or tiling catalogue and uptates mangaDB.field.
 
     """
 
+    if not isSample:
+        catData = readTilingCatalogue(catalogue)
+    else:
+        catData = readSampleCatalogue(catalogue)
+
     session.rollback()
-    catData = readTilingCatalogue(catalogue)
 
     for tile in catData:
-        addTile(tile, commit=False)
+        addTiles(catData, commit=False)
     session.commit()
 
 
-def addTile(tile, commit=True):
-    """Adds a single tile to the database."""
+def addTiles(tiles, commit=True):
+    """Adds fields to the database."""
 
-    tileID = TILE_ID_ROOT + tile['ID']
-    RA = tile['RA']
-    Dec = tile['Dec']
+    data = []
 
-    qq = session.query(MangaDB_Tile).filter(MangaDB_Tile.id == tileID)
+    for tile in tiles:
 
-    if qq.count() == 1:
-        qq.update(dict(id=tileID, ra_centre=RA, dec_centre=Dec))
+        tileID = TILE_ID_ROOT + tile['LOCATIONID']
+        RA = tile['PLATERA']
+        Dec = tile['PLATEDEC']
+        expectedNOfVisits = 1
+        shared = False
+        name = 'Tile {0:d}'.format(int(tileID))
 
-    elif qq.count() == 0:
-        session.add(MangaDB_Tile(id=tileID, ra_centre=RA, dec_centre=Dec))
-    else:
-        raise TotoroError('Trying to add tile ID {0} but '.format(tileID) +
-                          'more than one row in mangaDB.tile ' +
-                          'already have that ID.')
+        dd = dict(
+            name=name, center_ra=RA, center_dec=Dec,
+            location_id=tileID,
+            expected_no_visits=expectedNOfVisits,
+            shared=shared)
+
+        data.append(dd)
+
+    engine.execute(
+        MangaDB_Field.__table__.insert(), data)
 
     if commit:
         session.commit()
@@ -59,7 +70,7 @@ def addTile(tile, commit=True):
 
 def readTilingCatalogue(catalogue, id='ID', ra='RA', dec='DEC'):
     """Reads a tiling catalogue in FITS format."""
-    from astropy import table
+
     cat = table.Table.read(catalogue, format='fits')
     if id != 'ID':
         cat.rename_column(id, 'ID')
@@ -68,3 +79,17 @@ def readTilingCatalogue(catalogue, id='ID', ra='RA', dec='DEC'):
     if dec != 'Dec':
         cat.rename_column(dec, 'Dec')
     return cat
+
+
+def readSampleCatalogue(catalogue):
+
+    sample = table.Table.read(catalogue, format='fits')
+    locationIDs, idx = np.unique(sample['LOCATIONID'],
+                                 return_index=True)
+    validIdx = locationIDs > 0
+    locationID_Idx = idx[validIdx]
+
+    tabPlates = sample[locationID_Idx]['LOCATIONID', 'PLATERA', 'PLATEDEC']
+    tabPlates.sort('LOCATIONID')
+
+    return tabPlates

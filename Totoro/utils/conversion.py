@@ -12,19 +12,17 @@ between different types of data.
 
 """
 
+__ALL__ = ['utc2lmst', 'lmst2utc']
+
 from astropy.coordinates.angles import Longitude
 from ..exceptions import TotoroError
-from ..core import ConfigObject
 from astropy.units import degree, hour, hourangle
 from astropy.coordinates import Angle
 from astropy import time
-
-APO_LONGITUDE = 254.179722
-LONGITUDE = ConfigObject('longitude', APO_LONGITUDE,
-                         'The longitude of the observatory')
+from ..core.defaults import LONGITUDE
 
 
-def utc2lmst(utc, longitude=LONGITUDE()):
+def utc2lmst(utc, format='jd', longitude=LONGITUDE()):
     """Returns the LMST for a UTC time.
 
     This function returns the LMST for a certain UTC time
@@ -32,9 +30,11 @@ def utc2lmst(utc, longitude=LONGITUDE()):
 
     Parameters
     ----------
-    utc : `astropy.time.Time` object
-        The UTC time, in astropy format.
-    longitude : float or `astropy.coordinates.angles.Longitude` object
+    utc : `astropy.time.Time` object or float
+        The UTC time.
+    format : str, optional
+        If utc is a float, this format will be used to create a `Time` object.
+    longitude : float or `Longitude` object, optional
         The longitude of the site at which the LMST
         is calculated. If not define, APO longitude will
         be used. East longitudes with longitude in the range
@@ -54,6 +54,9 @@ def utc2lmst(utc, longitude=LONGITUDE()):
             longitude = Longitude(longitude, unit=degree)
         except:
             raise TotoroError('longitude cannot be understood.')
+
+    if not isinstance(utc, time.Time):
+        utc = time.Time(utc, format=format, scale='utc')
 
     utc.delta_ut1_utc = 0.0
     utc.lon = longitude
