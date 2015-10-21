@@ -43,7 +43,7 @@ class pluggerTestCase(unittest.TestCase):
     def testPlugger(self):
 
         pluggerSchedule = self.plugger.getOutput()
-        print(pluggerSchedule)
+        print('plugger output dictionary: ', pluggerSchedule)
 
 
 if __name__ == '__main__':

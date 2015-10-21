@@ -17,6 +17,7 @@ from __future__ import print_function
 from sdss.internal.manga.Totoro import log, config, TotoroDBConnection
 from sdss.internal.manga.Totoro.scheduler.timeline import Timeline
 from sdss.internal.manga.Totoro import exceptions
+from sdss.internal.manga.Totoro import utils
 from collections import OrderedDict
 import warnings
 import numpy as np
@@ -26,7 +27,7 @@ db = TotoroDBConnection()
 
 
 def getAvailableCart(carts):
-    """Gets a cart that without a plugged plate. If none is available, returns
+    """Gets a cart without a plugged plate. If none is available, returns
     None. If a cart is available, returns a tuple (cartNumber, status) with
     status a string indicating why the cart is available. The input argument,
     carts, must be a list of cart numbers."""
@@ -40,40 +41,36 @@ def getAvailableCart(carts):
     usedCarts = [aP.plugging.cartridge.number for aP in activePluggings
                  if aP.plugging.cartridge.number in carts]
     unusedCarts = [cart for cart in carts if cart not in usedCarts]
+
     if len(unusedCarts) > 0:
         return (unusedCarts[0], 'empty')
 
-    cartStatus = OrderedDict([('complete', []),
-                              ('noMaNGAPlate', []),
-                              ('notStarted', [])])
-
     for aP in activePluggings:
-
-        for key in cartStatus:
-            if len(cartStatus[key]) > 0:
-                return (cartStatus[key][0], key)
 
         cartNumber = aP.plugging.cartridge.number
 
         if cartNumber not in carts:
             continue
 
-        if aP.plugging.plate.isComplete:
-            cartStatus['complete'].append(cartNumber)
+        isMaNGAPlate = (aP.plugging.plate.currentSurveyMode is not None and
+                        'MaNGA' in aP.plugging.plate.currentSurveyMode.label)
 
-        elif (aP.plugging.plate.currentSurveyMode is None or
-                'MaNGA' not in aP.plugging.plate.currentSurveyMode.label):
-            cartStatus['noMaNGAPlate'].append(cartNumber)
+        if not isMaNGAPlate:
+            return (cartNumber, 'noMaNGAPlate')
 
-        elif (Plate(aP.plugging.plate.plate_id, format='plate_id')
-              .getPlateCompletion() == 0):
-            cartStatus['notStarted'].append(cartNumber)
+        totoroPlate = Plate(aP.plugging.plate.plate_id, format='plate_id')
+
+        if utils.isPlateComplete(totoroPlate):
+            return (cartNumber, 'complete')
+
+        elif totoroPlate.getPlateCompletion() == 0:
+            return (cartNumber, 'notStarted')
 
     return None
 
 
 def getCartPriority(carts):
-    """Returns the priority of a list of plates. The priority is defined as the
+    """Returns the priority of a list of carts. The priority is defined as the
     completion of the plate plugged in the cart times the priority its
     priority."""
 
@@ -132,21 +129,33 @@ class PluggerScheduler(object):
                   'JD1={1:.5f}'.format(jd0, jd1))
 
         self.timeline = Timeline(jd0, jd1, **kwargs)
-        self._platesAtAPO = plates
-        self._platesToAllocate = []
+
+        # Rejects plates with priority 1
+        self._platesAtAPO = [plate for plate in plates
+                             if plate.priority >
+                             config['plugger']['noPlugPriority']]
 
         self.carts = OrderedDict([(key, None) for key in config['carts']])
 
         self._scheduleForced()
 
-        # if (len(self._platesToAllocate) >= len(self.carts) or
-        #         self.timeline.lstRange.size == 0):
-        self.allocateCarts(plates=self._platesToAllocate)
-        # else:
-        #     self.timeline.schedule([plate for plate in self._platesAtAPO
-        #                             if plate not in self._platesToAllocate])
+        if (len(self.timeline.plates) >= len(self.carts) or
+                self.timeline.remainingTime <= 0):
+            pass
+        else:
+            self.timeline.schedule([plate for plate in self._platesAtAPO
+                                    if plate not in self.timeline.plates])
+
+        self.allocateCarts(plates=self.timeline.plates)
+
+        remainingTime = self.timeline.remainingTime
+        if remainingTime > 0:
+            log.important('{0:.2h} hours not allocated'.format(remainingTime))
+        else:
+            log.debug('all time has been allocated.')
 
     def _scheduleForced(self):
+        """Schedules plates that have priority=10."""
 
         forcePlugPriority = int(config['plugger']['forcePlugPriority'])
         forcePlugPlates = [plate for plate in self._platesAtAPO
@@ -170,13 +179,14 @@ class PluggerScheduler(object):
                           exceptions.TotoroPluggerWarning)
             forcePlugPlatesSorted = forcePlugPlatesSorted[0:len(self.carts)]
 
-        print(forcePlugPlatesSorted[0].getPlateCompletion())
-        self.timeline.schedule(forcePlugPlatesSorted, mode='plugger',
+        self.timeline.schedule(plates=forcePlugPlatesSorted, mode='plugger',
                                force=True)
-        print(forcePlugPlatesSorted[0].sets)
-        print([len(set.totoroExposures) for set in forcePlugPlatesSorted[0].sets])
 
-        self._platesToAllocate += forcePlugPlates
+        # Manually adds all the forced plates to the timeline, whether they
+        # have been observed or not.
+        self.timeline.allocateJDs(forcePlugPlatesSorted)
+        self.timeline.plates += [plate for plate in forcePlugPlatesSorted
+                                 if plate not in self.timeline.plates]
 
     def allocateCarts(self, plates=None, **kwargs):
 

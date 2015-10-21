@@ -28,27 +28,23 @@ session = db.Session()
 class Timelines(list):
     """A list of Timelines."""
 
-    def __init__(self, observingBlocks, plates=None, mode='planner', **kwargs):
+    def __init__(self, observingBlocks, mode='planner', **kwargs):
 
         self.mode = mode
         initList = []
         for row in observingBlocks:
-            initList.append(Timeline(row['JD0'], row['JD1'], plates=plates))
+            initList.append(Timeline(row['JD0'], row['JD1']))
 
         list.__init__(self, initList)
 
-    def schedule(self, mode=None, **kwargs):
+    def schedule(self, plates, mode=None, **kwargs):
         """Schedules all timelines."""
 
         if mode is None:
             mode = self.mode
 
-        plates = self[0]._plates
-
         for timeline in self:
-            timeline._plates = plates
-            timeline.schedule(mode=mode, **kwargs)
-            plates = timeline._plates
+            timeline.schedule(plates, mode=mode, **kwargs)
 
 
 class Timeline(object):
@@ -58,7 +54,7 @@ class Timeline(object):
 
         self.startDate = startDate
         self.endDate = endDate
-        self._plates = []
+        self.plates = []
 
         self.unallocatedPlateWindow = np.array([self.startDate, self.endDate])
         self.unallocatedExps = self.unallocatedPlateWindow.copy()
@@ -66,10 +62,12 @@ class Timeline(object):
     def allocateJDs(self, plates=None, **kwargs):
         """Allocates observed JDs for a list of plates."""
 
-        plates = self._plates if plates is None else plates
+        plates = self.plates if plates is None else plates
 
-        nominalMJD = int(Time((self.startDate+self.endDate)/2., format='jd',
-                              scale='tai').mjd)
+        nominalMJD = Time((self.startDate+self.endDate)/2., format='jd',
+                          scale='tai').mjd
+
+        nExp = 0  # number of new exposures
 
         for plate in plates:
             for exp in plate.getTotoroExposures():
@@ -80,12 +78,16 @@ class Timeline(object):
                         jdRange[0] <= self.endDate):
                     self.unallocatedExps = utils.removeInterval(
                         self.unallocatedExps, jdRange, wrapAt=None)
+                    nExp += 1
 
             dateRangePlate = plate.getUTRange(mjd=nominalMJD,
                                               returnType='date')
             jdRangePlate = [dateRangePlate[0].jd, dateRangePlate[1].jd]
+
             self.unallocatedPlateWindow = utils.removeInterval(
                 self.unallocatedPlateWindow, jdRangePlate, wrapAt=None)
+
+            return nExp
 
     @property
     def remainingTime(self):
@@ -98,42 +100,33 @@ class Timeline(object):
             unallocatedTime += (interval[1]-interval[0])
         return unallocatedTime * 24.
 
-    def schedule(self, plates=None, mode='plugger', force=False,
+    def schedule(self, plates, mode='plugger', allowIncomplete=False,
                  **kwargs):
         """Schedules a list of plates in the LST ranges not yet observed in the
         timeline."""
 
-        self._plates = []
-
-        plates = self._plates if plates is None else plates
-        platesCopy = list(plates)
-
         prioritisePlugged = True if mode == 'plugger' else False
 
-        log.debug('scheduling LST range {0} using {1} plates, '
-                  'mode={2}, force={3}'
-                  .format(self.unallocatedExps.tolist(),
-                          len(plates), mode, force))
+        log.debug('scheduling LST range {0} using {1} plates, mode={2}'
+                  .format(self.unallocatedExps.tolist(), len(plates), mode))
 
-        if not force:
-            plates = [plate for plate in platesCopy if not plate.isComplete]
+        if not allowIncomplete:
+            plates = [plate for plate in plates if not plate.isComplete]
 
         while self.remainingTime > 0 and len(plates) > 0:
-
+            platesToSchedule = [plate for plate in plates
+                                if plate not in self.plates]
             optimalPlate = logic.getOptimalPlate(
-                platesCopy, self.unallocatedExps,
-                prioritisePlugged=prioritisePlugged)
+                platesToSchedule, self.unallocatedExps,
+                prioritisePlugged=prioritisePlugged, mode=mode)
 
             if optimalPlate is None:
                 break
             else:
-                self._plates.append(optimalPlate)
-                self.allocateJDs(plates=[optimalPlate])
-                platesCopy.remove(optimalPlate)
-
-        if len(platesCopy) > 0 and force:
-            self.allocateJDs(plates)
-            self._plates += plates
+                self.plates.append(optimalPlate)
+                nExp = self.allocateJDs(plates=[optimalPlate])
+                log.debug('Found optimal plate: plate_id={0}, ({1} new '
+                          'exposures)'.format(optimalPlate.plate_id, nExp))
 
         if self.remainingTime == 0:
             return True

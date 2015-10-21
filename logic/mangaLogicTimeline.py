@@ -23,34 +23,42 @@ expTime = config['exposure']['exposureTime']
 maxAlt = config['exposure']['maxAltitude']
 
 
-def getOptimalPlate(plates, jdRanges, prioritisePlugged=True, **kwargs):
+def getOptimalPlate(plates, jdRanges, prioritisePlugged=True, mode='plugger',
+                    **kwargs):
     """Gets the optimal plate to observe in a range of JDs."""
 
     jdRanges = np.atleast_2d(jdRanges).copy()
     incompletePlates = [plate for plate in plates if plate.isComplete is False]
 
     if prioritisePlugged:
-        pluggedPlates = [plate for plate in incompletePlates
-                         if plate.isPlugged]
+
+        pluggedPlates = []
+        notPlugged = []
+        for plate in incompletePlates:
+            if plate.isPlugged:
+                pluggedPlates.append(plate)
+            else:
+                notPlugged.append(plate)
+
         if len(pluggedPlates) > 0:
-            observedFlag = simulatePlates(pluggedPlates, jdRanges)
+            observedFlag = simulatePlates(pluggedPlates, jdRanges, mode=mode)
             if observedFlag is True:
                 optimal = selectOptimal(pluggedPlates)
                 cleanupPlates(pluggedPlates, optimal)
                 return optimal
-
-    notPlugged = [plate for plate in incompletePlates if not plate.isPlugged]
+    else:
+        notPlugged = incompletePlates
 
     startedPlates = [plate for plate in notPlugged
                      if plate.getPlateCompletion() > 0]
     if len(startedPlates) > 0:
-        observedFlag = simulatePlates(startedPlates, jdRanges)
+        observedFlag = simulatePlates(startedPlates, jdRanges, mode=mode)
         if observedFlag is True:
             optimal = selectOptimal(startedPlates)
             cleanupPlates(startedPlates, optimal)
             return optimal
 
-    observedFlag = simulatePlates(notPlugged, jdRanges)
+    observedFlag = simulatePlates(notPlugged, jdRanges, mode=mode)
     if observedFlag is False:
         return None
 
@@ -107,11 +115,13 @@ def selectOptimal(plates, **kwargs):
     return None
 
 
-def simulatePlates(plates, jdRanges):
+def simulatePlates(plates, jdRanges, mode='plugger'):
     """Simulates exposures for a list of plates withing a range of JDs."""
 
     jdRanges = np.atleast_2d(jdRanges)
     observedFlag = False
+
+    expTimeEff = expTime / config[mode]['efficiency']
 
     for plate in plates:
         plateLST = plate.getLSTRange()
@@ -131,12 +141,13 @@ def simulatePlates(plates, jdRanges):
                     pass
                 else:
                     result = plate.addMockExposure(
-                        set=None, startTime=jd, expTime=expTime, silent=True)
+                        set=None, startTime=jd, expTime=expTimeEff,
+                        silent=True)
                     if result is not False:
                         observedFlag = True
                         result._tmp = True
 
-                jd += expTime / config['plugger']['efficiency'] / 86400.
+                jd += expTimeEff / 86400
 
     return observedFlag  # True if we have added at least one exposure
 
