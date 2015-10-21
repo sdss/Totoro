@@ -20,6 +20,7 @@ from sdss.utilities import yanny
 from astropy import table
 import glob
 import os
+import sys
 
 db = TotoroDBConnection()
 
@@ -68,42 +69,48 @@ def loadMangaPlates():
     specialPlates = specialPlates.filled()
 
     with db.session.begin():
-        allPlates = db.session.query(db.plateDB.Plate).all()
+        allPlates = db.session.query(db.plateDB.Plate).join(
+            db.plateDB.PlateToSurvey, db.plateDB.Survey,
+            db.plateDB.SurveyMode).filter(
+                db.plateDB.Survey.label == 'MaNGA',
+                db.plateDB.SurveyMode.label.like('%MaNGA%')).all()
 
     with db.session.begin():
 
-        for plate in allPlates:
+        for nn, plate in enumerate(allPlates):
 
-            if (plate.plate_id in mangaTileIDs or
-                    plate.plate_id in specialPlates['plateid']):
+            try:
+                newPlate = db.session.query(db.mangaDB.Plate).filter(
+                    db.mangaDB.Plate.platedb_plate_pk == plate.pk).one()
+            except:
+                newPlate = db.mangaDB.Plate()
 
-                try:
-                    newPlate = db.session.query(db.mangaDB.Plate).filter(
-                        db.mangaDB.Plate.platedb_plate_pk == plate.pk).one()
-                except:
-                    newPlate = db.mangaDB.Plate()
+            if plate.plate_id in mangaTileIDs:
+                newPlate.manga_tileid = mangaTileIDs[plate.plate_id]
+            else:
+                newPlate.manga_tileid = None
 
-                if plate.plate_id in mangaTileIDs:
-                    newPlate.manga_tileid = mangaTileIDs[plate.plate_id]
+            if plate.plate_id in specialPlates['plateid']:
+                row = specialPlates[specialPlates['plateid'] ==
+                                    plate.plate_id]
+                newPlate.special_plate = True
+                newPlate.all_sky_plate = bool(row['all_sky_plate'][0])
+                newPlate.commissioning_plate = bool(
+                    row['commissioning_plate'][0])
+                newPlate.comment = row['comment'][0]
+            else:
+                newPlate.special_plate = False
+                newPlate.all_sky_plate = False
+                newPlate.commissioning_plate = False
+                newPlate.comment = ''
 
-                if plate.plate_id in specialPlates['plateid']:
-                    row = specialPlates[specialPlates['plateid'] ==
-                                        plate.plate_id]
-                    newPlate.special_plate = True
-                    newPlate.all_sky_plate = bool(row['all_sky_plate'][0])
-                    newPlate.commissioning_plate = bool(
-                        row['commissioning_plate'][0])
-                    newPlate.comment = row['comment'][0]
-                else:
-                    newPlate.special_plate = False
-                    newPlate.all_sky_plate = False
-                    newPlate.commissioning_plate = False
-                    newPlate.comment = ''
+            newPlate.platedb_plate_pk = plate.pk
 
-                newPlate.platedb_plate_pk = plate.pk
+            db.session.add(newPlate)
 
-                db.session.add(newPlate)
-
+            sys.stdout.write('\rLoading plates: {0:.0f}%'
+                             .format(nn / float(len(allPlates)) * 100.))
+            sys.stdout.flush()
     return
 
 

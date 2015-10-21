@@ -104,11 +104,12 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
             plates = plates.join(plateDB.PlatePointing).filter(
                 plateDB.PlatePointing.priority > minimumPriority)
 
-        if rejectSpecial:
-            plates = plates.join(mangaDB.Plate).filter(
-                mangaDB.Plate.special_plate == 'False')
-
         plates = plates.order_by(plateDB.Plate.plate_id).all()
+
+        if rejectSpecial:
+            plates = [plate for plate in plates
+                      if plate.mangadbPlate is None or
+                      plate.mangadbPlate.special_plate is False]
 
     if onlyIncomplete:
         return _getIncomplete(plates, **kwargs)
@@ -129,7 +130,12 @@ def getAll(onlyIncomplete=False, rejectSpecial=False, **kwargs):
         plates = plates.join(mangaDB.Plate).filter(
             mangaDB.Plate.special_plate == 'False')
 
-    plates = plates.all()
+    plates = plates.order_by(plateDB.Plate.plate_id).all()
+
+    if rejectSpecial:
+        plates = [plate for plate in plates
+                  if plate.mangadbPlate is None or
+                  plate.mangadbPlate.special_plate is False]
 
     if onlyIncomplete:
         return _getIncomplete(plates, **kwargs)

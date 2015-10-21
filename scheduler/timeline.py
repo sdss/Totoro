@@ -126,31 +126,31 @@ class Timeline(object):
                 self.plates.append(optimalPlate)
                 nExp = self.allocateJDs(plates=[optimalPlate])
 
-                flags = []
+                flags = ''
 
                 if (optimalPlate.drilled is False and
                         not isinstance(optimalPlate, Field)):
-                    flags.append(_color_text('plate not yet drilled', 'white'))
+                    flags = _color_text('** plate not yet drilled **', 'white')
+                elif not isinstance(optimalPlate, Field):
+                    location = optimalPlate.getLocation()  # May be None
+                    if not location and not isinstance(optimalPlate, Field):
+                        flags = _color_text('** unknown location **', 'red')
+                    elif location != 'APO' and location != 'Cosmic':
+                        flags = _color_text('** plate not on the mountain **',
+                                            'red')
+                    elif location == 'Cosmic':
+                        flags = _color_text('** plate in Cosmic **', 'red')
 
-                location = optimalPlate.getLocation()  # May be None
-                if not location:
-                    flags.append(_color_text('unknown location', 'red'))
-                elif location != 'APO' and location != 'Cosmic':
-                    flags.append(
-                        _color_text('plate not on the mountain', 'red'))
-                elif location == 'Cosmic':
-                    flags.append(_color_text('plate in Cosmic', 'red'))
-
-                if len(flags) > 0:
-                    flags = u'** {0} **'.format(', '.join(flags))
+                if not isinstance(optimalPlate, Field):
+                    log.info('...... plate_id={0}, '
+                             'manga_tiledid={1} ({2} new exposures) {3}'
+                             .format(optimalPlate.plate_id,
+                                     optimalPlate.getMangaTileID(),
+                                     nExp, flags))
                 else:
-                    flags = ''
-
-                log.info('...... found optimal plate: plate_id={0}, '
-                         'manga_tiledid={1} ({2} new exposures) {3}'
-                         .format(optimalPlate.plate_id,
-                                 optimalPlate.getMangaTileID(),
-                                 nExp, flags))
+                    log.info('...... manga_tiledid={0} ({1} new exposures) {2}'
+                             .format(optimalPlate.getMangaTileID(),
+                                     nExp, flags))
 
         if showUnobservedTimes:
             if (self.remainingTime <=
