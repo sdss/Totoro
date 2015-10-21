@@ -23,6 +23,7 @@ log = None
 IMPORTANT = 25
 logging.addLevelName(IMPORTANT, 'IMPORTANT')
 
+
 def important(self, message, *args, **kws):
     self._log(IMPORTANT, message, args, **kws)
 
