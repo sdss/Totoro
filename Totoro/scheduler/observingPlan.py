@@ -15,13 +15,12 @@ from ..exceptions import TotoroError
 import os
 from astropy import time
 from astropy.io import ascii
-import warnings
 
 
 DEFAULT_PLAN_FILE = ConfigObject('defaultPlanFile',
                                  os.path.join(
                                      os.path.dirname(__file__),
-                                     'nightly.D.txt'),
+                                     '../data/nightly.D.txt'),
                                  'The file with the observing plan')
 
 DEFAULT_PLAN_FORMAT = ConfigObject('defaultPlanFormat',
