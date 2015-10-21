@@ -15,6 +15,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro import config, readPath, TotoroDBConnection
+from sdss.internal.manga.Totoro.exceptions import TotoroError
 from sdss.utilities import yanny
 from astropy import table
 import glob
@@ -31,6 +32,9 @@ def getMangaTileIDs():
     plateTargets = glob.glob(
         os.path.join(mangacorePath,
                      'platedesign/platetargets/plateTargets-*.par'))
+
+    if len(plateTargets) == 0:
+        raise TotoroError('no plateTargets files found.')
 
     mangaTileIDs = {}
     for plateTargetsFile in plateTargets:
