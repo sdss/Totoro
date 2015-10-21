@@ -37,7 +37,7 @@ class Planner(object):
     """A class for field selection."""
 
     def __init__(self, startDate=None, endDate=None, useFields=True,
-                 **kwargs):
+                 optimiseFootprint=True, **kwargs):
 
         log.info('entering PLANNER mode.')
 
@@ -61,7 +61,8 @@ class Planner(object):
                   .format(len(self.timelines)))
 
         # Selects all valid plates, including complete ones.
-        self._allPlates = self.getPlates(**kwargs)
+        self._allPlates = self.getPlates(optimiseFootprint=optimiseFootprint,
+                                         **kwargs)
 
         # Selects only plates that are incomplete and have enough priority
         self.plates = [plate for plate in self._allPlates
@@ -83,6 +84,10 @@ class Planner(object):
             self.createFields(self._allPlates)
         else:
             self.fields = []
+
+        # Defines priorities
+        if optimiseFootprint:
+            self._assignPriorities()
 
     def createFields(self, allPlates):
         """Creates a field list from a tiling catalogue."""
@@ -132,7 +137,7 @@ class Planner(object):
 
     @staticmethod
     def getPlates(usePlatesNotAtAPO=True, usePlatesBeingDrilled=True,
-                  **kwargs):
+                  optimiseFootprint=True, skipDrilled=False, **kwargs):
         """Gets plates that are already drilled or in process of being so,
         with some filtering."""
 
@@ -152,6 +157,13 @@ class Planner(object):
             if (not usePlatesNotAtAPO and
                     plate.getLocation() != 'APO'):
                 validPlate = False
+            if optimiseFootprint:
+                if ((plate.ra < 100 or plate.ra > 300) and
+                        (plate.dec < -1 or plate.dec > 1)):
+                    validPlate = False
+            if skipDrilled:
+                if len(plate.getScienceExposures()) == 0:
+                    validPlate = False
             if validPlate:
                 validPlates.append(plate)
 
@@ -220,6 +232,22 @@ class Planner(object):
                         validPlates.append(mockPlate)
 
         return validPlates
+
+    def _assignPriorities(self):
+        """Defines footprint priorities."""
+
+        for field in self.fields:
+            if ((field.ra < 100 or field.ra > 300) and
+                    (field.dec > -1 and field.dec < 1)):
+                field.priority = 9
+            elif ((field.ra > 199.5 - 7.5 and field.ra < 199.5 + 7.5) and
+                    (field.dec > 29 - 5 and field.dec < 29 + 5)):
+                field.priority = 9
+            elif ((field.ra > 11 * 15. and field.ra < 14 * 15.) and
+                    (field.dec > 45 and field.dec < 50)):
+                field.priority = 9
+            elif field.dec < 20:
+                field.priority = 6.5
 
     def schedule(self, useFields=True, goodWeatherFraction=None, **kwargs):
         """Runs the scheduling simulation."""
