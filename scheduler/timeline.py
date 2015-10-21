@@ -19,7 +19,9 @@ from sdss.internal.manga.Totoro import log, config
 from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro import logic
 from sdss.internal.manga.Totoro.core.colourPrint import _color_text
+from sdss.internal.manga.Totoro.exceptions import TotoroUserWarning
 import numpy as np
+import warnings
 
 
 class Timelines(list):
@@ -126,6 +128,9 @@ class Timeline(object):
                 self.plates.append(optimalPlate)
                 nExp = self.allocateJDs(plates=[optimalPlate])
 
+                # Defines some flags to be logged if plate is in Cosmic, being
+                # drilled or not on the mountain.
+
                 flags = ''
 
                 if (optimalPlate.drilled is False and
@@ -141,16 +146,36 @@ class Timeline(object):
                     elif location == 'Cosmic':
                         flags = _color_text('** plate in Cosmic **', 'red')
 
+                # Calculates completion before and after the simulation.
+                completionPre = optimalPlate.getPlateCompletion(useMock=False)
+                completion = optimalPlate.getPlateCompletion()
+
+                # Gets number of orphaned exposures
+                nOrphaned = len(optimalPlate.getOrphaned(useMock=False))
+                nOrphanedAfter = len(optimalPlate.getOrphaned(useMock=True))
+
+                # Logs the result of the simulation. Format changed depending
+                # on whether this is plate or a field.
                 if not isinstance(optimalPlate, Field):
                     log.info('...... plate_id={0}, '
-                             'manga_tiledid={1} ({2} new exposures) {3}'
+                             'manga_tiledid={1} ({2} new exposures, '
+                             '{3:.2f} -> {4:.2f} complete) {5}'
                              .format(optimalPlate.plate_id,
                                      optimalPlate.getMangaTileID(),
-                                     nExp, flags))
+                                     nExp, completionPre, completion, flags))
+
+                    if nOrphaned > 0 or nOrphanedAfter > 0:
+                        warnings.warn('... plate_id={0} has {1} orphaned '
+                                      'exposures ({2} after simulation)'
+                                      .format(optimalPlate.plate_id,
+                                              nOrphaned, nOrphanedAfter),
+                                      TotoroUserWarning)
+
                 else:
-                    log.info('...... manga_tiledid={0} ({1} new exposures) {2}'
+                    log.info('...... manga_tiledid={0} ({1} new exposures, '
+                             '{2:.2f} -> {3:.2f} complete) {4}'
                              .format(optimalPlate.getMangaTileID(),
-                                     nExp, flags))
+                                     nExp, completionPre, completion, flags))
 
         if showUnobservedTimes:
             if (self.remainingTime <=

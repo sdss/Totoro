@@ -60,7 +60,6 @@ dustMap:
 
 planner:
     efficiency: 0.8
-
     platesIgnore: +data/platesIgnore.dat
     maxAltitude: 75
     noPlugPriority: 1
@@ -76,9 +75,9 @@ plugger:
     onlyVisiblePlates: true
 
 simulation:
-    blueSN2: 3.4
+    blueSN2: 3.9
     alphaBlue: 1.25
-    redSN2: 5.77
+    redSN2: 6.64
     alphaRed: 0.65
 
 SN2thresholds:
@@ -112,3 +111,4 @@ setArrangement:
 carts: [1, 2, 3, 4, 5, 6]
 defaultPriority: 5
 plateVisibilityMaxHalfWindowHours: 3
+numberPlatesAllowedAtAPO: 100
