@@ -84,7 +84,7 @@ exposure:
 
 set:
     excellentSeeing: 1.5
-    poorSeeing: 2
+    goodSeeing: 2
     maxHARange: 15
     maxSeeingRange: 0.8
     maxSN2Factor: 2

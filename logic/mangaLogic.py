@@ -216,6 +216,7 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
     4: SN2 values out of range
     5: too many exposures
     6: multiple exposures with the same dither position
+    7: average seeing > maximum
     10: from set status.
 
     """
@@ -300,8 +301,8 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
                           'set pk={0} is incomplete.'.format(set.pk))
 
     # Set is valid: assigns status
-    if np.mean(seeing) > config['set']['poorSeeing']:
-        return flagHelper('Poor', 0)
+    if np.mean(seeing) > config['set']['goodSeeing']:
+        return flagHelper('Bad', 7)
     elif np.mean(seeing) <= config['set']['excellentSeeing']:
         return flagHelper('Excellent', 0)
     else:
