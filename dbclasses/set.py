@@ -180,10 +180,13 @@ class Set(mangaDB.Set):
 
         if len(exposures) == 0:
             plateHALimit = utils.mlhalimit(self.dec)
-            return np.array([-plateHALimit, plateHALimit])
+            HA = np.array([-plateHALimit, plateHALimit])
         elif len(exposures) >= 1:
             expHAs = np.array([exp.getHA() for exp in exposures])
-            return np.array(utils.getMinMaxIntervalSequence(expHAs))
+            HA = np.array(utils.getMinMaxIntervalSequence(expHAs))
+
+        HA[HA > 180] -= 360
+        return HA
 
     def getHARange(self, intersect=False, mjd=None,
                    maxHARange=config['set']['maxHARange'], **kwargs):
@@ -197,6 +200,7 @@ class Set(mangaDB.Set):
 
         haRangePlate = utils.getIntervalIntersection(
             haRange, np.array([-plateHALimit, plateHALimit]), wrapAt=360.)
+        haRangePlate[haRangePlate > 180] -= 360
 
         if intersect is False:
             return haRangePlate

@@ -419,6 +419,7 @@ class Plate(plateDB.Plate):
         ha1 = self.mlhalimit
 
         haRange = np.array([ha0, ha1]) % 360.
+        haRange[haRange > 180.] -= 360.
 
         if intersect is False:
             return haRange

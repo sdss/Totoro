@@ -190,9 +190,12 @@ class Exposure(plateDB.Exposure):
         tStart = t0 + time.TimeDelta(startTime, format='sec', scale='tai')
 
         lst = site.localSiderealTime(tStart.jd)
-        ha = (lst * 15. - self.ra) % 360.
+        ha0 = (lst * 15. - self.ra) % 360.
 
-        return np.array([ha, ha + expTime / 3600. * 15]) % 360.
+        ha = np.array([ha0, ha0 + expTime / 3600. * 15]) % 360.
+        ha[ha > 180.] -= 360.
+
+        return ha
 
     def getSN2Array(self):
         """Returns an array with the SN2 of the exposure. The return
