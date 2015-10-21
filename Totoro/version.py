@@ -6,4 +6,3 @@ version = '0.1.dev'
 major = 0
 minor = 1
 release = False
-
