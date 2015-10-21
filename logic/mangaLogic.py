@@ -215,7 +215,7 @@ def setExposureStatus(exposure, status, **kwargs):
 
 
 def checkSet(input, flag=True, flagExposures=True, silent=False,
-             midPoint=None, forceReflag=False, **kwargs):
+             forceReflag=False, **kwargs):
     """Checks if a set meets MaNGA's quality criteria. Returns one of the
     following values: 'Good', 'Excellent', 'Poor', 'Bad', 'Incomplete'.
 
@@ -267,7 +267,7 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
                               .format(set.pk))
 
     # Checks range of observations
-    HA = set.getHA(midPoint=midPoint)
+    HA = set.getHA()
     HALength = (HA[1] - HA[0]) % 360.
     if HALength > config['set']['maxHARange']:
         return flagHelper('Bad', 2,
