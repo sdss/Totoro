@@ -35,7 +35,7 @@ cartStatusCodes = {0: 'empty', 1: 'noMaNGAplate', 2: 'MaNGA_complete',
 replaceMsgs = {0: 'empty cart', 1: 'replacing non-MaNGA plate',
                2: 'replacing complete MaNGA plate',
                3: 'replacing non-started MaNGA plate',
-               4: 'replacing stated MaNGA plate',
+               4: 'replacing started MaNGA plate',
                10: 'replacing plate with unknown status'}
 
 
@@ -164,6 +164,9 @@ class Plugger(object):
 
         from sdss.internal.manga.Totoro.dbclasses import getPlugged
 
+        self.startDate = None
+        self.endDate = None
+
         warnings.warn(
             'no JD1, JD2 values provided. Plugger will only return plugged, '
             'non-completed plates.', exceptions.TotoroPluggerWarning)
@@ -194,23 +197,24 @@ class Plugger(object):
 
         self.timeline = Timeline(self.startDate, self.endDate, **kwargs)
 
-        self.platesToSchedule = self.selectPlates(**kwargs)
-        log.info('scheduling {0} plates'.format(len(self.platesToSchedule)))
+        self._platesToSchedule = self.selectPlates(**kwargs)
+        log.info('scheduling {0} plates'.format(len(self._platesToSchedule)))
 
         # Initialises a dictionary with the MaNGA carts. Removes offline carts.
         self.carts = OrderedDict([(key, None)
                                   for key in config['mangaCarts']
                                   if key not in config['offlineCarts']])
 
-        self._scheduleForced()
+    def schedule(self, **kwargs):
+
+        self._scheduleForced(**kwargs)
 
         if (len(self.timeline.plates) >= len(self.carts) or
                 self.timeline.remainingTime <= 0):
             pass
         else:
-            self.timeline.schedule([plate for plate in self.platesToSchedule
-                                    if plate not in self.timeline.plates],
-                                   mode='plugger')
+            self.timeline.schedule(self._platesToSchedule, mode='plugger',
+                                   **kwargs)
 
         # We log the number of new exposures for the plates in the timeline.
         # We'll use this later when we prioritise carts.
@@ -218,7 +222,7 @@ class Plugger(object):
             [(plate.plate_id, len(plate.getMockExposures()))
              for plate in self.timeline.plates])
 
-        self.allocateCarts(plates=self.timeline.plates)
+        self.allocateCarts(self.timeline.plates)
         self._cleanUp()  # Removes cart without MaNGA plates
 
         remainingTime = self.timeline.remainingTime
@@ -230,6 +234,9 @@ class Plugger(object):
     def getASOutput(self, **kwargs):
         """Returns the plugging request as a cart dictionary, in a format
         that the master autoscheduler can understand."""
+
+        if self.startDate is not None and self.endDate is not None:
+            self.schedule(**kwargs)
 
         # First we add carts not used to cart_order, with lower priority
         nonUsedCarts = [cartNo for cartNo in config['mangaCarts']
@@ -331,7 +338,7 @@ class Plugger(object):
 
         return platesToSchedule
 
-    def _scheduleForced(self):
+    def _scheduleForced(self, **kwargs):
         """Schedules plates that have priority=forcePlugPriority."""
 
         from sdss.internal.manga.Totoro.dbclasses import Plate
@@ -353,29 +360,8 @@ class Plugger(object):
 
         forcePlugPlates = [Plate(plate) for plate in forcePlugPlates]
 
-        # Sort forced plates so that the plates that are already plugged are
-        # first.
-        forcePlugPlatesSorted = [plate for plate in forcePlugPlates
-                                 if plate.isPlugged] + \
-                                [plate for plate in forcePlugPlates
-                                 if not plate.isPlugged]
-
-        if len(forcePlugPlatesSorted) > len(self.carts):
-            warnings.warn('{0} plates marked with priority {1:d} but only '
-                          '{2} carts available. Using the first {2} plates.'
-                          .format(len(forcePlugPlatesSorted),
-                                  forcePlugPriority, len(self.carts)),
-                          exceptions.TotoroPluggerWarning)
-            forcePlugPlatesSorted = forcePlugPlatesSorted[0:len(self.carts)]
-
-        self.timeline.schedule(
-            plates=forcePlugPlatesSorted, showUnobservedTimes=False,
-            mode='plugger')
-
-        # Manually adds all the forced plates to the timeline, whether they
-        # have been observed or not.
-        # self.timeline.allocateJDs(forcePlugPlatesSorted)
-        self.timeline.plates += [plate for plate in forcePlugPlatesSorted
+        # Manually adds all the forced plates to the timeline.
+        self.timeline.plates += [plate for plate in forcePlugPlates
                                  if plate not in self.timeline.plates]
 
     def _logCartAllocation(self, cartNumber, plate, messages=''):
@@ -410,8 +396,6 @@ class Plugger(object):
     def allocateCarts(self, plates, **kwargs):
         """Allocates plates into carts in the most efficient way."""
 
-        plates = np.unique(plates)
-
         if len(plates) > len(self.carts):
             warnings.warn('{0} plates to allocate but only {1} carts '
                           'available. Using the first {1} plates.'
@@ -423,12 +407,14 @@ class Plugger(object):
         log.important('Plugging allocation for MJD={0:d} follows:'
                       .format(mjd))
 
-        # # Dictionary to save the cart allocation
+        # Dictionary to save the cart allocation
         cartPlateMessage = {}
 
         # Gets active pluggings
         with session.begin(subtransactions=True):
-            activePluggings = session.query(db.plateDB.ActivePlugging).all()
+            activePluggings = session.query(
+                db.plateDB.ActivePlugging).order_by(
+                    db.plateDB.ActivePlugging.pk).all()
 
         # Gets the status of the plates in each remaining cart.
         cartStatus = OrderedDict(

@@ -32,5 +32,7 @@ if __name__ == '__main__':
 
     if '-v' not in sys.argv:
         sys.argv.append('-v')
+    if '--nologcapture' not in sys.argv:
+        sys.argv.append('--nologcapture')
 
     nose.main()

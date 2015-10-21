@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-testAPOcomplete.py
+testSetArrangement.py
 
 Created by José Sánchez-Gallego on 14 Jul 2014.
 Licensed under a 3-clause BSD license.
@@ -16,18 +16,17 @@ from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro import TotoroDBConnection
 from sdss.internal.manga.Totoro.dbclasses import fromPlateID
+import unittest
 
 
 db = TotoroDBConnection()
 session = db.session
 
 
-class testSetArrangement():
+class testSetArrangement(unittest.TestCase):
 
     def testExposureAssignment(self):
         """Tests if an exposure is assigned to a correct incomplete set."""
-
-        db = TotoroDBConnection()
 
         with session.begin(subtransactions=True):
             exposure = session.query(db.mangaDB.Exposure).get(1348)
@@ -39,7 +38,7 @@ class testSetArrangement():
 
         setExposurePK = [exp._mangaExposure.pk
                          for exp in plate.sets[4].totoroExposures]
-        assert 1348 in setExposurePK
+        self.assertIn(1348, setExposurePK)
 
     def testIncompleteSetsRearrangement(self):
         """Tests whether the rearrang. of incomplete sets works properly."""
@@ -57,9 +56,21 @@ class testSetArrangement():
 
         # Reloads plate 8551
         plate8551 = fromPlateID(8551, force=True)
-        for ss in plate8551.sets:
-            print(ss.pk, [exp.exposure_no for exp in ss.totoroExposures])
+
+        # Checks new arrangement
+        self.assertEqual(len(plate8551.sets), 5)
+
+        # This is the expected assignment of exposures for each set
+        correctSetExposures = [[198628, 198629],
+                               [198624],
+                               [198625, 198626, 198627],
+                               [198623, 198621, 198622],
+                               [198618, 198619, 198620]]
+        for ii, ss in enumerate(plate8551.sets):
+            setExposures = [exp.exposure_no
+                            for exp in plate8551.sets[ii].totoroExposures]
+            self.assertItemsEqual(setExposures, correctSetExposures[ii])
 
 
-
-
+if __name__ == '__main__':
+    unittest.main()

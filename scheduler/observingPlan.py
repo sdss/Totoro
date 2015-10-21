@@ -79,12 +79,24 @@ class ObservingPlan(object):
             raise exceptions.TotoroError('schedule {0} not found'.format(
                                          scheduleToPrint))
 
-        self.plan = table.Table.read(self.scheduleFile,
-                                     format='ascii.no_header')
+        plan = table.Table.read(self.scheduleFile,
+                                format='ascii.no_header')
+
+        self.plan = plan.copy()
         self.plan.keep_columns(['col1', 'col11', 'col12'])
         self.plan.rename_column('col1', 'JD')
         self.plan.rename_column('col11', 'JD0')
         self.plan.rename_column('col12', 'JD1')
+
+        self.plan.add_column(
+            table.Column(np.zeros(len(self.plan)), name='Position', dtype=int))
+        for ii, row in enumerate(plan):
+            if row['col11'] == 0:
+                continue
+            if row['col11'] > row['col5'] and row['col11'] > row['col9']:
+                self.plan['Position'][ii] = 2
+            else:
+                self.plan['Position'][ii] = 1
 
         log.debug('observing plan {0} loaded.'.format(scheduleToPrint))
 

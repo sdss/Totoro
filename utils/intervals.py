@@ -72,8 +72,8 @@ def isIntervalInsideOther(aa, bb, wrapAt=360, onlyOne=False):
     """Checks if the interval aa (a numpy.ndarray of length 2) is inside bb."""
 
     if wrapAt is None:
-        p1 = (aa[0] - bb[0]) < (bb[1]-bb[0])
-        p2 = (aa[1] - bb[0]) < (bb[1]-bb[0])
+        p1 = (aa[0] >= bb[0]) and (aa[0] <= bb[1])
+        p2 = (aa[1] >= bb[0]) and (aa[1] <= bb[1])
     else:
         p1 = ((aa[0] - bb[0]) % wrapAt < (bb[1]-bb[0]) % wrapAt)
         p2 = ((aa[1] - bb[0]) % wrapAt < (bb[1]-bb[0]) % wrapAt)
