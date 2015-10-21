@@ -28,7 +28,7 @@ def removeSet(set_pk):
 
     db = TotoroDBConnection()
     session = db.Session()
-    print(set_pk)
+
     with session.begin(subtransactions=True):
         set = session.query(db.mangaDB.Set).get(set_pk)
         if set is None:
