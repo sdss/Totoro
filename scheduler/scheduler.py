@@ -15,11 +15,13 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from sdss.internal.manga.Totoro.exceptions import TotoroError
-from sdss.internal.manga.Totoro import log, site
+from sdss.internal.manga.Totoro import log, site, config
 from sdss.internal.manga.Totoro.scheduler import observingPlan
+from sdss.internal.manga.Totoro.utils import intervals
 from plugger import PluggerScheduler
 from planner import PlannerScheduler
 from astropy import time
+import numpy as np
 
 
 __ALL__ = ['BaseScheduler', 'Planner', 'Nightly', 'Plugger']
@@ -112,13 +114,33 @@ class Plugger(object):
 
         from sdss.internal.manga.Totoro import dbclasses
 
+        onlyVisiblePlates = kwargs.pop('onlyVisiblePlates',
+                                       config['plugger']['onlyVisiblePlates'])
+
+        assert isinstance(onlyVisiblePlates, int), \
+            'onlyVisiblePlates must be a boolean'
+
         log.info('getting plates at APO with rejectComplete={0}, '
                  'onlyMarked={1}'.format(rejectComplete, onlyMarked))
+
+        if onlyVisiblePlates:
+            lstRange = site.localSiderealTime([self.startDate, self.endDate])
+            window = config['plateVisibilityMaxHalfWindowHours']
+            raRange = np.array([(lstRange[0] - window) * 15.,
+                                (lstRange[1] + window) * 15.])
+
+            log.info('selecting plates with RA in range {0}'
+                     .format(str(raRange % 360)))
+
+            raRange = intervals.splitInterval(raRange, 360.)
+
+        else:
+            raRange = None
 
         plates = dbclasses.getAtAPO(onlyIncomplete=rejectComplete,
                                     onlyMarked=onlyMarked,
                                     rejectLowPriority=True,
-                                    fullCheck=False)
+                                    fullCheck=False, raRange=raRange)
 
         log.info('plates found: {0}'.format(len(plates)))
 

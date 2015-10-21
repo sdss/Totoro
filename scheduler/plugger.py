@@ -28,89 +28,55 @@ import numpy as np
 db = TotoroDBConnection()
 session = db.session
 
-
-def getAvailableCart(activePluggings, carts):
-    """Gets a cart without a plugged plate. If none is available, returns
-    None. If a cart is available, returns a tuple (cartNumber, status) with
-    status a string indicating why the cart is available. The input argument,
-    carts, must be a list of cart numbers."""
-
-    from sdss.internal.manga.Totoro.dbclasses import Plate
-
-    usedCarts = [aP.plugging.cartridge.number for aP in activePluggings
-                 if aP.plugging.cartridge.number in carts]
-    unusedCarts = [cart for cart in carts if cart not in usedCarts]
-
-    if len(unusedCarts) > 0:
-        return (unusedCarts[0], 'empty')
-
-    for aP in activePluggings:
-
-        cartNumber = aP.plugging.cartridge.number
-
-        if cartNumber not in carts:
-            continue
-
-        isMaNGAPlate = (aP.plugging.plate.currentSurveyMode is not None and
-                        'MaNGA' in aP.plugging.plate.currentSurveyMode.label)
-
-        if not isMaNGAPlate:
-            return (cartNumber, 'noMaNGAPlate')
-
-        totoroPlate = Plate(aP.plugging.plate)
-
-        if utils.isPlateComplete(totoroPlate):
-            return (cartNumber, 'complete')
-
-        elif totoroPlate.getPlateCompletion() == 0:
-            return (cartNumber, 'notStarted')
-
-    return None
+cartStatusCodes = {0: 'empty', 1: 'noMaNGAplate', 2: 'MaNGA_complete',
+                   3: 'MaNGA_noStarted', 4: 'MaNGA_started', 10: 'unknown'}
+replaceMsgs = {0: 'empty cart', 1: 'replacing non-MaNGA plate',
+               2: 'replacing complete MaNGA plate',
+               3: 'replacing non-started MaNGA plate',
+               4: 'replacing stated MaNGA plate',
+               10: 'replacing plate with unknown status'}
 
 
-def getCartStatus(cartNumber, activePluggings):
-    """Returns the status of a cart."""
+def getCartStatus(activePluggings, cartNumber):
+    """Returns the status of the plate in a cart. The returned tuple is
+    (cart_number, plate, status_number, status_code, completion)"""
 
-    cartStatus = getAvailableCart(activePluggings, [cartNumber])
-    if cartStatus is None:
-        return None
+    from sdss.internal.manga.Totoro.dbclasses.plate import Plate
+
+    cartActivePluggings = [aP for aP in activePluggings
+                           if aP.plugging.cartridge.number == cartNumber]
+
+    if len(cartActivePluggings) == 0:
+        return (cartNumber, None, 0, cartStatusCodes[0], 0)  # Empty cart
+    elif len(cartActivePluggings) > 1:
+        raise exceptions.TotoroError(
+            'something went wrong. Cart #{0} has more than '
+            'one active plugging'.format(cartNumber))
     else:
-        return cartStatus[1]
+        cartActivePlugging = cartActivePluggings[0]
 
+    plate = cartActivePlugging.plugging.plate
 
-def getCartPriority(activePluggings, carts):
-    """Returns the priority of a list of carts. The priority is defined as the
-    completion of the plate plugged in the cart times the priority its
-    priority."""
+    isMaNGAPlate = (plate.currentSurveyMode is not None and
+                    'MaNGA' in plate.currentSurveyMode.label)
 
-    from sdss.internal.manga.Totoro.dbclasses import Plate
+    if not isMaNGAPlate:
+        return (cartNumber, plate, 1, cartStatusCodes[1], 0)  # No MaNGA plate
 
-    priorities = []
+    totoroPlate = Plate(plate)
 
-    for cart in carts:
-        cartActivePluggings = [aP for aP in activePluggings
-                               if aP.plugging.cartridge.number == cart]
-        if len(cartActivePluggings) == 0:
-            log.debug('no active plugging for cart #{0}'.format(cart))
-            priorities.append(10)
-            continue
+    if totoroPlate.isComplete:
+        return (cartNumber, totoroPlate, 2,
+                cartStatusCodes[2], 1.)  # Complete MaNGA plate
 
-        priority = (cartActivePluggings[0].plugging
-                    .plate.plate_pointings[0].priority)
-        if priority == 0:
-            priorities.append(0)
-            continue
+    if totoroPlate.getPlateCompletion() == 0:
+        return (cartNumber, totoroPlate, 3,
+                cartStatusCodes[3], 0.)  # Non-stated MaNGA plate
+    else:
+        return (cartNumber, 4, totoroPlate, cartStatusCodes[4],
+                totoroPlate.getPlateCompletion())  # Started MaNGA plate
 
-        try:
-            completion = Plate(
-                cartActivePluggings[0].plugging.plate).getPlateCompletion()
-        except exceptions.TotoroError:
-            # If plate is not MaNGA (i.e., is APOGEE using one of our carts)
-            completion = 0.  # Forces priority to be zero.
-
-        priorities.append(completion * priority)
-
-    return np.array(priorities)
+    return (cartNumber, None, 10, cartStatusCodes[10], 0)  # Unknown
 
 
 def getCartPlate(activePluggings, cartNumber):
@@ -125,7 +91,7 @@ def getCartPlate(activePluggings, cartNumber):
 def getCartForReplug(plate):
     """Returns the cart of the last plugging."""
 
-    # TODO: this function should check that the returned plugging actuallu
+    # TODO: this function should check that the returned plugging actually
     # contains science exposures.
 
     if len(plate.pluggings) == 0:
@@ -133,6 +99,40 @@ def getCartForReplug(plate):
 
     scanMJDs = [plugging.fscan_mjd for plugging in plate.pluggings]
     return plate.pluggings[np.argmax(scanMJDs)].cartridge.number
+
+
+def prioritiseCarts(cartStatus, activePluggings):
+    """Returns a list of carts sorted by priority for being allocated."""
+
+    # Creates some intermediate lists
+    empty = []
+    noMaNGA = []
+    complete = []
+    noStarted = []
+    unknown = []
+    started = []
+
+    # Assigns carts to the appropriate list.
+    for cart in cartStatus:
+        statusLabel = cart[3]
+        if statusLabel == 'empty':
+            empty.append(cart)
+        elif statusLabel == 'noMaNGAplate':
+            noMaNGA.append(cart)
+        elif statusLabel == 'MaNGA_complete':
+            complete.append(cart)
+        elif statusLabel == 'MaNGA_noStarted':
+            noStarted.append(cart)
+        elif statusLabel == 'unknown':
+            unknown.append(cart)
+        elif statusLabel == 'MaNGA_started':
+            started.append(cart)
+
+    # Sorts started carts using the completion (fifth element of the tuple).
+    started = sorted(started, key=lambda xx: xx[4])
+
+    # Returns carts in the desired order.
+    return empty + noMaNGA + complete + noStarted + unknown + started
 
 
 class PluggerScheduler(object):
@@ -285,8 +285,7 @@ class PluggerScheduler(object):
                       .format(cartNumber, plateid, msgStr))
 
     def allocateCarts(self, plates, **kwargs):
-
-        from sdss.internal.manga.Totoro.dbclasses import Plate
+        """Allocates plates into carts in the most efficient way."""
 
         if len(plates) > len(self.carts):
             warnings.warn('{0} plates to allocate but only {1} carts '
@@ -299,89 +298,90 @@ class PluggerScheduler(object):
         log.important('Plugging allocation for MJD={0:d} follows:'
                       .format(mjd))
 
-        allocatedPlates = []
-
-        # Dictionary to save the cart allocation
+        # # Dictionary to save the cart allocation
         cartPlateMessage = {}
 
         # Gets active pluggings
         with session.begin(subtransactions=True):
             activePluggings = session.query(db.plateDB.ActivePlugging).all()
 
+        # Gets the status of the plates in each remaining cart.
+        cartStatus = OrderedDict(
+            [(cartNumber, getCartStatus(activePluggings, cartNumber))
+             for cartNumber in self.carts if self.carts[cartNumber] is None])
+
+        allocatedPlates = []
+
+        # Allocates plates that are already plugged
         for plate in plates:
-
             if plate.isPlugged:
-
                 cartNumber = plate.getActiveCartNumber()
                 self.carts[cartNumber] = plate.plate_id
-                self._logCartAllocation(cartNumber, plate, 'already plugged')
+                cartPlateMessage[cartNumber] = (plate, 'already plugged')
                 allocatedPlates.append(plate)
+                cartStatus.pop(cartNumber)
 
+        # Allocates replugs
+        for plate in plates:
+            if plate in allocatedPlates:
+                continue
+            if hasattr(plate, 'isReplug') and plate.isReplug:
+                cartNumber = getCartForReplug(plate)
+                statusCode = cartStatus[cartNumber][2]
+                self.carts[cartNumber] = plate.plate_id
+                allocatedPlates.append(plate)
+                cartPlateMessage[cartNumber] = (plate,
+                                                replaceMsgs[statusCode])
+                cartStatus.pop(cartNumber)
+
+        # Sorts carts by priority. Note that sortedCarts is a list of tuples,
+        # while cartStatus was a dictionary.
+        sortedCarts = prioritiseCarts(cartStatus.values(), activePluggings)
+
+        # Allocates the remaining plates
+        for plate in plates:
+            if plate in allocatedPlates:
+                continue
+
+            cart = sortedCarts[0]
+            sortedCarts.pop(0)
+
+            cartNumber, cartPlate, statusCode, statusLabel, completion = cart
+
+            self.carts[cartNumber] = plate.plate_id
+            allocatedPlates.append(plate)
+            msg = replaceMsgs[statusCode]
+            if statusLabel == 'MaNGA_started':
+                msg + ', completion={0:.2f}'.format(completion)
+
+            cartPlateMessage[cartNumber] = (plate, msg)
+
+        if len(plates) > len(allocatedPlates):
+            warnings.warn('{0} plates have not been allocated'.format(
+                          len(plates) - len(allocatedPlates)),
+                          exceptions.TotoroPluggerWarning)
+
+        # Checks unassigned carts
+        for cart in sortedCarts:
+            cartNumber, plate, statusCode, statusLabel, completion = cart
+            if completion >= 1:
+                # Unplugs complete plates
+                cartPlateMessage[cartNumber] = (plate, 'unplug')
+                continue
             else:
-
-                if hasattr(plate, 'isReplug') and plate.isReplug:
-                    cartNumber = getCartForReplug(plate)
-                    status = getCartStatus(cartNumber, activePluggings)
-                else:
-                    cartNumber, status = getAvailableCart(
-                        activePluggings,
-                        [cartNumber for cartNumber in self.carts
-                         if self.carts[cartNumber] is None])
-
-                if cartNumber is not None:
-
+                if statusLabel != 'noMaNGAplate':
+                    # If this is a MaNGA plate, keeps it.
                     self.carts[cartNumber] = plate.plate_id
-
-                    if status == 'empty':
-                        cartPlateMessage[cartNumber] = (plate, 'empty cart')
-                    elif status == 'complete':
-                        cartPlateMessage[cartNumber] = (
-                            plate, 'replacing complete plate')
-                    elif status == 'noMaNGAPlate':
-                        cartPlateMessage[cartNumber] = (
-                            plate, 'replacing no-MaNGA plate')
-                    elif status == 'notStarted':
-                        cartPlateMessage[cartNumber] = (
-                            plate, 'replacing non started plate')
-
-                    allocatedPlates.append(plate)
-
-        # Now it handles the plates that will require replacing a MaNGA plate
-        unallocatedPlates = [plate for plate in plates
-                             if plate not in allocatedPlates]
-        unallocatedCarts = [cart for cart in self.carts
-                            if self.carts[cart] is None]
-
-        cartPriority = getCartPriority(activePluggings, unallocatedCarts)
-
-        for plate in unallocatedPlates:
-            bestCartIdx = np.argmin(cartPriority)
-            cart = unallocatedCarts[bestCartIdx]
-            self.carts[cart] = plate.plate_id
-            cartPlateMessage[cart] = (plate, 'replacing MaNGA plate')
-
-            cartPriority = np.delete(cartPriority, bestCartIdx)
-            unallocatedCarts.pop(bestCartIdx)
-
-        # If there are unallocated carts, leaves them untouched.
-        for cart in unallocatedCarts:
-            plate = getCartPlate(activePluggings, cart)
-            if plate is None:
-                cartPlateMessage[cart] = (None, '')
-            else:
-                # In principle, the cart is left untouched
-                self.carts[cart] = plate.plate_id
-                cartPlateMessage[cart] = (plate, 'unchanged')
-                if utils.isMaNGA_Led(plate) and Plate(plate).isComplete:
-                    # If plate is complete, sets the cart to None and
-                    # requests it to be unplugged
-                    self.carts[cart] = None
-                    cartPlateMessage[cart] = (None, 'unplug')
+                    cartPlateMessage[cartNumber] = (plate, 'unchanged')
+                else:
+                    # Otherwise, does nothing.
+                    cartPlateMessage[cartNumber] = (plate, '')
 
         # Logs the allocation
-        for cart in sorted(cartPlateMessage.keys()):
-            self._logCartAllocation(cart, cartPlateMessage[cart][0],
-                                    cartPlateMessage[cart][1])
+        for cartNumber in sorted(cartPlateMessage.keys()):
+            self._logCartAllocation(cartNumber,
+                                    cartPlateMessage[cartNumber][0],
+                                    cartPlateMessage[cartNumber][1])
 
     def _cleanUpNoMaNGA(self):
         """Removes the key in the self.cart dictionary that contain a

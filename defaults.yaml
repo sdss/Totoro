@@ -71,7 +71,8 @@ plugger:
     efficiency: 0.8
     noPlugPriority: 2
     forcePlugPriority: 10
-    maxAltitude: 80
+    maxAltitude: 80,
+    onlyVisiblePlates: true
 
 simulation:
     blueSN2: 3.4
@@ -107,3 +108,4 @@ setArrangement:
 
 carts: [1, 2, 3, 4, 5, 6]
 defaultPriority: 5
+plateVisibilityMaxHalfWindowHours: 3

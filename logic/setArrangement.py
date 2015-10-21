@@ -39,7 +39,7 @@ def updatePlate(plate, nExposuresMax=None, **kwargs):
         if nExposuresMax is None else nExposuresMax
 
     log.debug('plate_id={0}: updating sets'.format(plate.plate_id))
-    # print(plate)
+
     badSetStatus = checkBadSets(plate, **kwargs)
     if badSetStatus:
         plate = fixBadSets(plate)
