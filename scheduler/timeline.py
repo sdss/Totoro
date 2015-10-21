@@ -132,4 +132,6 @@ class Timeline(object):
         if self.remainingTime == 0:
             return True
         else:
+            log.info('... unobserved times: {0}'.format(
+                     str(self.unallocatedExps)))
             return False

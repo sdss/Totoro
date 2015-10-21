@@ -19,7 +19,7 @@ from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro import exceptions as TotoroExpections
 from sdss.internal.manga.Totoro import logic
 from sdss.internal.manga.Totoro import log, config, dustMap, site
-# from sdss.internal.manga.Totoro import scheduler
+from sdss.internal.manga.Totoro.scheduler.observingPlan import ObservingPlan
 import warnings
 from astropy import time
 import set as TotoroSet
@@ -36,6 +36,8 @@ __ALL__ = ['getPlugged', 'getAtAPO', 'getAll', 'Plates', 'Plate',
 totoroDB = TotoroDBConnection()
 plateDB = totoroDB.plateDB
 mangaDB = totoroDB.mangaDB
+
+observingPlan = ObservingPlan()
 
 
 def getPlugged(onlyIncomplete=False, **kwargs):
@@ -297,9 +299,9 @@ class Plate(plateDB.Plate):
 
         return True
 
-    def rearrangeSets(self, startDate=None, **kwargs):
+    def rearrangeSets(self, LST=None, **kwargs):
         result = logic.setArrangement.rearrangeSets(
-            self, startDate=startDate, **kwargs)
+            self, LST=LST, **kwargs)
         if result is True:
             self.update()
         return result
@@ -470,27 +472,30 @@ class Plate(plateDB.Plate):
         haRange = np.array([ha0, ha1]) % 360.
         haRange[haRange > 180.] -= 360.
 
-        # if intersect is False:
+        if intersect is False:
+            return haRange
+
+        if mjd is None:
+            mjd = int(np.round(time.Time.now().mjd))
+            log.debug('Plate.getHARange: MJD set to {0:d}'.format(mjd))
+        else:
+            mjd = int(mjd)
+
+        jdRange = observingPlan.getMJD(mjd)
+
+        if jdRange is None:
+            warnings.warn('no observing block found for MJD={0:d}. '
+                          'Observing windows will not be contrained.'
+                          .format(mjd), TotoroExpections.NoObservingBlock)
+            return haRange
+
+        observingRangeLST = np.array(map(site.localSiderealTime, jdRange))
+        observingRangeHA = (observingRangeLST * 15 - self.ra) % 360.
+
+        haRange = utils.getIntervalIntersection(haRange, observingRangeHA)
+        haRange[haRange > 180] -= 360.
+
         return haRange
-
-        # if mjd is None:
-        #     mjd = int(np.round(time.Time.now().mjd))
-        #     log.debug('Plate.getHARange: MJD set to {0:d}'.format(mjd))
-        # else:
-        #     mjd = int(mjd)
-
-        # jdRange = scheduler.observingPlan.getMJD(mjd)
-
-        # if jdRange is None:
-        #     warnings.warn('no observing block found for MJD={0:d}. '
-        #                   'Observing windows will not be contrained.'
-        #                   .format(mjd), TotoroExpections.NoObservingBlock)
-        #     return haRange
-
-        # observingRangeLST = np.array(map(site.localSiderealTime, jdRange))
-        # observingRangeHA = (observingRangeLST * 15 - self.ra) % 360.
-
-        # return utils.getIntervalIntersection(haRange, observingRangeHA)
 
     def getLSTRange(self, **kwargs):
 

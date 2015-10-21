@@ -94,6 +94,7 @@ set:
     maxHARange: 15.
     maxSeeingRange: 0.8
     maxSN2Factor: 2
+    setRearrangementFactor: 0.9
     ditherPositions: ['N', 'S', 'E']
 
 setArrangement:
