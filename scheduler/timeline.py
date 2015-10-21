@@ -18,6 +18,7 @@ from astropy.time import Time
 from sdss.internal.manga.Totoro import log, config
 from sdss.internal.manga.Totoro import utils
 from sdss.internal.manga.Totoro import logic
+from sdss.internal.manga.Totoro.core.colourPrint import _color_text
 import numpy as np
 
 
@@ -119,13 +120,24 @@ class Timeline(object):
             if optimalPlate is None:
                 break
             else:
+
                 self.plates.append(optimalPlate)
                 nExp = self.allocateJDs(plates=[optimalPlate])
+
+                locationFlag = ''
+                location = optimalPlate.getLocation()  # May be None
+                if location and location != 'APO' and location != 'Cosmic':
+                    locationFlag = _color_text(
+                        '** Plate not on the mountain **', 'red')
+                elif location and location == 'Cosmic':
+                    locationFlag = _color_text(
+                        '** Plate in Cosmic **', 'red')
+
                 log.info('...... found optimal plate: plate_id={0}, '
-                         'manga_tiledid={1} ({2} new exposures)'
+                         'manga_tiledid={1} ({2} new exposures) {3}'
                          .format(optimalPlate.plate_id,
                                  optimalPlate.getMangaTileID(),
-                                 nExp))
+                                 nExp, locationFlag))
 
         if showUnobservedTimes:
             if (self.remainingTime <=

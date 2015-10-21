@@ -18,6 +18,7 @@ data/platesIgnore.dat -text
 data/specialPlates.dat -text
 data/tilesBeingDrilled.dat -text
 data/tmpSchedule.dat -text
+data/updatedSchedule.dat -text
 dbclasses/__init__.py -text
 dbclasses/exposure.py -text
 dbclasses/field.py -text

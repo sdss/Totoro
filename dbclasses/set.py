@@ -276,8 +276,15 @@ class Set(mangaDB.Set):
         """Returns the seeing range in which new exposures may be taken."""
 
         maxSeeingRange = config['set']['maxSeeingRange']
+        goodSeeing = config['set']['goodSeeing']
         maxSeeing = config['exposure']['maxSeeing']
+
+        nExposuresMissing = 3 - len(self.totoroExposures)
         seeings = np.array([exp.seeing for exp in self.totoroExposures])
+
+        maxSeeingGood = (3 * goodSeeing - np.sum(seeings)) / nExposuresMissing
+        if maxSeeingGood < maxSeeing:
+            maxSeeing = maxSeeingGood
 
         seeingRangeMin = np.max(seeings) - maxSeeingRange
         seeingRangeMax = np.min(seeings) + maxSeeingRange
