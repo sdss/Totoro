@@ -47,10 +47,8 @@ class BaseScheduler(object):
         """Sets the start and end date if they haven't been defined."""
 
         if scope == 'planner':
-            if startDate is not None and endDate is not None:
-                pass
-            else:
-                startDate, endDate = self._observingPlan.getRun(startDate)
+            if startDate is None or endDate is None:
+                raise TotoroError('planner requires both start and end dates.')
 
         elif scope == 'nightly':
             if startDate is None or endDate is None:
