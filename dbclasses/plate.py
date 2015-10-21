@@ -252,6 +252,10 @@ class Plate(plateDB.Plate):
         self.mjd = mjd
         self._manga_tileid = manga_tileid
 
+        # Date (JD) at which the plate will arrive at APO. Used for field
+        # selection. If None, it assumes the plate is already at APO.
+        self._dateAtAPO = None
+
         if 'dust' in kwargs:
             self.dust = kwargs['dust']
         else:
@@ -877,3 +881,12 @@ class Plate(plateDB.Plate):
     @drilled.setter
     def drilled(self, value):
         self._drilled = value
+
+    @property
+    def dateAtAPO(self):
+        return self._dateAtAPO
+
+    @dateAtAPO.setter
+    def dateAtAPO(self, value):
+        assert value > 0, 'value must be a JD.'
+        self._dateAtAPO = value

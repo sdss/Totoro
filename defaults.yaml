@@ -50,7 +50,7 @@ observingPlan:
 fields:
     tilingCatalogue: $MANGA_TILING_CATALOGUE
     mangacore: $MANGACORE_DIR
-    tilesBeingDrilled: None
+    tilesBeingDrilled: ~/.totoro/tiles_drilling.dat
     scienceCatalogue: $MANGASAMPLE_SCIENCE_CATALOGUE
 
 observatory:
@@ -126,3 +126,4 @@ apogeeCarts: [7, 8, 9]
 defaultPriority: 5
 plateVisibilityMaxHalfWindowHours: 3
 numberPlatesAllowedAtAPO: 100
+dateAtAPO: ~/.totoro/dateAtAPO.dat

@@ -98,7 +98,7 @@ class Timeline(object):
         return unallocatedTime * 24.
 
     def schedule(self, plates, mode='plugger', allowComplete=False,
-                 showUnobservedTimes=True, **kwargs):
+                 showUnobservedTimes=True, useDateAtAPO=True, **kwargs):
         """Schedules a list of plates in the LST ranges not yet observed in the
         timeline."""
 
@@ -118,8 +118,15 @@ class Timeline(object):
             if len(jdRange.shape) == 2:
                 jdRange = jdRange[0]
 
+            if useDateAtAPO:
+                platesToSchedule = [plate for plate in plates
+                                    if plate.dateAtAPO is None or
+                                    plate.dateAtAPO <= jdRange[0]]
+            else:
+                platesToSchedule = plates
+
             optimalPlate, newExposures = logic.getOptimalPlate(
-                plates, jdRange, prioritisePlugged=prioritisePlugged,
+                platesToSchedule, jdRange, prioritisePlugged=prioritisePlugged,
                 mode=mode, **kwargs)
 
             if optimalPlate is None:
@@ -169,11 +176,9 @@ class Timeline(object):
                 # Logs the result of the simulation. Format changed depending
                 # on whether this is plate or a field.
                 if not isinstance(optimalPlate, Field):
-                    log.info('...... plate_id={0}, '
-                             'manga_tiledid={1} ({2} new exps, '
-                             '{3:.2f} -> {4:.2f} complete) {5}'
+                    log.info('...... plate_id={0}, ({1} new exps, '
+                             '{2:.2f} -> {3:.2f} complete) {4}'
                              .format(optimalPlate.plate_id,
-                                     optimalPlate.getMangaTileID(),
                                      nExps, completionPre, completionPost,
                                      flags))
 
