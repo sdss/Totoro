@@ -175,6 +175,8 @@ class Plugger(object):
                 cart = plate.getActiveCartNumber()
                 self.carts[cart] = plate
 
+        self.addCartOrder()
+
     def _initFromDates(self, jd0, jd1, **kwargs):
         """Initialites the Plugger instance from two JD dates."""
 
