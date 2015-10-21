@@ -70,12 +70,13 @@ def loadMangaPlates():
     with db.session.begin():
         allPlates = db.session.query(db.plateDB.Plate).all()
 
-    for plate in allPlates:
+    with db.session.begin():
 
-        if (plate.plate_id in mangaTileIDs or
-                plate.plate_id in specialPlates['plateid']):
+        for plate in allPlates:
 
-            with db.session.begin():
+            if (plate.plate_id in mangaTileIDs or
+                    plate.plate_id in specialPlates['plateid']):
+
                 try:
                     newPlate = db.session.query(db.mangaDB.Plate).filter(
                         db.mangaDB.Plate.platedb_plate_pk == plate.pk).one()
