@@ -28,7 +28,6 @@ helpers/addTiles.py.bak -text
 helpers/createSchedule.py -text
 helpers/createWorkableDB.py -text
 helpers/loadMockData.py -text
-helpers/rearrangeSets.py -text
 helpers/tilecenters_180_SGC.fits -text
 logic/__init__.py -text
 logic/mangaLogic.py -text
