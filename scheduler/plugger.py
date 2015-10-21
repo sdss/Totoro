@@ -298,6 +298,8 @@ class PluggerScheduler(object):
     def allocateCarts(self, plates, **kwargs):
         """Allocates plates into carts in the most efficient way."""
 
+        plates = np.unique(plates)
+
         if len(plates) > len(self.carts):
             warnings.warn('{0} plates to allocate but only {1} carts '
                           'available. Using the first {1} plates.'
@@ -383,10 +385,15 @@ class PluggerScheduler(object):
                 if statusLabel != 'noMaNGAplate' and plate is not None:
                     # If this is a MaNGA plate, keeps it.
                     self.carts[cartNumber] = plate.plate_id
-                    cartPlateMessage[cartNumber] = (plate, 'unchanged')
+                    if plate.isPlugged:
+                        cartPlateMessage[cartNumber] = (plate,
+                                                        'already plugged')
+                    else:
+                        cartPlateMessage[cartNumber] = (plate, 'unchanged')
                 else:
                     # Otherwise, does nothing.
-                    cartPlateMessage[cartNumber] = (plate, 'same')
+                    cartPlateMessage[cartNumber] = (plate,
+                                                    'not doing anything')
 
         # Logs the allocation
         for cartNumber in sorted(cartPlateMessage.keys()):

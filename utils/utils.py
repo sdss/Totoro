@@ -91,9 +91,10 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
     else:
         plateComplete = False
 
-    if np.isnan(plate.getCumulatedSN2(includeIncomplete=False)).any():
-        log.info('not all cameras have been correctly reduced. '
-                 'Setting plateComplete=False.')
+    if (plateComplete is True and
+            np.isnan(plate.getCumulatedSN2(includeIncomplete=False)).any()):
+        log.debug('plate_id={0}: not all cameras have been correctly reduced. '
+                  'Setting plateComplete=False.'.format(plate.plate_id))
         plateComplete = False
 
     if plugComplete is not None:
