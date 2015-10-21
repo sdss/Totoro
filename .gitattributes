@@ -27,6 +27,7 @@ helpers/addFields.py -text
 helpers/addTiles.py.bak -text
 helpers/createSchedule.py -text
 helpers/createWorkableDB.py -text
+helpers/getMaNGAstats.py -text
 helpers/loadMockData.py -text
 helpers/tilecenters_180_SGC.fits -text
 logic/__init__.py -text

@@ -186,7 +186,10 @@ def getNewExposures(plate, silent=True, **kwargs):
     """Gets unassigned exposures in a plate."""
 
     newExposures = []
-    for exp in plate.getScienceExposures():
+    exposures = np.array(plate.getScienceExposures())
+    expNo = [exp.exposure_no for exp in exposures]
+
+    for exp in exposures[np.argsort(expNo)]:
         if len(exp.mangadbExposure) == 0:
             warnings.warn('exposure pk={0} has no mangaDB '
                           'counterpart.'.format(exp.pk), NoMangaExposure)
@@ -241,9 +244,7 @@ def rearrangeSets(plate, mode='optimal', **kwargs):
         for ss in plate.sets:
             removeSet(ss.pk)
 
-        plate.update(silent=True)
-
-        return updatePlate(plate, nExposuresMax=False, **kwargs)
+        return plate.update(silent=True, nExposuresMax=False)
 
 
 def removeSet(set_pk, orphan=False):
@@ -352,7 +353,7 @@ def getOptimalArrangement(plate, LST=None,
     validExposures = []
     invalidExposures = []
     for exposure in exposures:
-        if checkExposure(exposure, forceReflag=True, flag=True,
+        if checkExposure(exposure, force=True, flag=True,
                          silent=silent, **kwargs)[0]:
             validExposures.append(exposure)
         else:

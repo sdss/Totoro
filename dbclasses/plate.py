@@ -204,7 +204,7 @@ class Plate(plateDB.Plate):
                           self.pk, self.plate_id))
 
             if updateSets:
-                self.updatePlate(silent=silent)
+                self.updatePlate(silent=silent, **kwargs)
 
         else:
             self.sets = []

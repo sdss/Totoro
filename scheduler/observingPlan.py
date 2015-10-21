@@ -86,7 +86,7 @@ class ObservingPlan(object):
         self.plan.rename_column('col11', 'JD0')
         self.plan.rename_column('col12', 'JD1')
 
-        log.info('observing plan {0} loaded.'.format(scheduleToPrint))
+        log.debug('observing plan {0} loaded.'.format(scheduleToPrint))
 
         self.addRunDayCol()
         self.plan = self.plan[(self.plan['JD0'] > 0) & (self.plan['JD1'] > 0)]
