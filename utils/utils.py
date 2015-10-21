@@ -107,8 +107,8 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
 
 
 def getAPOcomplete(plates, format='plate_id',
-                   SN2_blue=None, SN2_red=None, func=np.max,
-                   createFile=False, **kwargs):
+                   SN2_blue=None, SN2_red=None, limitSN=False,
+                   func=np.max, createFile=False, **kwargs):
     """Returns a dictionary with the APOcomplete output."""
 
     from sdss.internal.manga.Totoro.dbclasses import Plate
@@ -141,25 +141,28 @@ def getAPOcomplete(plates, format='plate_id',
         APOcomplete[plate.plate_id] = []
 
         validSets = plate.getValidSets()
-        for nSets in range(1, len(validSets)+1):
 
-            combSets = list(combinations(validSets, nSets))
-            SN2 = np.array([_cumulatedSN2(sets) for sets in combSets])
+        if limitSN:
+            for nSets in range(1, len(validSets)+1):
 
-            overSN2 = [(combSets[ii], SN2[ii]) for ii in range(len(combSets))
-                       if SN2[ii][0] >= SN2_blue and SN2[ii][1] >= SN2_red]
+                combSets = list(combinations(validSets, nSets))
+                SN2 = np.array([_cumulatedSN2(sets) for sets in combSets])
 
-            if len(overSN2) > 0:
+                overSN2 = [(combSets[ii], SN2[ii])
+                           for ii in range(len(combSets))
+                           if SN2[ii][0] >= SN2_blue and SN2[ii][1] >= SN2_red]
 
-                relativeSN2 = np.array(
-                    [(overSN2[ii][1][0] / SN2_blue) *
-                     (overSN2[ii][1][1] / SN2_red)
-                     for ii in range(len(overSN2))])
+                if len(overSN2) > 0:
 
-                setsToAPOcomplete = overSN2[
-                    np.where(relativeSN2 == func(relativeSN2))[0][0]][0]
+                    relativeSN2 = np.array(
+                        [(overSN2[ii][1][0] / SN2_blue) *
+                         (overSN2[ii][1][1] / SN2_red)
+                         for ii in range(len(overSN2))])
 
-                break
+                    setsToAPOcomplete = overSN2[
+                        np.where(relativeSN2 == func(relativeSN2))[0][0]][0]
+
+                    break
 
         if setsToAPOcomplete is None:
             setsToAPOcomplete = validSets
@@ -175,7 +178,11 @@ def getAPOcomplete(plates, format='plate_id',
                 APOcomplete[plate.plate_id].append(
                     [plate.plate_id, mjd, pk, dPos, nExp])
 
-        apoCompleteSN2 = _cumulatedSN2(setsToAPOcomplete)
+        if len(setsToAPOcomplete) > 0:
+            apoCompleteSN2 = _cumulatedSN2(setsToAPOcomplete)
+        else:
+            apoCompleteSN2 = np.array([0., 0.])
+
         if apoCompleteSN2[0] >= SN2_blue and apoCompleteSN2[1] >= SN2_red:
             log.info('APOcomplete for plate_id={0} generated with '
                      'SN2_blue={1:.1f}, SN2_red={2:.1f}.'.format(
@@ -231,6 +238,9 @@ def _cumulatedSN2(sets):
     """Returns the cumulated SN2 for a list of sets as [SN2_blue, SN2_red]."""
 
     SN2array = np.array([ss.getSN2Array() for ss in sets])
+    if len(SN2array) == 0:
+        SN2array = np.array([[0.0, 0.0, 0.0, 0.0]])
+
     SN2sum = np.sum(SN2array, axis=0)
 
     return np.array([np.mean(SN2sum[0:2]), np.mean(SN2sum[2:])])

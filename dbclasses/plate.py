@@ -655,7 +655,13 @@ class Plate(plateDB.Plate):
             return False
 
     def getAPOcomplete(self):
+        """Retuns the APOcomplete dictionary for this plate."""
         return utils.getAPOcomplete(self)
+
+    def createAPOcompleteFile(self, path=None):
+        """Creates an apocomp file for the current plate."""
+
+        return utils.createAPOcompleteFile(self.getAPOcomplete(), path=path)
 
     def getMangaTileID(self):
 
