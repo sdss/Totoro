@@ -23,6 +23,8 @@ import warnings
 from sdss.manga import mlhalimit as mlhalimitHours
 from collections import OrderedDict
 from astropy import time, units
+from numbers import Real
+import datetime
 
 
 def mlhalimit(dec):
@@ -156,7 +158,7 @@ def createSite(longitude=None, latitude=None, altitude=None,
             name = config['observatory']['name']
 
     site = obstools.Site(latitude, longitude, name=name, alt=altitude)
-    # site.localSiderialTime = lambda jd: _calculateLST(site, jd)
+    site.localSiderialTime = lambda jd: _calculateLST(site, jd)
 
     if verbose:
         log.info('Created site with name \'{0}\''.format(name))
@@ -164,17 +166,25 @@ def createSite(longitude=None, latitude=None, altitude=None,
     return site
 
 
-# def _calculateLST(site, jd):
-#     """Not-to-be-used-directly function to replace the imprecise
-#     locaSiderialTime in astropysics."""
+def _calculateLST(site, inputDate):
+    """Not-to-be-used-directly function to replace the imprecise
+    locaSiderialTime in astropysics."""
 
-#     tmpTime = time.Time(jd, format='jd', scale='tai')
-#     tmpTime.delta_ut1_utc = 0.
+    if isinstance(inputDate, Real):
+        tmpTime = time.Time(inputDate, format='jd', scale='tai')
+    elif isinstance(inputDate, datetime.date):
+        inputDate = datetime.datetime.fromordinal(inputDate.toordinal())
+        tmpTime = time.Time(inputDate, format='datetime', scale='tai')
+    else:
+        raise TotoroError('inputDate format not recognised. Must be JD '
+                          'or datetime.')
 
-#     lst = tmpTime.sidereal_time('apparent',
-#                                 longitude=float(site.longitude.degrees))
+    tmpTime.delta_ut1_utc = 0.
 
-#     return lst.hour
+    lst = tmpTime.sidereal_time('apparent',
+                                longitude=float(site.longitude.degrees))
+
+    return lst.hour
 
 
 def JDdiff(JD0, JD1):
