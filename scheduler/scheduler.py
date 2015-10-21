@@ -24,7 +24,7 @@ from astropy import time
 import numpy as np
 
 
-__ALL__ = ['BaseScheduler', 'Planner', 'Plugger']
+__ALL__ = ['BaseScheduler', 'Planner', 'Nightly', 'Plugger']
 
 
 class BaseScheduler(object):
@@ -152,3 +152,52 @@ class Plugger(object):
             self.plates, self.startDate, self.endDate, **kwargs)
 
         return pluggerSchedule.carts
+
+
+class Nightly(object):
+
+    def __init__(self, startDate=None, endDate=None, plates=None, **kwargs):
+
+        log.info('entering NIGHTLY mode.')
+
+        self.startDate = startDate
+        self.endDate = endDate
+        self.currentDate = time.Time.now().jd
+
+        if plates is None:
+            self.plates = self.getPlates(**kwargs)
+        else:
+            log.info('using programmatic input for plates.')
+            log.info('{0} input plates'.format(len(plates)))
+            self.plates = plates
+
+    def getPlates(self, **kwargs):
+        """Gets the plugged plates."""
+
+        from sdss.internal.manga.Totoro import dbclasses
+
+        plates = dbclasses.getPlugged(**kwargs)
+
+        if len(plates) == 0:
+            log.info('no plugged plates found.')
+        else:
+            log.info('found {0} plugged plates'.format(len(plates)))
+
+        return plates
+
+    def printTabularOutput(self):
+        """Prints a series of tables with information about the schedule."""
+
+        from sdss.internal.manga.Totoro import output
+
+        output.printTabularOutput(self.plates)
+
+    def getOutput(self, format='dict'):
+        """Returns the nightly output in the selected format."""
+
+        from sdss.internal.manga.Totoro import output
+
+        if format == 'table':
+            return output.getTabularOutput(self.plates)
+        else:
+            return output.getNightlyOutput(self, format=format)
