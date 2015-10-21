@@ -304,7 +304,7 @@ class Set(mangaDB.Set):
 
     @property
     def complete(self):
-        if self.getQuality()[0] not in ['Incomplete']:
+        if self.getQuality()[0] not in ['Incomplete', 'Bad']:
             return True
         else:
             return False
