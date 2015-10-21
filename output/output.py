@@ -15,8 +15,8 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from collections import OrderedDict
-from ..exceptions import TotoroError
-from ..scheduler import scheduler
+from Totoro.exceptions import TotoroError
+from Totoro import scheduler
 import numpy as np
 import yaml
 

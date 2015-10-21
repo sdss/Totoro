@@ -15,8 +15,8 @@ system.
 
 import yaml
 import os
-from .. import __TOTORO_CONFIG_PATH__, __DEFAULT_CONFIG_FILE__
-from ..exceptions import TotoroError
+from Totoro import __TOTORO_CONFIG_PATH__, __DEFAULT_CONFIG_FILE__
+from Totoro.exceptions import TotoroError
 
 
 def getConfiguration(default=None):

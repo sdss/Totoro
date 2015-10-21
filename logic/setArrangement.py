@@ -15,10 +15,9 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import itertools
-from .mangaLogic import checkExposure
-from ..exceptions import NoMangaExposure
-from .. import TotoroDBConnection
-from .. import log, config
+from mangaLogic import checkExposure
+from Totoro.exceptions import NoMangaExposure
+from Totoro import TotoroDBConnection, log, config
 from sqlalchemy import func
 from scipy.misc import factorial
 import collections
@@ -87,7 +86,7 @@ def checkBadSets(plate, **kwargs):
 def getValidSet(totoroExp, plate, setQuality=None):
     """Gets the best possible set for an exposure"""
 
-    from ..dbclasses import Set
+    from Totoro import dbclasses
 
     if not totoroExp.isValid()[0]:
         return False
@@ -106,8 +105,8 @@ def getValidSet(totoroExp, plate, setQuality=None):
 
     mockSetQuality = []
     for set in incompleteSetsSorted:
-        mockSet = Set.fromExposures(set.totoroExposures + [totoroExp],
-                                    silent=True)
+        mockSet = dbclasses.Set.fromExposures(
+            set.totoroExposures + [totoroExp], silent=True)
         mockSetQuality.append(mockSet.getQuality(silent=True)[0])
         if mockSetQuality[-1] in ['Good', 'Excellent']:
             return set
@@ -122,10 +121,10 @@ def getValidSet(totoroExp, plate, setQuality=None):
 def addExposure(exp, plate):
     """Adds an exposure to a plate."""
 
-    from ..dbclasses import Exposure, Set
+    from Totoro import dbclasses
 
-    if not isinstance(exp, Exposure):
-        totoroExp = Exposure(exp, silent=True)
+    if not isinstance(exp, dbclasses.Exposure):
+        totoroExp = dbclasses.Exposure(exp, silent=True)
     else:
         totoroExp = exp
 
@@ -133,7 +132,7 @@ def addExposure(exp, plate):
     if validSet is False:
         return False
     elif validSet is None:
-        validSet = Set()
+        validSet = dbclasses.Set()
         plate.sets.append(validSet)
 
     validSet.totoroExposures.append(totoroExp)
@@ -304,9 +303,9 @@ def getOptimalArrangement(plate, startDate=None,
                           forceLimit=False, **kwargs):
     """Gets the best possible arrangement for the exposures in a plate."""
 
-    from ..dbclasses import Exposure, Set, Plate
+    from Totoro import dbclasses
 
-    exposures = [Exposure(exp.pk, parent='mangaDB', silent=True)
+    exposures = [dbclasses.Exposure(exp.pk, parent='mangaDB', silent=True)
                  for exp in plate.getMangadbExposures()]
 
     validExposures = []
@@ -353,7 +352,7 @@ def getOptimalArrangement(plate, startDate=None,
 
             exposures = [validExposures[ii]
                          for ii in setIndices if ii is not None]
-            set = Set.fromExposures(exposures, silent=True)
+            set = dbclasses.Set.fromExposures(exposures, silent=True)
             sets.append(set)
 
             # To avoid calculating the state of a set more than one, creates
@@ -365,8 +364,8 @@ def getOptimalArrangement(plate, startDate=None,
         del set
 
         ra, dec = sets[-1].getCoordinates()
-        mockPlate = Plate.fromSets(sets, ra=ra, dec=dec, dust=None,
-                                   silent=True)
+        mockPlate = dbclasses.Plate.fromSets(sets, ra=ra, dec=dec, dust=None,
+                                             silent=True)
 
         plates.append(mockPlate)
         del mockPlate
@@ -448,7 +447,7 @@ def calculatePermutations(inputList):
 def fixBadSets(plate, setQuality=None):
     """Breaks bad sets into incomplete sets."""
 
-    from ..dbclasses import Set
+    from Totoro import dbclasses
 
     if setQuality is None:
         setQuality = [set.getQuality(silent=True)[0] for set in plate.sets]
@@ -470,8 +469,8 @@ def fixBadSets(plate, setQuality=None):
         validSet = getValidSet(exposure, plate, setQuality=newSetQuality)
 
         if validSet is None:
-            validSet = Set.createMockSet(ra=plate.ra, dec=plate.dec,
-                                         silent=True)
+            validSet = dbclasses.Set.createMockSet(ra=plate.ra, dec=plate.dec,
+                                                   silent=True)
             plate.sets.append(validSet)
             newSetQuality.append('Incomplete')
 

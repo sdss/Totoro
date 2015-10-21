@@ -15,16 +15,13 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from .. import config
-from astropysics import obstools
-from .. import log
-from ..exceptions import TotoroError, TotoroUserWarning
+from Totoro import config, log
+from Totoro.exceptions import TotoroError, TotoroUserWarning
 import warnings
 from sdss.manga import mlhalimit as mlhalimitHours
 from collections import OrderedDict
-from astropy import time, units
+from astropy import time
 from numbers import Real
-import datetime
 
 
 def mlhalimit(dec):
@@ -64,7 +61,7 @@ def computeAirmass(dec, ha, lat=config['observatory']['latitude'],
 def isPlateComplete(plate, format='plate_id', **kwargs):
     """Returns if a plate is complete using the MaNGA logic."""
 
-    from ..dbclasses import Plate
+    from Totoro.dbclasses import Plate
 
     if not isinstance(plate, Plate):
         if format.lower() not in ['pk', 'plate_id']:
@@ -100,7 +97,7 @@ def isPlateComplete(plate, format='plate_id', **kwargs):
 def getAPOcomplete(plates, format='plate_id', **kwargs):
     """Returns a dictionary with the APOcomplete output."""
 
-    from ..dbclasses import Plate
+    from Totoro.dbclasses import Plate
 
     format = format.lower()
     if format.lower() not in ['pk', 'plate_id']:
@@ -136,55 +133,84 @@ def getAPOcomplete(plates, format='plate_id', **kwargs):
     return APOcomplete
 
 
-def createSite(longitude=None, latitude=None, altitude=None,
-               name=None, verbose=False, **kwargs):
-    """Returns an astropysics.obstools.site instance. By default, uses the
-    coordinates for APO."""
+class Site(object):
 
-    if None in [longitude, latitude, altitude, name]:
-        assert 'observatory' in config.keys()
+    def __init__(self, longitude=None, latitude=None, altitude=None,
+                 name=None, verbose=True, **kwargs):
+        """Similar to astropysics.obstools.Site but using astropy"""
 
-    longitude = config['observatory']['longitude'] \
-        if longitude is None else longitude
-    latitude = config['observatory']['latitude'] \
-        if latitude is None else latitude
-    altitude = config['observatory']['altitude'] \
-        if altitude is None else altitude
+        if None in [longitude, latitude, altitude, name]:
+            assert 'observatory' in config.keys()
 
-    if name is None:
-        if 'name' not in config['observatory']:
-            name = ''
+        self.longitude = config['observatory']['longitude'] \
+            if longitude is None else float(longitude)
+        self.latitude = config['observatory']['latitude'] \
+            if latitude is None else float(latitude)
+        self.altitude = config['observatory']['altitude'] \
+            if altitude is None else float(altitude)
+
+        if name is None:
+            if 'name' not in config['observatory']:
+                self.name = ''
+            else:
+                self.name = config['observatory']['name']
+
+        if verbose:
+            log.debug('Created site with name \'{0}\''.format(self.name))
+
+    def localSiderialTime(self, *args, **kwargs):
+        """Alias for localSiderealTime observing the wrong spelling in
+        astropysics."""
+
+        return self.localSiderealTime(*args, **kwargs)
+
+    def localSiderealTime(self, inputDate=None, format='jd', **kwargs):
+        """Returns the LST for a given date."""
+
+        if inputDate is None:
+            inputDate = time.Time.now()
+
+        if isinstance(inputDate, time.Time):
+            pass
         else:
-            name = config['observatory']['name']
+            try:
+                inputDate = time.Time(inputDate, scale='tai', format=format)
+            except:
+                raise TotoroError('inputDate format not recognised.')
 
-    site = obstools.Site(latitude, longitude, name=name, alt=altitude)
-    site.localSiderialTime = lambda jd: _calculateLST(site, jd)
+        inputDate.delta_ut1_utc = 0.
 
-    if verbose:
-        log.info('Created site with name \'{0}\''.format(name))
+        lst = inputDate.sidereal_time('apparent', longitude=self.longitude)
 
-    return site
+        return lst.hour
 
+    def localSiderealTimeToDate(self, lst, date=None, dateFormat=None):
+        """Returns the UTC datetime for a LST at a given date."""
 
-def _calculateLST(site, inputDate):
-    """Not-to-be-used-directly function to replace the imprecise
-    locaSiderialTime in astropysics."""
+        if date is None:
+            date = time.Time.now()
 
-    if isinstance(inputDate, Real):
-        tmpTime = time.Time(inputDate, format='jd', scale='tai')
-    elif isinstance(inputDate, datetime.date):
-        inputDate = datetime.datetime.fromordinal(inputDate.toordinal())
-        tmpTime = time.Time(inputDate, format='datetime', scale='tai')
-    else:
-        raise TotoroError('inputDate format not recognised. Must be JD '
-                          'or datetime.')
+        lst = np.atleast_1d(lst)
 
-    tmpTime.delta_ut1_utc = 0.
+        if isinstance(date, time.Time):
+            pass
+        else:
+            try:
+                date = time.Time(date, format=dateFormat, scale='tai')
+            except:
+                raise TotoroError('date format not recognised.')
 
-    lst = tmpTime.sidereal_time('apparent',
-                                longitude=float(site.longitude.degrees))
+        LST0 = self.localSiderealTime(date)
 
-    return lst.hour
+        lstDelta = lst - LST0
+
+        UTDates = date + time.TimeDelta(lstDelta * 3600, format='sec',
+                                        scale='tai')
+
+        if len(UTDates) == 1:
+            return UTDates[0]
+        else:
+            return UTDates
 
 
 def JDdiff(JD0, JD1):

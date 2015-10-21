@@ -15,11 +15,10 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from astropysics import obstools
-from .observingPlan import ObservingPlan
-from ..dbclasses import Fields
-from ..dbclasses import Plates
-from .timeline import Timelines
-from .. import log, site
+from Totoro.exceptions import TotoroError
+from timeline import Timelines
+from Totoro import log, site
+from Totoro.scheduler import observingPlan
 from astropy import time
 
 
@@ -33,7 +32,11 @@ class BaseScheduler(object):
 
     def __init__(self, startDate=None, endDate=None, **kwargs):
 
-        self._observingPlan = ObservingPlan(**kwargs)
+        if observingPlan is None:
+            raise TotoroError('observing plan not found. Not possible to '
+                              'create an instance of BaseScheduler.')
+
+        self._observingPlan = observingPlan
         self.site = site
         self._setStartEndDate(startDate, endDate, **kwargs)
 
@@ -80,8 +83,10 @@ class Planner(BaseScheduler):
     def getFields(self, rejectDrilled=True, **kwargs):
         """Gets a table with the fields that can be scheduled."""
 
+        from Totoro import dbclasses
+
         log.info('finding fields with rejectDrilled={0}'.format(rejectDrilled))
-        fields = Fields(rejectDrilled=rejectDrilled, **kwargs)
+        fields = dbclasses.Fields(rejectDrilled=rejectDrilled, **kwargs)
 
         return fields
 
@@ -104,10 +109,12 @@ class Plugger(BaseScheduler):
 
     def getPlatesAtAPO(self, rejectComplete=True):
 
+        from Totoro import dbclasses
+
         log.info('getting plates at APO with rejectComplete={0}'.format(
                  rejectComplete))
 
-        plates = Plates.getAtAPO(onlyIncomplete=True)
+        plates = dbclasses.Plates.getAtAPO(onlyIncomplete=True)
 
         log.info('plates found: {0}'.format(len(plates)))
 
@@ -141,7 +148,9 @@ class Nightly(BaseScheduler):
     def getPlates(self, **kwargs):
         """Gets the plugged plates."""
 
-        plates = Plates.getPlugged(**kwargs)
+        from Totoro import dbclasses
+
+        plates = dbclasses.Plates.getPlugged(**kwargs)
 
         if len(plates) == 0:
             log.info('no plugged plates found.')

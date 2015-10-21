@@ -15,9 +15,8 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from ..utils import JDdiff
-from ..utils import getIntervalIntersection, isPointInInterval
-from .. import config, site
+from Totoro import utils
+from Totoro import config, site
 from astropy import table
 
 
@@ -103,25 +102,25 @@ def getOptimalPlate(plates, JD0, JD1, mode='planner', **kwargs):
 
 def getVisiblePlates(plates, LST0, LST1, **kwargs):
 
-    from ..dbclasses import Plates
+    from Totoro import dbclasses
 
-    return Plates.fromList(
+    return dbclasses.Plates.fromList(
         [plate for plate in plates
-         if isPointInInterval(LST0, plate.getLSTRange())])
+         if utils.isPointInInterval(LST0, plate.getLSTRange())])
 
 
 def getIncompletePlates(plates):
 
-    from ..dbclasses import Plates
+    from Totoro import dbclasses
 
-    return Plates.fromList(
+    return dbclasses.Plates.fromList(
         [plate for plate in plates
          if not plate.getPlateCompletion(includeIncompleteSets=True)[0]])
 
 
 def getPlatesWithEnoughTime(plates, JD0, JD1):
 
-    from ..dbclasses import Plates
+    from Totoro import dbclasses
 
     pp = []
 
@@ -130,9 +129,8 @@ def getPlatesWithEnoughTime(plates, JD0, JD1):
 
     for plate in plates:
 
-        plateLST0, plateLST1 = getIntervalIntersection((LST0, LST1),
-                                                       plate.getLSTRange(),
-                                                       wrapAt=24)
+        plateLST0, plateLST1 = utils.getIntervalIntersection(
+            (LST0, LST1), plate.getLSTRange(), wrapAt=24)
 
         plateJD0 = JD0 + (plateLST0 - LST0) % 24 / 24.
         plateJD1 = JD0 + (plateLST1 - LST0) % 24 / 24.
@@ -141,12 +139,12 @@ def getPlatesWithEnoughTime(plates, JD0, JD1):
             config['simulation']['efficiency']
 
         currentJD = plateJD0
-        remainingTime = JDdiff(currentJD, plateJD1)
+        remainingTime = utils.JDdiff(currentJD, plateJD1)
 
         if remainingTime > expTime:
             pp.append(plate)
 
-    return Plates.fromList(pp)
+    return dbclasses.Plates.fromList(pp)
 
 
 def simulateCompletionStatus(plate, JD0, JD1, **kwargs):
@@ -185,18 +183,17 @@ def simulateExposures(plate, JD0, JD1, LST0=None, LST1=None, expTime=None,
 
     plateLSTRange = plate.getLSTRange()
 
-    if not isPointInInterval(LST0, plateLSTRange):
+    if not utils.isPointInInterval(LST0, plateLSTRange):
         return plate, []
 
-    plateLST0, plateLST1 = getIntervalIntersection((LST0, LST1),
-                                                   plate.getLSTRange(),
-                                                   wrapAt=24)
+    plateLST0, plateLST1 = utils.getIntervalIntersection(
+        (LST0, LST1), plate.getLSTRange(), wrapAt=24)
 
     plateJD0 = JD0
     plateJD1 = JD0 + (plateLST1 - LST0) % 24 / 24.
 
     currentJD = plateJD0
-    remainingTime = JDdiff(currentJD, plateJD1)
+    remainingTime = utils.JDdiff(currentJD, plateJD1)
 
     if expTime is None:
         expTime = config['exposure']['exposureTime']
@@ -219,6 +216,6 @@ def simulateExposures(plate, JD0, JD1, LST0=None, LST1=None, expTime=None,
         newExposures.append(newExposure)
 
         currentJD += expTime / 86400.
-        remainingTime = JDdiff(currentJD, plateJD1)
+        remainingTime = utils.JDdiff(currentJD, plateJD1)
 
     return plate, newExposures

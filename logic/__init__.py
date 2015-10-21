@@ -1,4 +1,4 @@
 
-from .setArrangement import *
-from .mangaLogic import *
-from .mangaLogicTimeline import *
+from setArrangement import *
+from mangaLogic import *
+from mangaLogicTimeline import *

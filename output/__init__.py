@@ -1,4 +1,4 @@
 
-from .output import getNightlyOutput
-from .tabularOutput import printTabularOutput, ObservedPlateOutput
-from .tabularOutput import getTabularOutput
+from output import getNightlyOutput
+from tabularOutput import printTabularOutput, ObservedPlateOutput
+from tabularOutput import getTabularOutput

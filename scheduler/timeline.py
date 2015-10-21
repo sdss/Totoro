@@ -14,14 +14,11 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from ..dbclasses.plate import Plates
-from .. import config, log, site
-from .. import TotoroDBConnection
+from Totoro import config, log, site, TotoroDBConnection
 import warnings
-from ..exceptions import TotoroUserWarning
-from ..utils import JDdiff
-from ..logic import getOptimalPlate
-import numpy as np
+from Totoro.exceptions import TotoroUserWarning
+from Totoro import utils
+from Totoro import logic
 
 
 db = TotoroDBConnection()
@@ -57,11 +54,13 @@ class Timeline(object):
 
     def __init__(self, startTime, endTime, plates=None, **kwargs):
 
+        from Totoro import dbclasses
+
         self.startTime = startTime
         self.endTime = endTime
 
         if plates is None:
-            self._plates = Plates()
+            self._plates = dbclasses.Plates()
         else:
             self._plates = plates
 
@@ -73,7 +72,7 @@ class Timeline(object):
                  .format(self.startTime, self.endTime))
 
         currentTime = self.startTime
-        remainingTime = JDdiff(currentTime, self.endTime)
+        remainingTime = utils.JDdiff(currentTime, self.endTime)
 
         expTime = (config['exposure']['exposureTime'] /
                    config[mode]['efficiency'])
@@ -87,10 +86,10 @@ class Timeline(object):
 
             # log.info('Simulating plates for {0:.5f}'.format(currentTime))
 
-            optimalPlate, newExposures = getOptimalPlate(
+            optimalPlate, newExposures = logic.getOptimalPlate(
                 self._plates, currentTime, self.endTime, expTime=expTime,
                 mode=mode, **kwargs)
-            print(optimalPlate)
+
             if optimalPlate is None:
 
                 warnings.warn('no valid plates found at JD={0:.4f} '
@@ -110,67 +109,6 @@ class Timeline(object):
                 newTime = optimalPlate.getLastExposure().getJD()[1]
                 currentTime = newTime
 
-            remainingTime = JDdiff(currentTime, self.endTime)
+            remainingTime = utils.JDdiff(currentTime, self.endTime)
 
         return
-
-    def getPluggedPlates(self):
-
-        with session.begin(subtransactions=True):
-
-            activePluggings = session.query(plateDB.Plate).join(
-                plateDB.Plugging, plateDB.ActivePlugging)
-
-            subActPl = activePluggings.subquery()
-            mangaPlugged = session.query(plateDB.Plate).outerjoin(
-                subActPl, plateDB.Plate.pk == subActPl.c.pk).join(
-                    plateDB.PlateToSurvey).join(plateDB.Survey).filter(
-                        plateDB.Survey.label == 'MaNGA')
-
-        return mangaPlugged.all()
-
-    def _getNNewExposures(self, optimalPlate):
-
-        for ii in range(len(self._plates)):
-            if self._plates[ii].location_id == optimalPlate.location_id:
-                return (len(optimalPlate.getValidExposures()) -
-                        len(self._plates[ii].getValidExposures()))
-
-    def _replaceWithOptimal(self, optimalPlate):
-
-        for ii in range(len(self._plates)):
-            if self._plates[ii].location_id == optimalPlate.location_id:
-                self._plates[ii] = optimalPlate.copy()
-
-    def _observePlate(self, plate, startTime=None, endTime=None,
-                      calibrations=True, **kwargs):
-
-        startTime = self.startTime if startTime is None else startTime
-        endTime = self.endTime if endTime is None else endTime
-
-        return
-
-    def getExposures(self):
-
-        exposures = []
-        for plate in self._plates:
-            exposures += plate.getValidExposures()
-
-        timelineExposures = []
-        for exp in exposures:
-            expJD0, expJD1 = exp.getJDObserved()
-            if expJD0 >= self.startTime and expJD1 <= self.endTime:
-                timelineExposures.append(exp)
-
-        return timelineExposures
-
-    def printExposures(self):
-
-        exposures = self.getExposures()
-
-        jdArray = np.array([exp.getJDObserved() for exp in exposures],
-                           dtype=[('JD0', float), ('JD1', float)])
-
-        jdArray.sort(order='JD0')
-
-        print(jdArray)

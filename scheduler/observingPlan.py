@@ -12,9 +12,9 @@ Licensed under a 3-clause BSD license.
 from __future__ import division
 from __future__ import print_function
 from astropy import table, time
-from ..exceptions import TotoroError, TotoroUserWarning
+from Totoro.exceptions import TotoroError, TotoroUserWarning, NoObservingBlock
 import warnings
-from .. import config, log, readPath
+from Totoro import config, log, readPath
 import numpy as np
 import os
 
@@ -82,7 +82,7 @@ class ObservingPlan(object):
         self.plan.rename_column('col11', 'JD0')
         self.plan.rename_column('col12', 'JD1')
 
-        log.info('observing plan {0} loaded.'.format(scheduleToPrint))
+        log.debug('observing plan {0} loaded.'.format(scheduleToPrint))
 
         self.addRunDayCol()
         self.plan = self.plan[(self.plan['JD0'] > 0) & (self.plan['JD1'] > 0)]
@@ -192,8 +192,20 @@ class ObservingPlan(object):
         firstDay = self.plan[self.plan['JD'] == jd]
         runNumber = firstDay['RUN']
         lastDay = self.plan[self.plan['RUN'] == runNumber][-1]
-        print(firstDay, lastDay)
+
         return (firstDay['JD0'], lastDay['JD1'])
+
+    def getMJD(self, mjd):
+
+        mjd = int(mjd)
+
+        jd = 2400000. + int(mjd)
+        row = self.plan[self.plan['JD'] == jd]
+
+        if len(row) == 1:
+            return (row['JD0'][0], row['JD1'][0])
+        else:
+            return None
 
     def __repr__(self):
         return self.plan.__repr__()
