@@ -14,9 +14,27 @@ from __future__ import print_function
 from astropy import table, time
 from ..exceptions import TotoroError, TotoroUserWarning
 import warnings
-from .. import config, log
+from .. import config, log, readPath
 import numpy as np
 import os
+
+
+def getScheduleFile():
+
+    try:
+        # Gets the master scheduler schedule file
+        import autoscheduler
+        autoschedulerDir = os.path.dirname(autoscheduler.__file__)
+        schedule = os.path.join(autoschedulerDir, '../../schedules',
+                                'Sch_base.6yrs.txt.frm.dat')
+    except:
+        # If the autoscheduler is not available, uses the local schedule file
+        schedule = readPath(config['observingPlan']['schedule'])
+        warnings.warn('The master autoscheduler could not be found. '
+                      'Using a local copy of the schedule. BE CAREFUL! '
+                      'THIS FILE MIGHT BE OUTDATED!', TotoroUserWarning)
+
+    return schedule
 
 
 class ObservingPlan(object):
@@ -46,21 +64,19 @@ class ObservingPlan(object):
     def __init__(self, schedule=None, **kwargs):
 
         if schedule is None:
-            schedule = config['observingPlan']['schedule']
+            schedule = getScheduleFile()
 
-        if schedule[0] == '+':
-            schedule = os.path.join(os.path.dirname(__file__),
-                                    '../' + schedule[1:])
+        self.scheduleFile = os.path.realpath(schedule)
+        scheduleToPrint = self.scheduleFile[:15] + '...' + \
+            self.scheduleFile[-45:] if len(self.scheduleFile) > 70 else \
+            self.scheduleFile
 
-        schedule = os.path.realpath(schedule)
-        scheduleToPrint = schedule[:15] + '...' + schedule[-45:] \
-            if len(schedule) > 70 else schedule
-
-        if not os.path.exists(schedule):
+        if not os.path.exists(self.scheduleFile):
             raise TotoroError('schedule {0} not found'.format(
                               scheduleToPrint))
 
-        self.plan = table.Table.read(schedule, format='ascii.no_header')
+        self.plan = table.Table.read(self.scheduleFile,
+                                     format='ascii.no_header')
         self.plan.keep_columns(['col1', 'col11', 'col12'])
         self.plan.rename_column('col1', 'JD')
         self.plan.rename_column('col11', 'JD0')

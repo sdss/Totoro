@@ -7,6 +7,7 @@ core/configuration.py -text
 core/logger.py -text
 core/setupTools.py -text
 data/FinalSchedAPO.dat -text
+data/Sch_base.6yrs.txt.frm.dat -text
 data/finalTilingCatalogue_v0.5.fits -text
 data/tmpSchedule.dat -text
 dbclasses/__init__.py -text
