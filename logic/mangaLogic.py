@@ -41,7 +41,7 @@ def removeSet(set_pk):
 
 
 def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
-                  silent=False, forceReflag=False, **kwargs):
+                  silent=False, forceReflag=True, **kwargs):
     """Checks if a given exposures meets MaNGA's quality criteria.
 
     Error codes:
