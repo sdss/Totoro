@@ -19,8 +19,6 @@ Totoro/plateDB/connection.py -text
 Totoro/plateDB/dataModel.py -text
 Totoro/plateDB/queries.py -text
 Totoro/scheduler/__init__.py -text
-Totoro/scheduler/nightly.D.txt -text
-Totoro/scheduler/nightly.D_UTC.txt -text
 Totoro/scheduler/observingPlan.py -text
 Totoro/scheduler/scheduler.py -text
 Totoro/tests/__init__.py -text
