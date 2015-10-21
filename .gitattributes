@@ -46,17 +46,6 @@ tests/testPlanner.py -text
 tests/testPlugger.py -text
 tests/unitTestPlates.py -text
 tests/unitTestSets.py -text
-trunk/python/autoscheduler/manga/Totoro/backup/conversion.py.bak -text
-trunk/python/autoscheduler/manga/Totoro/backup/defaults.py -text
-trunk/python/autoscheduler/manga/Totoro/backup/logger.py.bak -text
-trunk/python/autoscheduler/manga/Totoro/backup/mangaDB.sql -text
-trunk/python/autoscheduler/manga/Totoro/backup/plateDB/PlateDB.py.bak -text
-trunk/python/autoscheduler/manga/Totoro/backup/plateDB/__init__.py -text
-trunk/python/autoscheduler/manga/Totoro/backup/plateDB/connection.py -text
-trunk/python/autoscheduler/manga/Totoro/backup/plateDB/dataModel.py -text
-trunk/python/autoscheduler/manga/Totoro/backup/plateDB/queries.py -text
-trunk/python/autoscheduler/manga/Totoro/backup/plateDB_Test.dump -text
-trunk/python/autoscheduler/manga/Totoro/backup/plateUtils.py -text
 utils/__init__.py -text
 utils/intervals.py -text
 utils/utils.py -text
