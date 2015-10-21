@@ -413,7 +413,7 @@ class Plate(plateDB.Plate):
                           .format(mjd), TotoroExpections.NoObservingBlock)
             return haRange
 
-        observingRangeLST = map(site.localSiderealTime, jdRange)
+        observingRangeLST = np.array(map(site.localSiderealTime, jdRange))
         observingRangeHA = (observingRangeLST * 15 - self.ra) % 360.
 
         return utils.getIntervalIntersection(haRange, observingRangeHA)
