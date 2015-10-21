@@ -54,7 +54,7 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
     5: HA range outside the range of visibility of the plate.
     6: exposure not completely reduced
     7: low transparency
-    10: manually overriden bad.
+    10: status read from DB.
     """
 
     from sdss.internal.manga.Totoro import dbclasses
@@ -101,12 +101,6 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
         exposure = dbclasses.Exposure(exposure, format=format,
                                       parent=parent, silent=silent)
 
-    # Checks if the exposure has been completely reduce. If not, returns False
-    # but does not flag it as Totoro Good/Bad.
-    if None in list(exposure.getSN2Array()):
-        setExposureStatus(exposure, 'Good')
-        return (False, 6)
-
     # Checks dither position
     if (exposure.ditherPosition not in
             config['exposure']['validDitherPositions']
@@ -144,17 +138,6 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
                           'has a seeing larger than the maximum acceptable.'
                           .format(exposure._mangaExposure.pk))
 
-    # Checks SN2
-    minSN2red = config['SN2thresholds']['exposureRed']
-    minSN2blue = config['SN2thresholds']['exposureBlue']
-    snArray = exposure.getSN2Array()
-
-    if np.any(snArray[0:2] < minSN2blue) or np.any(snArray[2:] < minSN2red):
-        return flagHelper(False, 4,
-                          'Invalid exposure. plateDB.Exposure.pk={0} has SN2 '
-                          'lower than the minimum acceptable.'
-                          .format(exposure._mangaExposure.pk))
-
     # Checks visibility window
     visibilityWindow = np.array([-exposure.mlhalimit, exposure.mlhalimit])
     HA = exposure.getHA()
@@ -167,13 +150,51 @@ def checkExposure(exposure, format='pk', parent='plateDB', flag=True,
                           .format(exposure._mangaExposure.pk, HA[0], HA[1],
                                   visibilityWindow[0], visibilityWindow[1]))
 
-    # If we are here is that everything went ok
-    return flagHelper(True, 0)
+    # Checks wheter at least one camera for each arm has been reduced
+    exposureSN2 = exposure.getSN2Array(useNaN=False)
+    blue = exposureSN2[0:2].tolist()
+    red = exposureSN2[2:].tolist()
 
-    return
+    # If one of the arms has no SN2 value, returns False and doees not flag
+    # the exposure
+    if not any(blue) or not any(red):
+        setExposureStatus(exposure, 'Good', silent=silent)
+        return (False, 6)
+
+    # Checks if the reduction is complete (i.e., if all the cameras have SN2
+    # values)
+    isReductionComplete = False
+    if all(blue) and all(red):
+        isReductionComplete = True
+
+    # Checks SN2
+    minSN2red = config['SN2thresholds']['exposureRed']
+    minSN2blue = config['SN2thresholds']['exposureBlue']
+
+    blueMin = [ss < minSN2blue if ss is not None else ss
+               for ss in list(exposureSN2[0:2])]
+    redMin = [ss < minSN2red if ss is not None else ss
+              for ss in list(exposureSN2[2:])]
+
+    # If any of the cameras has a SN2 lower than the minimum, flag it as bad
+    if any(blueMin) or any(redMin):
+        return flagHelper(False, 4,
+                          'Invalid exposure. plateDB.Exposure.pk={0} '
+                          'has SN2 lower than the minimum acceptable.'
+                          .format(exposure._mangaExposure.pk))
+
+    if isReductionComplete:
+        # If we are here and isReductionComplete is True, flag
+        # the exposure as good
+        return flagHelper(True, 0)
+    else:
+        # The exposure is usable but not yet completely reduced. We return
+        # True but not flag it.
+        setExposureStatus(exposure, 'Good', silent=silent)
+        return (True, 6)
 
 
-def setExposureStatus(exposure, status, **kwargs):
+def setExposureStatus(exposure, status, silent=False, **kwargs):
     """ Sets the status of an exposure.
 
     Parameters
@@ -219,7 +240,9 @@ def setExposureStatus(exposure, status, **kwargs):
         exp = session.query(db.mangaDB.Exposure).get(pk)
         exp.exposure_status_pk = statusPK
 
-    log.debug('mangaDB.Exposure.pk={0} set to {1}'.format(exposure.pk, status))
+    if not silent:
+        log.debug('mangaDB.Exposure.pk={0} set to {1}'.format(
+                  exposure.pk, status))
 
     return True
 
@@ -270,14 +293,15 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
 
     # Check if exposures are valid
     for exposure in set.totoroExposures:
-        exposureCheck = checkExposure(exposure, flag=flagExposures)
+        exposureCheck = checkExposure(exposure, silent=silent,
+                                      flag=flagExposures)
         if exposureCheck[0] is False:
             return flagHelper('Bad', 1,
                               'set pk={0}: one or more exposures are invalid.'
                               .format(set.pk))
 
     # Checks range of observations
-    HA = set.getHA()
+    HA = set.getHA(silent=silent)
     HALength = (HA[1] - HA[0]) % 360.
     if HALength > config['set']['maxHARange']:
         return flagHelper('Bad', 2,
@@ -296,6 +320,7 @@ def checkSet(input, flag=True, flagExposures=True, silent=False,
     for ii in range(len(sn2)):
         for jj in range(ii, len(sn2)):
             sn2Ratio = sn2[ii] / sn2[jj]
+            sn2Ratio[np.isnan(sn2Ratio)] = config['set']['maxSN2Factor']
             if np.any(sn2Ratio > config['set']['maxSN2Factor']) or \
                     np.any(sn2Ratio < (1. / config['set']['maxSN2Factor'])):
                 return flagHelper('Bad', 4,

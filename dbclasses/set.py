@@ -172,11 +172,11 @@ class Set(mangaDB.Set):
             self._checkHasExposures()
             return self.totoroExposures[0].getCoordinates()
 
-    def getHA(self):
+    def getHA(self, **kwargs):
         """Returns the HA interval of the exposures in the set. If midPoint is
         set, the middle point of the exposures is used for the calculation."""
 
-        exposures = self.getValidExposures()
+        exposures = self.getValidExposures(**kwargs)
 
         if len(exposures) == 0:
             plateHALimit = utils.mlhalimit(self.dec)
@@ -242,16 +242,11 @@ class Set(mangaDB.Set):
         """Returns an array with the cumulated SN2 of the valid exposures in
         the set. The return format is [b1SN2, b2SN2, r1SN2, r2SN2]."""
 
-        validExposures = []
-        for exposure in self.totoroExposures:
-            if exposure.isValid(**kwargs):
-                validExposures.append(exposure)
-
-        if len(validExposures) == 0:
+        if len(self.totoroExposures) == 0:
             return np.array([0.0, 0.0, 0.0, 0.0])
         else:
             return np.sum([exp.getSN2Array()
-                           for exp in validExposures], axis=0)
+                           for exp in self.totoroExposures], axis=0)
 
     def getSN2Range(self):
         """Returns the SN2 range in which new exposures may be taken."""
@@ -260,7 +255,7 @@ class Set(mangaDB.Set):
 
         sn2 = np.array([exp.getSN2Array() for exp in self.totoroExposures])
         sn2Average = np.array(
-            [(np.mean(ss[0:2]), np.mean(ss[2:4])) for ss in sn2])
+            [(np.nanmean(ss[0:2]), np.nanmean(ss[2:4])) for ss in sn2])
 
         minSN2Blue = np.max(sn2Average[:, 0]) / maxSN2Factor
         maxSN2Blue = np.min(sn2Average[:, 0]) * maxSN2Factor
@@ -293,20 +288,20 @@ class Set(mangaDB.Set):
 
         return logic.checkSet(self, silent=silent, **kwargs)
 
-    def getValidExposures(self):
+    def getValidExposures(self, **kwargs):
 
         validExposures = []
         for exp in self.totoroExposures:
-            if exp.valid is True:
+            if exp.isValid(**kwargs)[0] is True:
                 validExposures.append(exp)
 
         return validExposures
 
-    def getAverageSeeing(self):
+    def getAverageSeeing(self, **kwargs):
 
         seeings = []
         for exp in self.totoroExposures:
-            if exp.valid:
+            if exp.isValid(**kwargs)[0]:
                 seeings.append(exp.seeing)
 
         return np.mean(seeings)

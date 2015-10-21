@@ -88,7 +88,6 @@ def selectOptimal(plates, **kwargs):
     if len(completedPlates) > 0:
         nExposures = [len(plate.getTotoroExposures()) / plate.priority
                       for plate in completedPlates]
-        # print('completed')
         return completedPlates[np.argmin(nExposures)]
 
     # If no completed plates, calculates the plate completion using only
@@ -126,7 +125,8 @@ def simulatePlates(plates, jdRanges, mode='plugger'):
     for plate in plates:
         plateLST = plate.getLSTRange()
         for jdRange in jdRanges:
-            if not isObservable(plate, jdRange):
+            # Requires the plate to be observable at least for two exposues.
+            if not isObservable(plate, jdRange, minExpTime=2*expTimeEff):
                 continue
             jd = jdRange[0]
             while jd < jdRange[1]:
@@ -152,7 +152,7 @@ def simulatePlates(plates, jdRanges, mode='plugger'):
     return observedFlag  # True if we have added at least one exposure
 
 
-def isObservable(plate, jdRanges):
+def isObservable(plate, jdRanges, minExpTime=0):
     """Returns True if a plate is observable in a range of JDs."""
 
     jdRanges = np.atleast_2d(jdRanges)
@@ -161,8 +161,10 @@ def isObservable(plate, jdRanges):
         plateLSTRange = plate.getLSTRange()
         lstRange = site.localSiderealTime(jdRange)
 
-        if (utils.getIntervalIntersection(plateLSTRange, lstRange, wrapAt=24.)
-                is not False):
+        intersectionLength = utils.getIntervalIntersectionLength(
+            plateLSTRange, lstRange, wrapAt=24.)
+
+        if intersectionLength > minExpTime / 3600.:
             return True
 
     return False

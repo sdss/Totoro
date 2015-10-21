@@ -206,7 +206,7 @@ class Exposure(plateDB.Exposure):
 
         return ha
 
-    def getSN2Array(self):
+    def getSN2Array(self, useNaN=True):
         """Returns an array with the SN2 of the exposure. The return
         format is [b1SN2, b2SN2, r1SN2, r2SN2]."""
 
@@ -215,8 +215,16 @@ class Exposure(plateDB.Exposure):
 
         SN2Values = self._mangaExposure.sn2values[0]
 
-        return np.array([SN2Values.b1_sn2, SN2Values.b2_sn2,
-                         SN2Values.r1_sn2, SN2Values.r2_sn2])
+        # None values are replaced with NaN, which are easier to work with
+        # in numpy arrays.
+        values = [SN2Values.b1_sn2, SN2Values.b2_sn2,
+                  SN2Values.r1_sn2, SN2Values.r2_sn2]
+        valuesNaN = [np.nan if value is None else value for value in values]
+
+        if useNaN is True:
+            return np.array(valuesNaN)
+        else:
+            return np.array(values)
 
     @property
     def valid(self):

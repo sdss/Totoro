@@ -168,7 +168,8 @@ class Plugger(object):
                  'onlyMarked={1}'.format(rejectComplete, onlyMarked))
 
         plates = dbclasses.getAtAPO(onlyIncomplete=rejectComplete,
-                                    onlyMarked=onlyMarked)
+                                    onlyMarked=onlyMarked,
+                                    rejectLowPriority=True)
 
         log.info('plates found: {0}'.format(len(plates)))
 
