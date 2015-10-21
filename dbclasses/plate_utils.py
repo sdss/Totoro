@@ -89,21 +89,27 @@ def assignExposureToOptimalSet(plate, exposure):
     optimalSet = getOptimalSet(plate, exposure)
 
     if optimalSet is None:
+        setPK = getConsecutiveSets(1)[0]
         with session.begin(subtransactions=True):
-            newSet = db.mangaDB.Set()
-            newSet.pk = getConsecutiveSets(1)[0]
-            session.add(newSet)
-            session.flush()
-            assert newSet.pk is not None, \
-                'something failed while creating a new set'
-            exposure.mangadbExposure[0].set_pk = newSet.pk
+            if session.query(db.mangaDB.Set).get(setPK) is None:
+                newSet = db.mangaDB.Set(pk=setPK)
+                session.add(newSet)
+                session.flush()
+                assert newSet.pk is not None, \
+                    'something failed while creating a new set'
+                exposure.mangadbExposure[0].set_pk = newSet.pk
 
-            log.debug('plate_id={0}: exposure_no={1} assigned to '
-                      'new set pk={2}'
-                      .format(plate.plate_id, exposure.exposure_no, newSet.pk))
-
-        totoroNewSet = TotoroSet(newSet)
-        plate.sets.append(totoroNewSet)
+                log.debug('plate_id={0}: exposure_no={1} assigned to '
+                          'new set pk={2}'
+                          .format(plate.plate_id, exposure.exposure_no,
+                                  newSet.pk))
+                totoroNewSet = TotoroSet(newSet)
+                plate.sets.append(totoroNewSet)
+            else:
+                log.debug('plate_id={0}: something failed while assigning new '
+                          'set_pk to exposure_no={1}'
+                          .format(plate.plate_id, exposure.exposure_no))
+                return
     else:
         with session.begin(subtransactions=True):
             exposure.mangadbExposure[0].set_pk = optimalSet.pk
@@ -455,8 +461,7 @@ def applyArrangement(plate, arrangement):
         # Now creates the new sets and assigns the exposures
         with session.begin(subtransactions=True):
             for ii, ss in enumerate(arrangement):
-                newSet = db.mangaDB.Set()
-                newSet.pk = pks[ii]
+                newSet = db.mangaDB.Set(pk=pks[ii])
                 session.add(newSet)
                 session.flush()
                 for exp in ss.totoroExposures:
