@@ -48,6 +48,7 @@ class PlannerScheduler(object):
 
         drilling = [plate for plate in self.plates if not plate.drilled]
 
+        txtDrilling = ''
         if len(drilling) > 0:
             txtDrilling = _color_text(
                 '({0} in process of being drilled)'.format(len(drilling)),
@@ -108,7 +109,7 @@ class PlannerScheduler(object):
                      'been drilled or have no targets.'.format(nFieldsDrilled))
 
     @staticmethod
-    def getPlates(useDesigns=True, **kwargs):
+    def getPlates(usePlatesNotAtAPO=True, **kwargs):
         """Gets plates that are already drilled or in process of being so,
         with some filtering."""
 
@@ -124,16 +125,18 @@ class PlannerScheduler(object):
             validPlate = True
             for status in plate.statuses:
                 if status.label in ['Rejected', 'Unobservable']:
+                    print(plate)
                     validPlate = False
-                if (not useDesigns and
-                        plate.getLocation() not in ['APO', 'Cosmic']):
-                    validPlate = False
+            if (not usePlatesNotAtAPO and
+                    plate.getLocation() not in ['APO', 'Cosmic']):
+                validPlate = False
             if validPlate:
                 validPlates.append(plate)
 
         # Adds tiles being drilled from file
         if ('tilesBeingDrilled' in config['fields'] and
-                config['fields']['tilesBeingDrilled'].lower() != 'none'):
+                config['fields']['tilesBeingDrilled'].lower() != 'none' and
+                usePlatesNotAtAPO):
 
             tilesBeingDrilledRaw = open(
                 readPath(config['fields']['tilesBeingDrilled']), 'r') \
@@ -183,10 +186,14 @@ class PlannerScheduler(object):
             if goodWeatherFraction is not None \
             else config['planner']['goodWeatherFraction']
 
+        SN2_red = config['SN2thresholds']['plateRed']
+        SN2_blue = config['SN2thresholds']['plateBlue']
+
         efficiency = kwargs.get('efficiency', config['planner']['efficiency'])
 
         log.info('Good weather fraction: {0:.2f}'.format(goodWeatherFraction))
         log.info('Efficiency: {0:.2f}'.format(efficiency))
+        log.info('SN2 red={0:.1f}, blue={1:.1f}'.format(SN2_red, SN2_blue))
 
         goodWeatherIdx = self.getGoodWeatherIndices(goodWeatherFraction,
                                                     **kwargs)
