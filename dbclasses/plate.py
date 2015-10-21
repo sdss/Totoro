@@ -117,6 +117,21 @@ class Plates(list):
             list.__init__(self, [Plate(ii, format=format, **kwargs)
                                  for ii in inp])
 
+    @staticmethod
+    def getPlugged(**kwargs):
+        """For backards compatibility."""
+        return getPlugged(**kwargs)
+
+    @staticmethod
+    def getAll(**kwargs):
+        """For backards compatibility."""
+        return getPlugged(**kwargs)
+
+    @staticmethod
+    def getAtAPO(**kwargs):
+        """For backards compatibility."""
+        return getPlugged(**kwargs)
+
 
 class Plate(plateDB.Plate):
 
