@@ -168,10 +168,10 @@ class TotoroLogger(Logger):
         self.setLevel('DEBUG')
 
         # Set up the stdout handler
-        sh = logging.StreamHandler()
-        sh.emit = self._stream_formatter
-        self.addHandler(sh)
-        sh.setLevel(logLevel)
+        self.sh = logging.StreamHandler()
+        self.sh.emit = self._stream_formatter
+        self.addHandler(self.sh)
+        self.sh.setLevel(logLevel)
 
         # Set up the main log file handler if requested (but this might fail if
         # configuration directory or log file is not writeable).
@@ -182,15 +182,15 @@ class TotoroLogger(Logger):
             os.mkdir(logDir)
 
         try:
-            fh = FileHandler(logFilePath, mode='w')
+            self.fh = FileHandler(logFilePath, mode='w')
         except (IOError, OSError) as e:
             warnings.warn(
                 'log file {0!r} could not be opened for writing: '
                 '{1}'.format(logFilePath, unicode(e)), RuntimeWarning)
         else:
-            fh.setFormatter(fmt)
-            fh.setLevel(logFileLevel)
-            self.addHandler(fh)
+            self.fh.setFormatter(fmt)
+            self.fh.setLevel(logFileLevel)
+            self.addHandler(self.fh)
 
         self.logFilename = logFilePath
         warnings.showwarning = self._showwarning

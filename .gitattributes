@@ -2,6 +2,7 @@
 /README.md -text
 /__init__.py -text
 /apoDB.py -text
+bin/mangaPluggingRequest.py -text
 core/__init__.py -text
 core/colourPrint.py -text
 core/configuration.py -text
