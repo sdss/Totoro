@@ -441,12 +441,12 @@ def getOptimalArrangement(plate, startDate=None,
             completion = [plateMin.getPlateCompletion()
                           for plateMin in minIncompleteSetPlates]
             optimumPlate = minIncompleteSetPlates[np.argmax(completion)]
-            return optimumPlate
-
-        if len(minIncompleteSetPlates) == 0:
-            optimumPlate = minIncompleteSetPlates[0]
         else:
-            optimumPlate = getEarliestIncompletePlate(minIncompleteSetPlates)
+            if len(minIncompleteSetPlates) == 0:
+                optimumPlate = minIncompleteSetPlates[0]
+            else:
+                optimumPlate = getEarliestIncompletePlate(
+                    minIncompleteSetPlates)
 
     return {'sets': optimumPlate.sets, 'invalid': invalidExposures}
 
