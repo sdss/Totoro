@@ -31,6 +31,8 @@ class TestPlugger(unittest.TestCase):
 
         cls.originalOfflineCarts = config['offlineCarts']
 
+        config['offlineCarts'] = [2]
+
         with session.begin(subtransactions=True):
 
             # Restores priorities
@@ -74,7 +76,7 @@ class TestPlugger(unittest.TestCase):
         plugger = Plugger(startDate=2457157.76042, endDate=2457157.95)
 
         validResult = OrderedDict(
-            [(1, 8482), (3, 8486), (4, 8550),
+            [(1, 8312), (3, 8486), (4, 8550),
              ('cart_order', [9, 8, 7, 2, 5, 6, 3, 1, 4])])
 
         self.assertEqual(validResult, plugger.getASOutput())
@@ -99,8 +101,8 @@ class TestPlugger(unittest.TestCase):
         # We expect the same result as before but with 8550 and 7443 assigned
         # first.
         validResult = OrderedDict(
-            [(1, 8482), (3, 8486), (4, 7443), (5, 8550), (6, 8335),
-             ('cart_order', [9, 8, 7, 2, 3, 1, 6, 4, 5])])
+            [(1, 8482), (3, 8486), (4, 7443), (5, 8550),
+             ('cart_order', [9, 8, 7, 2, 6, 3, 1, 4, 5])])
 
         self.assertEqual(validResult, plugger.getASOutput())
 
@@ -135,7 +137,7 @@ class TestPlugger(unittest.TestCase):
         output = plugger.getASOutput()
 
         self.assertEqual(output,
-                         OrderedDict([(1, 8482), (2, 8334), (3, 8486),
+                         OrderedDict([(1, 8482), (2, 8312), (3, 8486),
                                       ('cart_order', [9, 8, 7, 4, 5, 6,
                                                       1, 3, 2])]))
 

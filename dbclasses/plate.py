@@ -50,7 +50,7 @@ def getPlugged(**kwargs):
                 plateDB.Survey,
                 plateDB.SurveyMode).filter(
                     plateDB.Survey.label == 'MaNGA',
-                    plateDB.SurveyMode.label == 'MaNGA dither').order_by(
+                    plateDB.SurveyMode.label.ilike('MaNGA%')).order_by(
                         plateDB.Plate.plate_id).all()
 
     plates = [actPlug.plugging.plate for actPlug in activePluggings]
@@ -367,8 +367,8 @@ class Plate(plateDB.Plate):
                                 exp.mangadbExposure[0].set_pk = None
                             ss.totoroExposures.remove(exp)
 
-                    # Checks if the sets is now empty, if so, removes it from
-                    # the object and from the DB
+                    # Checks if the sets is now empty, if so, removes it
+                    # from the object and from the DB
                     if len(ss.totoroExposures) == 0:
                         if not ss.isMock:
                             setDB = session.query(mangaDB.Set).get(ss.pk)
@@ -386,14 +386,14 @@ class Plate(plateDB.Plate):
 
     def updatePlate(self, force=False, **kwargs):
 
-        if self.isComplete:
-            if not force:
-                log.debug('plate_id={0} is marked complete. Not updating sets.'
-                          .format(self.plate_id))
-                return False
-            else:
-                log.info('plate_id={0} is marked complete but force=True.'
-                         .format(self.plate_id))
+        # if self.isComplete:
+        #     if not force:
+        #         log.debug('plate_id={0} is marked complete. '
+        #                   'Not updating sets.'.format(self.plate_id))
+        #         return False
+        #     else:
+        #         log.info('plate_id={0} is marked complete but force=True.'
+        #                  .format(self.plate_id))
 
         if (self.currentSurveyMode is None or
                 self.currentSurveyMode.label != 'MaNGA dither'):
