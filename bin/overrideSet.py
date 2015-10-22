@@ -132,7 +132,7 @@ def override(args):
                 log.info('changing set_pk for exposure_no={0} to {1}'
                          .format(totExp.exposure_no, overridenSetPK))
 
-    # Overrides the set good.
+    # Overrides the set good/bad.
     with db.session.begin():
         ss = db.session.query(db.mangaDB.Set).get(overridenSetPK)
         ss.set_status_pk = overriddenStatusPK
