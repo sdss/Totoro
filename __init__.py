@@ -35,3 +35,5 @@ from sdss.utilities.Site import Site
 site = Site()
 
 from apoDB import TotoroDBConnection
+from sdss.internal.manga.Totoro.utils import checkOpenSession
+checkOpenSession()

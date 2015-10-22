@@ -44,7 +44,7 @@ def getPlugged(**kwargs):
     kwargs.setdefault('fullCheck', False)
     kwargs.setdefault('updateSets', False)
 
-    with session.begin(subtransactions=True):
+    with session.begin():
         activePluggings = session.query(
             plateDB.ActivePlugging).join(
                 plateDB.Plugging,
@@ -71,7 +71,7 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
 
     minimumPriority = config['plugger']['noPlugPriority']
 
-    with session.begin(subtransactions=True):
+    with session.begin():
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode).filter(
                 plateDB.Survey.label == 'MaNGA',
@@ -134,7 +134,7 @@ def getAll(onlyIncomplete=False, **kwargs):
     kwargs.setdefault('fullCheck', False)
     kwargs.setdefault('updateSets', False)
 
-    with session.begin(subtransactions=True):
+    with session.begin():
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
             ).filter(plateDB.Survey.label == 'MaNGA',
@@ -172,7 +172,7 @@ def getComplete(**kwargs):
     kwargs.setdefault('fullCheck', False)
     kwargs.setdefault('updateSets', False)
 
-    with session.begin(subtransactions=True):
+    with session.begin():
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode,
             plateDB.Plugging, plateDB.PluggingStatus).filter(
@@ -236,6 +236,8 @@ class Plate(plateDB.Plate):
 
     def __new__(cls, input=None, format='pk', **kwargs):
 
+        utils.checkOpenSession()
+
         if input is None:
             return plateDB.Plate.__new__(cls)
 
@@ -244,7 +246,7 @@ class Plate(plateDB.Plate):
         if isinstance(input, base):
             instance = input
         else:
-            with session.begin(subtransactions=True):
+            with session.begin():
                 instance = session.query(base).filter(
                     eval('{0}.{1} == {2}'.format(base.__name__, format, input))
                     ).one()
@@ -330,7 +332,7 @@ class Plate(plateDB.Plate):
         sets matching exposures in this plate. Removes duplicates."""
 
         # Finds the sets for this plate
-        with session.begin(subtransactions=True):
+        with session.begin():
             sets = session.query(mangaDB.Set).join(
                 mangaDB.Exposure, plateDB.Exposure, plateDB.Observation,
                 plateDB.PlatePointing, plateDB.Plate).filter(
@@ -344,6 +346,9 @@ class Plate(plateDB.Plate):
         """Does some sanity checks for the current plate. If full=True,
         it checks that all the science exposures have a mangaDB counterpart.
         This can be disabled to save time during plate bulk load."""
+
+        # Checks that we are not inside an open session
+        utils.checkOpenSession()
 
         if not hasattr(self, 'pk') or not hasattr(self, 'plate_id'):
             raise AttributeError('Plate instance has no pk or plate_id.')
@@ -374,7 +379,7 @@ class Plate(plateDB.Plate):
 
         # Checks if some sets have incompletely reduced exposures. If so,
         # removes their set_pk so that they are completely procesed again.
-        # with session.begin(subtransactions=True):
+        # with session.begin():
         #     for ss in self.sets:
         #         for exp in ss.totoroExposures:
         #             if exp._mangaExposure.status is None:
@@ -795,7 +800,7 @@ class Plate(plateDB.Plate):
     @priority.setter
     def priority(self, value):
         if not self.isMock:
-            with session.begin(subtransactions=True):
+            with session.begin():
                 self.plate_pointings[0].priority = value
         else:
             self._priority = value

@@ -28,7 +28,7 @@ class testSetArrangement(unittest.TestCase):
     def testExposureAssignment(self):
         """Tests if an exposure is assigned to a correct incomplete set."""
 
-        with session.begin(subtransactions=True):
+        with session.begin():
             exposure = session.query(db.mangaDB.Exposure).get(1348)
             exposure.set_pk = None
 
@@ -44,8 +44,8 @@ class testSetArrangement(unittest.TestCase):
         """Tests whether the rearrang. of incomplete sets works properly."""
 
         # Removes all set assignment for plate 8551
-        with session.begin(subtransactions=True):
-            plate8551 = fromPlateID(8551)
+        plate8551 = fromPlateID(8551)
+        with session.begin():
             exposures = plate8551.getScienceExposures()
             for exp in exposures:
                 setPK = exp.mangadbExposure[0].set_pk

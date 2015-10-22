@@ -33,7 +33,7 @@ class TestPlugger(unittest.TestCase):
 
         config['offlineCarts'] = [2]
 
-        with session.begin(subtransactions=True):
+        with session.begin():
 
             # Restores priorities
             plate8550 = session.query(db.plateDB.Plate).filter(
@@ -47,7 +47,7 @@ class TestPlugger(unittest.TestCase):
     def tearDown(self):
         """Restores changes made to the DB during the tests."""
 
-        with session.begin(subtransactions=True):
+        with session.begin():
 
             # Restores priorities
             plate8550 = session.query(db.plateDB.Plate).filter(
@@ -85,7 +85,7 @@ class TestPlugger(unittest.TestCase):
         """Tests Plugger with a plate with priotity=10."""
 
         # Changes the priority of plates 8550 and 7443 to 10
-        with session.begin(subtransactions=True):
+        with session.begin():
 
             plate8550 = session.query(db.plateDB.Plate).filter(
                 db.plateDB.Plate.plate_id == 8550).one()
@@ -110,7 +110,7 @@ class TestPlugger(unittest.TestCase):
         """Tests the cart order returned by the Plugger."""
 
         # Sets a custom list of active pluggings.
-        with session.begin(subtransactions=True):
+        with session.begin():
 
             for ii in range(1, 4):
                 session.delete(

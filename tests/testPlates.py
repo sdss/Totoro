@@ -16,6 +16,8 @@ from __future__ import division
 from __future__ import print_function
 import unittest
 from sdss.internal.manga.Totoro.dbclasses import Plate, fromPlateID
+from sdss.internal.manga.Totoro import TotoroDBConnection
+from sdss.internal.manga.Totoro import exceptions
 
 
 class plateTestCase(unittest.TestCase):
@@ -60,6 +62,14 @@ class plateTestCase(unittest.TestCase):
         self.assertEqual(len(plate.getMangadbExposures()), 18)
         self.assertEqual(len(plate.getMangadbExposures()),
                          len(plate.getScienceExposures()))
+
+    def testSubtransactions(self):
+        """Fails if trying to load a plate from within a subtransaction."""
+
+        db = TotoroDBConnection()
+        with self.assertRaises(exceptions.TotoroError):
+            with db.session.begin():
+                fromPlateID(7815)
 
 
 if __name__ == '__main__':

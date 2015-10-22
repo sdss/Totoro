@@ -47,13 +47,13 @@ class Exposure(plateDB.Exposure):
 
         else:
             if parent.lower() == 'platedb':
-                with session.begin(subtransactions=True):
+                with session.begin():
                     instance = session.query(base).filter(
                         eval('{0}.{1} == {2}'.format(base.__name__,
                                                      format, input))).one()
 
             elif parent.lower() == 'mangadb':
-                with session.begin(subtransactions=True):
+                with session.begin():
                     instance = session.query(base).join(
                         mangaDB.Exposure).filter(
                             eval('mangaDB.Exposure.{0} == {1}'.format(
@@ -448,7 +448,7 @@ def setExposureStatus(exposure, status):
         pk = exposure
 
     # Gets the status_pk for the desired status and flags the exposure.
-    with session.begin(subtransactions=True):
+    with session.begin():
 
         try:
             if status is None:

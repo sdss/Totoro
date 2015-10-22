@@ -77,7 +77,7 @@ def autoAssignPlatePriorities(dryRun=False):
             continue
         newPriority = calculatePriority(plate.dec)
         if not dryRun:
-            with db.session.begin(subtransactions=True):
+            with db.session.begin():
                 plate.plate_pointings[0].priority = newPriority
         print('plate_id={0} (Dec={1:.2f}) assigned priority={2}'.format(
               plate.plate_id, plate.dec, newPriority))

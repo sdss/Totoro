@@ -347,7 +347,7 @@ class Plugger(object):
         forcePlugPriority = int(config['plugger']['forcePlugPriority'])
 
         # Does a query and gets all the plates with force plug priority
-        with session.begin(subtransactions=True):
+        with session.begin():
             forcePlugPlates = session.query(db.plateDB.Plate).join(
                 db.plateDB.PlateToSurvey, db.plateDB.Survey,
                 db.plateDB.SurveyMode, db.plateDB.PlatePointing
@@ -412,7 +412,7 @@ class Plugger(object):
         cartPlateMessage = {}
 
         # Gets active pluggings
-        with session.begin(subtransactions=True):
+        with session.begin():
             activePluggings = session.query(
                 db.plateDB.ActivePlugging).order_by(
                     db.plateDB.ActivePlugging.pk).all()
