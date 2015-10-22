@@ -146,24 +146,19 @@ class TotoroLogger(Logger):
         else:
             colourPrint(record.levelname, 'red', end='')
 
-        record.message = '{0}'.format(record.msg)
         if record.levelno == logging.WARN:
-            record.message = '{0}'.format(record.msg[record.msg.find(':')+2:])
+            message = '{0}'.format(record.msg[record.msg.find(':')+2:])
+        else:
+            message = '{0}'.format(record.msg)
 
-        # if not hasattr(record, 'origin') or record.origin == '':
-        #     record.message = '{0}'.format(record.msg)
-        # else:
-        #     record.message = '{0} [{1:s}]'.format(record.msg, record.origin)
-
-        if len(record.message) > self.wrapperLength:
+        if len(message) > self.wrapperLength:
             tw = TextWrapper()
             tw.width = self.wrapperLength
             tw.subsequent_indent = ' ' * (len(record.levelname)+2)
             tw.break_on_hyphens = False
-            msg = '\n'.join(tw.wrap(record.message))
-            print(': ' + msg)
-        else:
-            print(': ' + record.message)
+            message = '\n'.join(tw.wrap(message))
+
+        print(': ' + message)
 
     def _set_defaults(self,
                       logLevel='WARNING',

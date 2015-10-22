@@ -2,9 +2,11 @@
 /README.md -text
 /__init__.py -text
 /apoDB.py -text
+bin/__init__.py -text
 bin/autoAssignPlatePriorities.py -text
 bin/loadMangaPlates.py -text
 bin/mangaPluggingRequest.py -text
+bin/overrideSet.py -text
 bin/rearrangeSets.py -text
 core/__init__.py -text
 core/colourPrint.py -text
@@ -28,6 +30,8 @@ scheduler/plugger.py -text
 scheduler/scheduler_utils.py -text
 scheduler/timeline.py -text
 tests/__init__.py -text
+tests/bin/__init__.py -text
+tests/bin/testOverrideSet.py -text
 tests/runTests.py -text
 tests/testPlates.py -text
 tests/testPlugger.py -text
