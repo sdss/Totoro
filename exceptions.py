@@ -29,6 +29,11 @@ class TotoroPluggerError(TotoroError):
     pass
 
 
+class NoMangaPlate(TotoroError):
+    """Exception to be raised if a plate is not MaNGA."""
+    pass
+
+
 class TotoroSubtransactionError(TotoroError):
     """Exception to be raised if Totoro is called from within a DB session."""
     pass
