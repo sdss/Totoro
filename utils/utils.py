@@ -297,14 +297,14 @@ def checkOpenSession():
         pass
     except InvalidRequestError as ee:
         if 'A transaction is already begun' in str(ee):
-            raise exceptions.TotoroError('Totoro is being run within an open '
-                                         'SQLalchemy session. Please, modify '
-                                         'your code to avoid this.')
+            raise exceptions.TotoroSubtransactionError(
+                'Totoro is being run within an open SQLalchemy session. '
+                'Please, modify your code to avoid this.')
         else:
-            raise exceptions.TotoroError(
+            raise exceptions.TotoroSubtransactionError(
                 'Failed while checking session status. Error message is: {0}'
                 .format(str(ee)))
     except Exception as ee:
-        raise exceptions.TotoroError(
+        raise exceptions.TotoroSubtransactionError(
             'Failed while checking session status. Error message is: {0}'
             .format(str(ee)))

@@ -29,6 +29,11 @@ class TotoroPluggerError(TotoroError):
     pass
 
 
+class TotoroSubtransactionError(TotoroError):
+    """Exception to be raised if Totoro is called from within a DB session."""
+    pass
+
+
 class TotoroWarning(Warning):
     """Base warning for Totoro."""
     pass
