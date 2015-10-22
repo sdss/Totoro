@@ -42,3 +42,4 @@ Totoro/tests/testSets.py -text
 Totoro/utils/__init__.py -text
 Totoro/utils/intervals.py -text
 Totoro/utils/utils.py -text
+ups/Totoro.table -text

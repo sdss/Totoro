@@ -1,0 +1,5 @@
+setupOptional(sqlalchemy)
+setupOptional(psycopg2)
+
+envPrepend(PATH, ${PRODUCT_DIR}/Totoro/bin)
+envPrepend(PYTHONPATH, ${PRODUCT_DIR})
