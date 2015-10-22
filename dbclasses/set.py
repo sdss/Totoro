@@ -527,10 +527,10 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
             return ('Good', 10)
         elif set.status.label == 'Override Bad':
             return ('Bad', 10)
-        elif ('Excellent' in set.status.label or 'Good' in set.status.label and
-              not force):
+        elif ((set.status.label == 'Excellent' or
+               set.status.label == 'Good') and not force):
             return ('Good', 10)
-        elif 'Poor' in set.status.label and not force:
+        elif set.status.label == 'Poor' and not force:
             return ('Bad', 10)
         else:
             pass
