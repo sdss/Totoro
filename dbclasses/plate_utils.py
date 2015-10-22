@@ -684,6 +684,6 @@ def removeOrphanedSets():
                 session.delete(ss)
                 nRemoved += 1
 
-    log.info('removed {0} orphaned sets'.format(nRemoved))
+    log.debug('removed {0} orphaned sets'.format(nRemoved))
 
     return
