@@ -259,7 +259,9 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
     platesMaxCompletionIncrease = plates[
         np.where(completionIncrease == np.max(completionIncrease))]
 
-    if len(platesMaxCompletionIncrease) == 1:
+    if len(platesMaxCompletionIncrease) == 0:
+        return None
+    elif len(platesMaxCompletionIncrease) == 1:
         return platesMaxCompletionIncrease[0]
 
     # If several plates have maximum completion increase, use the incomplete
