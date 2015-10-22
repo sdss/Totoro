@@ -25,7 +25,6 @@ Totoro/.py[cod]
 Totoro/.pydevproject
 Totoro/.tox
 Totoro/__pycache__
-Totoro/bin
 Totoro/bin/*.egg
 Totoro/bin/*.egg-info
 Totoro/bin/*.mo
@@ -40,7 +39,6 @@ Totoro/bin/.py[cod]
 Totoro/bin/.pydevproject
 Totoro/bin/.tox
 Totoro/bin/__pycache__
-Totoro/bin/bin
 Totoro/bin/build
 Totoro/bin/develop-eggs
 Totoro/bin/dist
@@ -67,7 +65,6 @@ Totoro/core/.py[cod]
 Totoro/core/.pydevproject
 Totoro/core/.tox
 Totoro/core/__pycache__
-Totoro/core/bin
 Totoro/core/build
 Totoro/core/develop-eggs
 Totoro/core/dist
@@ -93,7 +90,6 @@ Totoro/data/.py[cod]
 Totoro/data/.pydevproject
 Totoro/data/.tox
 Totoro/data/__pycache__
-Totoro/data/bin
 Totoro/data/build
 Totoro/data/develop-eggs
 Totoro/data/dist
@@ -119,7 +115,6 @@ Totoro/dbclasses/.py[cod]
 Totoro/dbclasses/.pydevproject
 Totoro/dbclasses/.tox
 Totoro/dbclasses/__pycache__
-Totoro/dbclasses/bin
 Totoro/dbclasses/build
 Totoro/dbclasses/develop-eggs
 Totoro/dbclasses/dist
@@ -154,7 +149,6 @@ Totoro/scheduler/.py[cod]
 Totoro/scheduler/.pydevproject
 Totoro/scheduler/.tox
 Totoro/scheduler/__pycache__
-Totoro/scheduler/bin
 Totoro/scheduler/build
 Totoro/scheduler/develop-eggs
 Totoro/scheduler/dist
@@ -181,7 +175,6 @@ Totoro/tests/.py[cod]
 Totoro/tests/.pydevproject
 Totoro/tests/.tox
 Totoro/tests/__pycache__
-Totoro/tests/bin
 Totoro/tests/bin/*.egg
 Totoro/tests/bin/*.egg-info
 Totoro/tests/bin/*.mo
@@ -196,7 +189,6 @@ Totoro/tests/bin/.py[cod]
 Totoro/tests/bin/.pydevproject
 Totoro/tests/bin/.tox
 Totoro/tests/bin/__pycache__
-Totoro/tests/bin/bin
 Totoro/tests/bin/build
 Totoro/tests/bin/develop-eggs
 Totoro/tests/bin/dist
@@ -233,7 +225,6 @@ Totoro/utils/.py[cod]
 Totoro/utils/.pydevproject
 Totoro/utils/.tox
 Totoro/utils/__pycache__
-Totoro/utils/bin
 Totoro/utils/build
 Totoro/utils/develop-eggs
 Totoro/utils/dist
@@ -247,7 +238,6 @@ Totoro/utils/sdist
 Totoro/utils/var
 Totoro/var
 /__pycache__
-/bin
 /build
 /develop-eggs
 /dist
