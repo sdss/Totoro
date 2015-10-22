@@ -1,7 +1,6 @@
 * text=auto !eol
 /LICENSE -text
 /README.md -text
-/SDSSconnect -text
 Totoro/__init__.py -text
 Totoro/bin/__init__.py -text
 Totoro/bin/autoAssignPlatePriorities.py -text
