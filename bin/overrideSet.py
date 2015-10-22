@@ -24,7 +24,7 @@ from sdss.internal.manga.Totoro.dbclasses.plate_utils import (
     getConsecutiveSets, removeOrphanedSets)
 from sdss.internal.manga.Totoro.dbclasses import fromPlateID
 from sdss.internal.manga.Totoro.exceptions import (TotoroUserWarning,
-                                                   TotoroError)
+                                                   TotoroError, EmptySet)
 
 from sqlalchemy.orm.exc import NoResultFound
 import numpy as np
@@ -141,16 +141,27 @@ def override(args):
     for setPK in np.unique(originalSetPKs):
         if setPK == overridenSetPK:
             continue
-        ss = Set(setPK, format='pk')
-        origStatus = None if ss.status is None else ss.status.label
-        checkSet(ss, flag=True, force=True)
 
-        if verbose:
+        try:
             ss = Set(setPK, format='pk')
-            newStatus = None if ss.status is None else ss.status.label
-            if newStatus != origStatus:
-                log.info('set pk={0} status changed from {1} to {2}'
-                         .format(setPK, origStatus, newStatus))
+            origStatus = None if ss.status is None else ss.status.label
+            checkSet(ss, flag=True, force=True)
+
+            if verbose:
+                ss = Set(setPK, format='pk')
+                newStatus = None if ss.status is None else ss.status.label
+                if newStatus != origStatus:
+                    log.info('set pk={0} status changed from {1} to {2}'
+                             .format(setPK, origStatus, newStatus))
+
+        except EmptySet:
+
+            if verbose:
+                log.info('set pk={0} not empty. Removing it.'.format(setPK))
+            with db.session.begin():
+                ss = db.session.query(db.mangaDB.Set).get(setPK)
+                db.session.delete(ss)
+            continue
 
     # Checks if completion has changed for the plate and, if so, issues a
     # warning. Otherwise, issues a general warning.
@@ -171,6 +182,8 @@ def override(args):
         log.info('changing status of set {0} to Override {1}'
                  .format(overridenSetPK, mode))
         log.info('override was successful')
+
+    removeOrphanedSets()
 
     return overridenSetPK
 
