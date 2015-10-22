@@ -26,7 +26,7 @@ import itertools
 
 
 db = TotoroDBConnection()
-session = db.session
+session = db.Session()
 
 
 def updatePlate(plate, rearrangeIncomplete=True, **kwargs):

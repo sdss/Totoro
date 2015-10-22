@@ -26,7 +26,7 @@ import warnings
 db = TotoroDBConnection()
 plateDB = db.plateDB
 mangaDB = db.mangaDB
-session = db.session
+session = db.Session()
 
 
 class Exposure(plateDB.Exposure):

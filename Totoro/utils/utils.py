@@ -17,7 +17,7 @@ from __future__ import print_function
 from Totoro import log
 from Totoro import config
 from Totoro import exceptions
-from Totoro.apoDB import TotoroDBConnection
+from Totoro import TotoroDBConnection
 from sdss.manga.mlhalimit import mlhalimit as mlhalimitHours
 from sqlalchemy.exc import InvalidRequestError, ResourceClosedError
 from collections import OrderedDict
@@ -289,10 +289,11 @@ def checkOpenSession():
     """Raises an error if Totoro is being run from inside an open session."""
 
     totoroDB = TotoroDBConnection()
+    session = totoroDB.Session()
 
     try:
-        with totoroDB.session.begin():
-            totoroDB.session.commit()
+        with session.begin():
+            session.commit()
     except ResourceClosedError:
         pass
     except InvalidRequestError as ee:

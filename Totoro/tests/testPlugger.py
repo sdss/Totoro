@@ -20,7 +20,7 @@ from collections import OrderedDict
 import unittest
 
 db = TotoroDBConnection()
-session = db.session
+session = db.Session()
 
 
 class TestPlugger(unittest.TestCase):

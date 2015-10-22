@@ -28,7 +28,7 @@ import numpy as np
 __all__ = ['Plugger']
 
 db = TotoroDBConnection()
-session = db.session
+session = db.Session()
 
 cartStatusCodes = {0: 'empty', 1: 'noMaNGAplate', 2: 'MaNGA_complete',
                    3: 'MaNGA_noStarted', 4: 'MaNGA_started', 10: 'unknown'}

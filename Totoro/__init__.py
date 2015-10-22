@@ -34,6 +34,15 @@ except:
 from sdss.utilities.Site import Site
 site = Site()
 
-from apoDB import TotoroDBConnection
+from external.SDSSconnect.SDSSconnect import DatabaseConnection \
+    as TotoroDBConnection
+
+# Now we create the default DB connection
+databaseConnectionString = (
+    'postgresql+psycopg2://{user}:*@{host}:{port}/{database}'
+    .format(**config['dbConnection']))
+TotoroDBConnection(databaseConnectionString=databaseConnectionString,
+                   new=True, name='dbConnection')
+
 from Totoro.utils import checkOpenSession
 checkOpenSession()
