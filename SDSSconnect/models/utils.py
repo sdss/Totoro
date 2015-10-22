@@ -17,7 +17,7 @@ from __future__ import division
 from __future__ import print_function
 import re
 import os
-import inflect
+# import inflect
 import warnings
 from SDSSconnect.exceptions import SDSSconnectUserWarning
 
@@ -61,25 +61,25 @@ def cameliseClassname(base, tablename, table):
     return camelised
 
 
-_pluralizer = inflect.engine()
-
-
-def pluraliseCollection(base, local_cls, referred_cls, constraint):
-    """Produce an 'uncamelised', 'pluralised' class name."""
-
-    referred_name = referred_cls.__name__
-
-    if str(referred_cls.__table__.schema) == str(local_cls.__table__.schema):
-        referred_name = referred_name.replace(
-            str(referred_cls.__table__.schema).capitalize() + '_', '')
-
-    uncamelised = re.sub(r'[A-Z]',
-                         lambda m: "_%s" % m.group(0).lower(),
-                         referred_name)[1:]
-    pluralised = _pluralizer.plural(uncamelised)
-    pluralised = str(pluralised).replace('__', '_')
-
-    return pluralised
+# _pluralizer = inflect.engine()
+#
+#
+# def pluraliseCollection(base, local_cls, referred_cls, constraint):
+#     """Produce an 'uncamelised', 'pluralised' class name."""
+#
+#     referred_name = referred_cls.__name__
+#
+#     if str(referred_cls.__table__.schema) == str(local_cls.__table__.schema):
+#         referred_name = referred_name.replace(
+#             str(referred_cls.__table__.schema).capitalize() + '_', '')
+#
+#     uncamelised = re.sub(r'[A-Z]',
+#                          lambda m: "_%s" % m.group(0).lower(),
+#                          referred_name)[1:]
+#     pluralised = _pluralizer.plural(uncamelised)
+#     pluralised = str(pluralised).replace('__', '_')
+#
+#     return pluralised
 
 
 def modelRepr(self):
