@@ -67,8 +67,9 @@ class plateTestCase(unittest.TestCase):
         """Fails if trying to load a plate from within a subtransaction."""
 
         db = TotoroDBConnection()
+        session = db.Session()
         with self.assertRaises(exceptions.TotoroSubtransactionError):
-            with db.session.begin():
+            with session.begin():
                 fromPlateID(7815)
 
 

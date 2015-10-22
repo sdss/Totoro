@@ -15,7 +15,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from exposure import Exposure
-from Totoro.apoDB import TotoroDBConnection
+from Totoro import TotoroDBConnection
 from Totoro import log, config, site
 from Totoro import exceptions
 from Totoro import utils
@@ -63,8 +63,7 @@ class Set(mangaDB.Set):
         else:
             with session.begin():
                 instance = session.query(base).filter(
-                    eval('{0}.{1} == {2}'.format(base.__name__, format, input))
-                    ).one()
+                    eval('mangaDB.Set.{0} == {1}'.format(format, input))).one()
 
         instance.__class__ = cls
 

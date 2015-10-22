@@ -32,20 +32,20 @@ class TestSetArrangement(unittest.TestCase):
 
         setPK = [1, 1, 1, 2, 2, 2, 3, 4, 3, 4, 3, 4]
 
-        with db.session.begin():
+        with session.begin():
 
             for ii, expPK in enumerate(range(17, 29)):
-                exp = db.session.query(db.mangaDB.Exposure).get(expPK)
-                ss = db.session.query(db.mangaDB.Set).get(setPK[ii])
+                exp = session.query(db.mangaDB.Exposure).get(expPK)
+                ss = session.query(db.mangaDB.Set).get(setPK[ii])
                 if ss is None:
-                    db.session.add(db.mangaDB.Set(pk=setPK[ii]))
-                    db.session.flush()
+                    session.add(db.mangaDB.Set(pk=setPK[ii]))
+                    session.flush()
                 exp.set_pk = setPK[ii]
                 exp.exposure_status_pk = 4
-                db.session.flush()
+                session.flush()
 
             for sPK in setPK:
-                ss = db.session.query(db.mangaDB.Set).get(sPK)
+                ss = session.query(db.mangaDB.Set).get(sPK)
                 ss.set_status_pk = 0
 
         removeOrphanedSets()
@@ -76,8 +76,8 @@ class TestSetArrangement(unittest.TestCase):
 
         # Removes all set assignment for plate 8551
         plate8551 = fromPlateID(8551)
+        exposures = plate8551.getScienceExposures()
         with session.begin():
-            exposures = plate8551.getScienceExposures()
             for exp in exposures:
                 setPK = exp.mangadbExposure[0].set_pk
                 exp.mangadbExposure[0].set_pk = None
@@ -105,13 +105,13 @@ class TestSetArrangement(unittest.TestCase):
     def testRearrangementWithOverriddenSet(self):
         """Tests a rearrangement in a plate with an overriden set."""
 
-        with db.session.begin():
-            exp18 = db.session.query(db.mangaDB.Exposure).get(18)
-            exp20 = db.session.query(db.mangaDB.Exposure).get(20)
+        with session.begin():
+            exp18 = session.query(db.mangaDB.Exposure).get(18)
+            exp20 = session.query(db.mangaDB.Exposure).get(20)
             exp18.set_pk = 2
             exp20.set_pk = 1
 
-            set1 = db.session.query(db.mangaDB.Set).get(1)
+            set1 = session.query(db.mangaDB.Set).get(1)
             set1.set_status_pk = 3
 
         plate = fromPlateID(7495)

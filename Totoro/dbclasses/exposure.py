@@ -49,8 +49,8 @@ class Exposure(plateDB.Exposure):
             if parent.lower() == 'platedb':
                 with session.begin():
                     instance = session.query(base).filter(
-                        eval('{0}.{1} == {2}'.format(base.__name__,
-                                                     format, input))).one()
+                        eval('plateDB.Exposure.{0} == {1}'
+                             .format(format, input))).one()
 
             elif parent.lower() == 'mangadb':
                 with session.begin():

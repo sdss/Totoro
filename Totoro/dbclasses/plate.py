@@ -14,7 +14,7 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from Totoro.apoDB import TotoroDBConnection
+from Totoro import TotoroDBConnection
 from Totoro import exceptions as TotoroExceptions
 from Totoro import log, config, dustMap, site
 from Totoro import utils
@@ -37,7 +37,7 @@ __all__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plate',
 totoroDB = TotoroDBConnection()
 plateDB = totoroDB.plateDB
 mangaDB = totoroDB.mangaDB
-session = totoroDB.session
+session = totoroDB.Session()
 
 
 def getPlugged(**kwargs):
@@ -250,9 +250,8 @@ class Plate(plateDB.Plate):
             try:
                 with session.begin():
                     instance = session.query(base).filter(
-                        eval('{0}.{1} == {2}'.format(base.__name__,
-                                                     format, input))
-                        ).one()
+                        eval('plateDB.Plate.{0} == {1}'
+                             .format(format, input))).one()
             except NoResultFound:
                 raise TotoroExceptions.TotoroError('no plate found for input '
                                                    '{0}={1}'
@@ -339,11 +338,10 @@ class Plate(plateDB.Plate):
         sets matching exposures in this plate. Removes duplicates."""
 
         # Finds the sets for this plate
-        with session.begin():
-            sets = session.query(mangaDB.Set).join(
-                mangaDB.Exposure, plateDB.Exposure, plateDB.Observation,
-                plateDB.PlatePointing, plateDB.Plate).filter(
-                    plateDB.Plate.pk == self.pk).all()
+        sets = session.query(mangaDB.Set).join(
+            mangaDB.Exposure, plateDB.Exposure, plateDB.Observation,
+            plateDB.PlatePointing, plateDB.Plate).filter(
+                plateDB.Plate.pk == self.pk).all()
 
         sets = sorted(sets, key=lambda set: set.pk)
 
@@ -582,7 +580,11 @@ class Plate(plateDB.Plate):
         scienceExps = []
 
         for plugging in self.pluggings:
-            scienceExps += plugging.scienceExposures()
+            exposures = session.query(plateDB.Exposure).join(
+                plateDB.Observation, plateDB.ExposureFlavor).filter(
+                    plateDB.Observation.plugging_pk == plugging.pk).filter(
+                        plateDB.ExposureFlavor.label == 'Science').all()
+            scienceExps += exposures
 
         return scienceExps
 

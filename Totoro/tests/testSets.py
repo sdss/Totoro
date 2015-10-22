@@ -21,6 +21,7 @@ import numpy as np
 import unittest
 
 db = TotoroDBConnection()
+session = db.Session()
 
 
 class TestSets(unittest.TestCase):
@@ -31,17 +32,17 @@ class TestSets(unittest.TestCase):
 
         setPK = [1, 1, 1, 2, 2, 2, 3, 4, 3, 4, 3, 4]
 
-        with db.session.begin():
+        with session.begin():
 
             for ii, expPK in enumerate(range(17, 29)):
-                exp = db.session.query(db.mangaDB.Exposure).get(expPK)
-                ss = db.session.query(db.mangaDB.Set).get(setPK[ii])
+                exp = session.query(db.mangaDB.Exposure).get(expPK)
+                ss = session.query(db.mangaDB.Set).get(setPK[ii])
                 if ss is None:
-                    db.session.add(db.mangaDB.Set(pk=setPK[ii]))
+                    session.add(db.mangaDB.Set(pk=setPK[ii]))
                 exp.set_pk = setPK[ii]
                 exp.exposure_status_pk = 4
 
-            sn2 = db.session.query(db.mangaDB.SN2Values).get(17)
+            sn2 = session.query(db.mangaDB.SN2Values).get(17)
             sn2.b1_sn2 = 3.28888
             sn2.b2_sn2 = 2.90681
             sn2.r1_sn2 = 6.01449
@@ -153,8 +154,8 @@ class TestSets(unittest.TestCase):
         self.assertIsNot(exp._mangaExposure.set_pk, None)
 
         # Modifies the exposure
-        with db.session.begin():
-            exp = db.session.query(db.mangaDB.Exposure).get(17)
+        with session.begin():
+            exp = session.query(db.mangaDB.Exposure).get(17)
             exp.set_pk = None
             exp.sn2values[0].b1_sn2 = None
             exp.sn2values[0].b2_sn2 = None
@@ -173,8 +174,8 @@ class TestSets(unittest.TestCase):
                 break
 
         # Changes exposure to incomplete but valid
-        with db.session.begin():
-            exp = db.session.query(db.mangaDB.Exposure).get(17)
+        with session.begin():
+            exp = session.query(db.mangaDB.Exposure).get(17)
             exp.sn2values[0].b1_sn2 = 3.28888
             exp.sn2values[0].b2_sn2 = 2.90681
             exp.sn2values[0].r1_sn2 = 6.01449
@@ -188,8 +189,8 @@ class TestSets(unittest.TestCase):
                 break
 
         # Now we break the exposure again
-        with db.session.begin():
-            exp = db.session.query(db.mangaDB.Exposure).get(17)
+        with session.begin():
+            exp = session.query(db.mangaDB.Exposure).get(17)
             exp.sn2values[0].b1_sn2 = 0.0
             exp.sn2values[0].b2_sn2 = 0.0
             exp.sn2values[0].r1_sn2 = 6.01449
