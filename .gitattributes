@@ -1,15 +1,6 @@
 * text=auto !eol
 /LICENSE -text
 /README.md -text
-SDSSconnect/DatabaseConnection.py -text
-SDSSconnect/__init__.py -text
-SDSSconnect/etc/repr.dat -text
-SDSSconnect/exceptions.py -text
-SDSSconnect/models/__init__.py -text
-SDSSconnect/models/relationships.py -text
-SDSSconnect/models/utils.py -text
-SDSSconnect/tests/__init__.py -text
-SDSSconnect/tests/test_DatabaseConnect.py -text
 Totoro/__init__.py -text
 Totoro/bin/__init__.py -text
 Totoro/bin/autoAssignPlatePriorities.py -text
