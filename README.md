@@ -1,4 +1,4 @@
-GITS
-====
+Totoro
+======
 
-A night and plugging scheduler for MaNGA.
+A night scheduler for MaNGA.
