@@ -458,6 +458,21 @@ def setSetStatus(set, status):
     return True
 
 
+setErrorCodes = {
+    0: 'no error.',
+    1: 'one or more exposures are invalid.',
+    2: 'HA range is greater than maximum allowed.',
+    3: 'seeing values out of range',
+    4: 'SN2 values out of range',
+    5: 'too many exposures',
+    6: 'multiple exposures with the same dither position',
+    7: 'average seeing > maximum',
+    8: 'exposures span more than one plugging.',
+    9: 'set is incomplete but the plugging is no longer current.',
+    10: 'status from database.'
+}
+
+
 def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
              **kwargs):
     """Checks if a set meets MaNGA's quality criteria.
@@ -505,7 +520,7 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
     7: average seeing > maximum
     8: exposures span more than one plugging.
     9: set is incomplete but the plugging is no longer current.
-    10: overridden set status.
+    10: status from database.
 
     """
 
@@ -541,7 +556,7 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
 
     # Check if exposures are valid
     for exposure in set.totoroExposures:
-        exposureCheck = exposure.checkExposure(flag=flagExposures)
+        exposureCheck = exposure.checkExposure(flag=flagExposures, force=force)
         if exposureCheck[0] is False:
             message = ('set pk={0}: one or more exposures are invalid.'
                        .format(pk))

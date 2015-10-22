@@ -220,6 +220,48 @@ class TestOverrideSet(unittest.TestCase):
                 ss = db.session.query(db.mangaDB.Set).get(setPK)
                 self.assertEqual(ss.status.label, 'Good')
 
+    def testInfo(self):
+        """Test getting information from a set."""
+
+        # Checks a fake set
+        exps = [177773, 177774, 177778]
+        (status, code,
+         statusMock, codeMock) = main(argv=['-v', 'info'] + map(str, exps))
+
+        self.assertEqual(status, 'Bad')
+        self.assertEqual(code, 2)
+        self.assertIsNone(statusMock)
+        self.assertIsNone(codeMock)
+
+        # Now we check a real good one
+        exps = [177773, 177774, 177775]
+        (status, code,
+         statusMock, codeMock) = main(argv=['-v', 'info'] + map(str, exps))
+
+        self.assertEqual(status, 'Excellent')
+        self.assertEqual(code, 10)
+        self.assertEqual(statusMock, 'Good')
+        self.assertEqual(codeMock, 0)
+
+        # Lets override the first example as bad
+        exps = [177773, 177774, 177778]
+        main(argv=['-v', 'bad'] + map(str, exps))
+        (status, code,
+         statusMock, codeMock) = main(argv=['-v', 'info'] + map(str, exps))
+
+        self.assertEqual(status, 'Override Bad')
+        self.assertEqual(code, 10)
+        self.assertEqual(statusMock, 'Bad')
+        self.assertEqual(codeMock, 2)
+
+        # For the previous test the status of the exposures has been internally
+        # changed to None. That change should not be recorded in the DB. Let's
+        # check.
+        for exp in exps:
+            totExp = Exposure(exp, format='exposure_no')
+            self.assertEqual(totExp._mangaExposure.status.label,
+                             'Override Bad')
+
 
 if __name__ == '__main__':
     unittest.main()
