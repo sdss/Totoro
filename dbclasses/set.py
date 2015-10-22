@@ -541,7 +541,7 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
 
     # Check if exposures are valid
     for exposure in set.totoroExposures:
-        exposureCheck = exposure.checkExposure(flag=flagExposures)
+        exposureCheck = exposure.checkExposure(flag=flagExposures, force=force)
         if exposureCheck[0] is False:
             message = ('set pk={0}: one or more exposures are invalid.'
                        .format(pk))
