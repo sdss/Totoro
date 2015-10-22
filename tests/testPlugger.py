@@ -58,6 +58,10 @@ class TestPlugger(unittest.TestCase):
                 db.plateDB.Plate.plate_id == 7443).one()
             plate7443.plate_pointings[0].priority = 1
 
+            plate8081 = session.query(db.plateDB.Plate).filter(
+                db.plateDB.Plate.plate_id == 8081).one()
+            plate8081.plate_location_pk = 28
+
             # Restores the list of active pluggings
             for ii in range(1, 4):
                 session.delete(
@@ -78,6 +82,23 @@ class TestPlugger(unittest.TestCase):
         validResult = OrderedDict(
             [(1, 8312), (3, 8486), (4, 8550),
              ('cart_order', [9, 8, 7, 2, 5, 6, 3, 1, 4])])
+
+        self.assertEqual(validResult, plugger.getASOutput())
+
+    def test57307(self):
+        """Tests replugging when cart is offline."""
+
+        # Moves plate 8081 to APO
+        with session.begin():
+            plate8081 = session.query(db.plateDB.Plate).filter(
+                db.plateDB.Plate.plate_id == 8081).one()
+            plate8081.plate_location_pk = 23
+
+        plugger = Plugger(startDate=2457307.806736, endDate=2457307.998611)
+
+        validResult = OrderedDict([(1, 8570), (3, 8486), (4, 8081), (5, 8566),
+                                   ('cart_order', [9, 8, 7, 2, 6, 3, 4, 5, 1])
+                                   ])
 
         self.assertEqual(validResult, plugger.getASOutput())
 
