@@ -556,10 +556,14 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
             else:
                 return (False, 10)
 
-        if mangaDBstatus is not None and not force:
-            if mangaDBstatus == 'Totoro Good':
+        if mangaDBstatus is not None:
+            if mangaDBstatus == 'Totoro Good' and not force:
                 return (True, 10)
-            elif mangaDBstatus == 'Totoro Bad':
+            elif mangaDBstatus == 'Totoro Bad' and not force:
+                return (False, 10)
+            elif mangaDBstatus == 'Overridden Good':
+                return (True, 10)
+            elif mangaDBstatus == 'Overridden Bad':
                 return (False, 10)
             else:
                 pass
