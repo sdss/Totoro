@@ -332,7 +332,9 @@ class TestOverrideSet(unittest.TestCase):
         main(argv=['-v', 'good'] + map(str, exps))
 
         with db.session.begin():
-            ss = db.session.query(db.mangaDB.Set).get(312)
+            exp198371 = db.session.query(db.plateDB.Exposure).filter(
+                db.plateDB.Exposure.exposure_no == 198371).one()
+            ss = exp198371.mangadbExposure[0].set
 
         self.assertIsNotNone(ss)
         self.assertEqual(ss.status.label, 'Override Good')
