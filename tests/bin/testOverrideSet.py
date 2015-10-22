@@ -72,6 +72,13 @@ class TestOverrideSet(unittest.TestCase):
             self.assertEqual(totExp._mangaExposure.set.status.label,
                              'Override Good')
 
+        # Checks that the set is overriden good
+        with db.session.begin():
+            ss = db.session.query(db.mangaDB.Set).get(1)
+
+        self.assertIsNotNone(ss)
+        self.assertEqual(ss.status.label, 'Override Good')
+
     def testOverrideGoodSeveralSet(self):
         """Test overriding exposures from different sets into a good set."""
 
@@ -90,6 +97,13 @@ class TestOverrideSet(unittest.TestCase):
                              'Override Good')
 
         self.assertEqual(len(np.unique(setPKs)), 1)
+
+        # Checks that the set is overriden good
+        with db.session.begin():
+            ss = db.session.query(db.mangaDB.Set).get(setPKs[0])
+
+        self.assertIsNotNone(ss)
+        self.assertEqual(ss.status.label, 'Override Good')
 
         for setPK in [1, 2, 3, 4]:
             ss = Set(setPK, format='pk')
@@ -116,6 +130,13 @@ class TestOverrideSet(unittest.TestCase):
                              'Override Bad')
             self.assertEqual(totExp._mangaExposure.set.status.label,
                              'Override Bad')
+
+        # Checks that the set is overriden good
+        with db.session.begin():
+            ss = db.session.query(db.mangaDB.Set).get(1)
+
+        self.assertIsNotNone(ss)
+        self.assertEqual(ss.status.label, 'Override Bad')
 
         plate = fromPlateID(7495)
         self.assertEqual(len(plate.sets), 4)
@@ -152,6 +173,13 @@ class TestOverrideSet(unittest.TestCase):
 
         self.assertEqual(len(np.unique(setPKs)), 1)
 
+        # Checks that the set is overriden bad
+        with db.session.begin():
+            ss = db.session.query(db.mangaDB.Set).get(setPKs[0])
+
+        self.assertIsNotNone(ss)
+        self.assertEqual(ss.status.label, 'Override Bad')
+
         for setPK in [1, 2, 3, 4]:
             ss = Set(setPK, format='pk')
             status = ss.getStatus()[0]
@@ -171,21 +199,21 @@ class TestOverrideSet(unittest.TestCase):
 
         # We override a set as bad
         exps = [177773, 177774, 177778]
-        main(argv=['-v', 'bad'] + map(str, exps))
+        overridenSetPK = main(argv=['-v', 'bad'] + map(str, exps))
 
         # Checks that the new overridden set is 297
         with db.session.begin():
-            ss = db.session.query(db.mangaDB.Set).get(297)
+            ss = db.session.query(db.mangaDB.Set).get(overridenSetPK)
 
         self.assertIsNotNone(ss)
         self.assertEqual(ss.status.label, 'Override Bad')
 
         # Now we remove the set
-        main(argv=['-v', 'remove', '297'])
+        main(argv=['-v', 'remove', str(overridenSetPK)])
 
         # Check that set_pk 297 has been removed
         with db.session.begin():
-            ss = db.session.query(db.mangaDB.Set).get(297)
+            ss = db.session.query(db.mangaDB.Set).get(overridenSetPK)
 
         self.assertIsNone(ss)
 
@@ -200,10 +228,10 @@ class TestOverrideSet(unittest.TestCase):
 
         # Now we repeat the test but using --reload. The plate should be left
         # in the original state but with sets 1 and 2 exchanged.
-        main(argv=['-v', 'bad'] + map(str, exps))
+        overridenSetPK = main(argv=['-v', 'bad'] + map(str, exps))
 
         # Now we remove the set
-        main(argv=['-v', 'remove', '--reload', '297'])
+        main(argv=['-v', 'remove', '--reload', str(overridenSetPK)])
 
         # Checks that all exposures don't have exposure status or set_pk
         expSetPKs = [2, 2, 1]
