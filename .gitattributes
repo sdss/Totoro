@@ -1,7 +1,6 @@
 * text=auto !eol
 /README.md -text
 Totoro/__init__.py -text
-Totoro/apoDB.py -text
 Totoro/bin/__init__.py -text
 Totoro/bin/autoAssignPlatePriorities.py -text
 Totoro/bin/loadMangaPlates.py -text
