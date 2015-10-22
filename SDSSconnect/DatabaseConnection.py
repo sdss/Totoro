@@ -27,7 +27,7 @@ from SDSSconnect.models.utils import nullifyRelationship
 from SDSSconnect.exceptions import SDSSconnectUserWarning, SDSSconnectError
 
 import warnings
-import configparser
+import ConfigParser
 import os
 
 
@@ -43,7 +43,7 @@ def readProfile(profile=None, path=None):
     if not os.path.exists(profilesPath):
         raise RuntimeError('profile not found in {0}'.format(profilesPath))
 
-    config = configparser.ConfigParser()
+    config = ConfigParser.ConfigParser()
     config.read(profilesPath)
 
     # If no profile is defined, we try to return the DEFAULTS section and, if
