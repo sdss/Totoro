@@ -147,8 +147,7 @@ class Planner(object):
         """Gets plates that are already drilled or in process of being so,
         with some filtering."""
 
-        from Totoro.dbclasses import (getAll, Plate,
-                                                          getTilingCatalogue)
+        from Totoro.dbclasses import getAll, Plate, getTilingCatalogue
 
         allPlates = getAll(rejectSpecial=True, updateSets=False, silent=True,
                            fullCheck=False)
@@ -289,7 +288,7 @@ class Planner(object):
 
             if nn not in goodWeatherIdx:
                 log.info(_color_text('... skipping timeline because of '
-                                     'bad weather.','cyan'))
+                                     'bad weather.', 'cyan'))
                 timeline.observed = False
                 continue
 
