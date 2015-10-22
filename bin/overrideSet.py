@@ -172,7 +172,7 @@ def override(args):
                  .format(overridenSetPK, mode))
         log.info('override was successful')
 
-    return
+    return overridenSetPK
 
 
 def removeStatus(args):
