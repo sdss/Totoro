@@ -1,6 +1,5 @@
 * text=auto !eol
 /README.md -text
-Totoro/README.md -text
 Totoro/__init__.py -text
 Totoro/apoDB.py -text
 Totoro/bin/__init__.py -text
