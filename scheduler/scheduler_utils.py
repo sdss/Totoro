@@ -25,6 +25,8 @@ from numbers import Number
 
 expTime = config['exposure']['exposureTime']
 minSchedulingTime = config['plugger']['minSchedulingTimeHours']
+patchSetFactor = 0.1
+platePriorityFactor = 0.25
 
 
 def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
@@ -81,8 +83,7 @@ def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
                                    normalise=True)
 
         if optimalPlate:
-            newExps = cleanupPlates(observablePlates, optimalPlate,
-                                    jdRange)
+            newExps = cleanupPlates(observablePlates, optimalPlate, jdRange)
             return optimalPlate, newExps
         else:
             cleanupPlates(priorityPlates, None, jdRange)
@@ -114,12 +115,13 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
 
     # If we are scheduling only plugged plates, we rather plug a new plate
     # unless we can observe a plugged plate at least for a whole set.
-
     availableTime = (jdRange[1] - jdRange[0]) * 24.
     completionIncrease = np.array([plate._after['completion'] -
                                    plate._before['completion']
                                    for plate in plates])
 
+    # minSchedulingTime ensures that if the remaining time < length of a set,
+    # we still use the plugged plates, if any.
     if scope == 'plugged' and availableTime > minSchedulingTime:
         if np.all(completionIncrease == 0):
             return None
@@ -135,6 +137,14 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
                                       for status in plate.statuses]]
     if len(markedPlates) > 0:
         plates = markedPlates
+
+    # We check if any of the plate is complete after the simulation.
+    # If so, we return the one with fewer new exposures.
+    completePlates = [plate for plate in plates
+                      if plate._after['completion'] > 1]
+    nNewExposures = [plate._after['nNewExposures'] for plate in completePlates]
+    if len(completePlates) > 0:
+        return completePlates[np.argmin(nNewExposures)]
 
     # We record the real completion before and after. We will normalise the
     # other completions based on our scheduling logic.
@@ -191,24 +201,15 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
                         else:
                             nSetsFactor -= 1
 
-            patchedSetFactor.append(1. + 0.1 * nSetsFactor)
+            patchedSetFactor.append(1. + patchSetFactor * nSetsFactor)
 
         _completionFactor(plates, patchedSetFactor)
 
-    # We check if any of the plate is complete after the simulation.
-    # If so, we return the one with fewer new exposures.
-    completePlates = [plate for plate in plates
-                      if plate._after['realCompletion'] > 1]
-    nNewExposures = [plate._after['nNewExposures'] for plate in completePlates]
-    if len(completePlates) > 0:
-        return completePlates[np.argmin(nNewExposures)]
-
     # We add the priority into the mix
     platePriorities = np.array([plate.priority for plate in plates]) - 5.
-    _completionFactor(plates, 1 + 0.25 * platePriorities)
+    _completionFactor(plates, 1 + platePriorityFactor * platePriorities)
 
-    # If no complete plates exist, selects the ones that have the largest
-    # increase in completion
+    # Selects the plates that have the largest increase in completion
     completionIncrease = np.array(
         [plate._after['completion'] - plate._before['completion']
          for plate in plates])
