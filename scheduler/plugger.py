@@ -446,7 +446,8 @@ class Plugger(object):
             if hasattr(plate, 'isReplug') and plate.isReplug:
                 cartNumber = getCartForReplug(plate)
                 statusCode = cartStatus[cartNumber][2]
-                if cartNumber is not None and cartNumber not in config['offlineCarts']:
+                if (cartNumber is not None and
+                        cartNumber not in config['offlineCarts']):
                     self.carts[cartNumber] = plate
                     allocatedPlates.append(plate)
                     cartPlateMessage[cartNumber] = (plate,
