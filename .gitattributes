@@ -21,7 +21,6 @@ Totoro/dbclasses/plate_utils.py -text
 Totoro/dbclasses/set.py -text
 Totoro/defaults.yaml -text
 Totoro/exceptions.py -text
-Totoro/external/__init__.py -text
 Totoro/readPath.py -text
 Totoro/scheduler/__init__.py -text
 Totoro/scheduler/observingPlan.py -text
