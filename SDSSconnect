@@ -1,6 +1,0 @@
-tree 5dfe755d1c636197e58e941945adb40aeba7bfb0
-parent 47049361ce630bf95f0f6a8eadb48203c2089a50
-author José Sánchez-Gallego <j.sanchezgallego@uky.edu> 1444969298 -0400
-committer José Sánchez-Gallego <j.sanchezgallego@uky.edu> 1444969298 -0400
-
-new implementation of Base reflect
