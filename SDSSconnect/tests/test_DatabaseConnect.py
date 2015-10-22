@@ -16,7 +16,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import unittest
-import configparser
+import ConfigParser
 import os
 from SDSSconnect import DatabaseConnection
 from SDSSconnect.exceptions import SDSSconnectError
@@ -89,7 +89,7 @@ class TestDatabaseConnect(unittest.TestCase):
     def testConfigurationFile(self):
         """Tests reading an encrypted profile."""
 
-        cParser = configparser.ConfigParser()
+        cParser = ConfigParser.ConfigParser()
         cParser.read(self.tmpProfileSimple)
 
         self.assertEqual(cParser.get('test', 'user'), 'sdss')
