@@ -471,7 +471,7 @@ class Plate(plateDB.Plate):
         # totalSN = self.getCumulatedSN2(
         #     includeIncomplete=includeIncompleteSets, useMock=useMock)
 
-        validStatuses = ['Good', 'Excellent', 'Overridden Good']
+        validStatuses = ['Good', 'Excellent', 'Override Good']
         if includeIncompleteSets:
             validStatuses.append('Incomplete')
 
@@ -509,7 +509,7 @@ class Plate(plateDB.Plate):
         If useMock=False, mock sets are ignored.
         """
 
-        validStatuses = ['Good', 'Excellent', 'Overridden Good']
+        validStatuses = ['Good', 'Excellent', 'Override Good']
         if includeIncomplete:
             validStatuses.append('Incomplete')
 
@@ -602,7 +602,7 @@ class Plate(plateDB.Plate):
         validSets = []
         for set in self.sets:
             quality = set.getQuality()[0]
-            if quality in ['Good', 'Excellent', 'Overridden Good']:
+            if quality in ['Good', 'Excellent', 'Override Good']:
                 validSets.append(set)
             elif includeIncomplete and quality == 'Incomplete':
                 validSets.append(set)

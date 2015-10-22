@@ -265,7 +265,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
     validExposures = []
     for exp in exposures:
         status = _getSetStatusLabel(exp)
-        if status is not None and 'Overridden' in status:
+        if status is not None and 'Override' in status:
             continue
         elif not exp.isValid(force=True, flag=True):
             continue
@@ -274,9 +274,9 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
         else:
             validExposures.append(exp)
 
-    # Stores overriden sets
+    # Stores overridden sets
     overridenSets = [ss for ss in plate.sets if ss.status is not None and
-                     'Overridden' in ss.status.label]
+                     'Override' in ss.status.label]
 
     # Does some logging.
     logMode('plate_id={0}: rearranging sets, mode=\'{1}\', scope=\'{2}\''
@@ -368,7 +368,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
                 setStatus[setId] = ss.getStatus(silent=True)[0]
                 setSN2[setId] = ss.getSN2Array() \
                     if setStatus[setId] in ['Excellent', 'Good',
-                                            'Overridden Good'] else zeroSN2
+                                            'Override Good'] else zeroSN2
 
             del ss
 
@@ -480,7 +480,7 @@ def applyArrangement(plate, arrangement):
     from sdss.internal.manga.Totoro.dbclasses import Set as TotoroSet
 
     arrangement = [ss for ss in arrangement
-                   if ss.status is None or 'Overridden' not in ss.status.label]
+                   if ss.status is None or 'Override' not in ss.status.label]
 
     # If all exposures are real, saves data to the DB.
     expMock = [exp.isMock for ss in arrangement for exp in ss.totoroExposures]
@@ -489,7 +489,7 @@ def applyArrangement(plate, arrangement):
         # Removes sets and exposure-set assignment from the DB
         with session.begin():
             for ss in plate.sets:
-                if ss.status is not None and 'Overridden' in ss.status.label:
+                if ss.status is not None and 'Override' in ss.status.label:
                     continue
                 for exp in ss.totoroExposures:
                     setPK = exp.mangadbExposure[0].set_pk
