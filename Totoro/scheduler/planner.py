@@ -14,11 +14,11 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from sdss.internal.manga.Totoro import log, config, readPath, site
-from sdss.internal.manga.Totoro.scheduler.timeline import Timelines
-from sdss.internal.manga.Totoro.scheduler import observingPlan
-from sdss.internal.manga.Totoro.core.colourPrint import _color_text
-from sdss.internal.manga.Totoro import exceptions
+from Totoro import log, config, readPath, site
+from Totoro.scheduler.timeline import Timelines
+from Totoro.scheduler import observingPlan
+from Totoro.core.colourPrint import _color_text
+from Totoro import exceptions
 from astropy import table
 from astropy import time
 import warnings
@@ -112,7 +112,7 @@ class Planner(object):
                           'Won\'t check for number of targets',
                           exceptions.TotoroPlannerWarning)
 
-        from sdss.internal.manga.Totoro.dbclasses import Fields
+        from Totoro.dbclasses import Fields
 
         tmpFields = Fields(rejectDrilled=False)
         tileIDPlates = [plate.manga_tileid for plate in allPlates]
@@ -147,7 +147,7 @@ class Planner(object):
         """Gets plates that are already drilled or in process of being so,
         with some filtering."""
 
-        from sdss.internal.manga.Totoro.dbclasses import (getAll, Plate,
+        from Totoro.dbclasses import (getAll, Plate,
                                                           getTilingCatalogue)
 
         allPlates = getAll(rejectSpecial=True, updateSets=False, silent=True,

@@ -15,15 +15,15 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 
-from sdss.internal.manga.Totoro import log, TotoroDBConnection
-from sdss.internal.manga.Totoro.dbclasses.exposure import (Exposure,
+from Totoro import log, TotoroDBConnection
+from Totoro.dbclasses.exposure import (Exposure,
                                                            setExposureStatus)
-from sdss.internal.manga.Totoro.dbclasses.set import (Set, checkSet,
+from Totoro.dbclasses.set import (Set, checkSet,
                                                       setErrorCodes)
-from sdss.internal.manga.Totoro.dbclasses.plate_utils import (
+from Totoro.dbclasses.plate_utils import (
     getConsecutiveSets, removeOrphanedSets)
-from sdss.internal.manga.Totoro.dbclasses import fromPlateID
-from sdss.internal.manga.Totoro.exceptions import (TotoroUserWarning,
+from Totoro.dbclasses import fromPlateID
+from Totoro.exceptions import (TotoroUserWarning,
                                                    TotoroError, EmptySet)
 
 from sqlalchemy.orm.exc import NoResultFound

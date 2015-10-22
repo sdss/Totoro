@@ -18,9 +18,9 @@ import os
 import sys
 import argparse
 from astropy import time
-from sdss.internal.manga.Totoro.scheduler import Plugger
-from sdss.internal.manga.Totoro.scheduler import observingPlan
-from sdss.internal.manga.Totoro import log
+from Totoro.scheduler import Plugger
+from Totoro.scheduler import observingPlan
+from Totoro import log
 
 
 def mangaPluggingRequest(mjd=None, marked=False):

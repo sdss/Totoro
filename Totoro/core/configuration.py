@@ -15,9 +15,9 @@ system.
 
 import yaml
 import os
-from sdss.internal.manga.Totoro import exceptions
-from sdss.internal.manga.Totoro import __DEFAULT_CONFIG_FILE__
-from sdss.internal.manga.Totoro import __TOTORO_CONFIG_PATH__
+from Totoro import exceptions
+from Totoro import __DEFAULT_CONFIG_FILE__
+from Totoro import __TOTORO_CONFIG_PATH__
 
 
 def getConfiguration(default=None):

@@ -15,11 +15,11 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from exposure import Exposure
-from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
-from sdss.internal.manga.Totoro import log, config, site
-from sdss.internal.manga.Totoro import exceptions
-from sdss.internal.manga.Totoro import utils
-# from sdss.internal.manga.Totoro import scheduler
+from Totoro.apoDB import TotoroDBConnection
+from Totoro import log, config, site
+from Totoro import exceptions
+from Totoro import utils
+# from Totoro import scheduler
 import numpy as np
 import warnings
 from copy import copy
@@ -428,7 +428,7 @@ def setSetStatus(set, status):
 
     """
 
-    # from sdss.internal.manga.Totoro.dbclasses import Set
+    # from Totoro.dbclasses import Set
 
     if isinstance(set, (Set, db.mangaDB.Set)):
         pk = set.pk

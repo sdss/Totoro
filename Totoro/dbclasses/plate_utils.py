@@ -16,9 +16,9 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from sdss.internal.manga.Totoro import TotoroDBConnection, log, config, site
-from sdss.internal.manga.Totoro import exceptions
-from sdss.internal.manga.Totoro.utils import intervals, checkOpenSession
+from Totoro import TotoroDBConnection, log, config, site
+from Totoro import exceptions
+from Totoro.utils import intervals, checkOpenSession
 from scipy.misc import factorial
 import numpy as np
 import collections
@@ -65,7 +65,7 @@ def updatePlate(plate, rearrangeIncomplete=True, **kwargs):
 def getUnassignedExposures(plate):
     """Returns exposures in `plate` that are not assigned to a plate."""
 
-    from sdss.internal.manga.Totoro.dbclasses import Exposure as TotoroExposure
+    from Totoro.dbclasses import Exposure as TotoroExposure
 
     scienceExposures = plate.getScienceExposures()
 
@@ -88,7 +88,7 @@ def assignExposureToOptimalSet(plate, exposure):
     """Assigns `exposure` to the best possible set in `plate` or creates a new
     set for it."""
 
-    from sdss.internal.manga.Totoro.dbclasses import Set as TotoroSet
+    from Totoro.dbclasses import Set as TotoroSet
 
     optimalSet = getOptimalSet(plate, exposure)
 
@@ -131,7 +131,7 @@ def getOptimalSet(plate, exposure):
     """Returns the best set in `plate` for an `exposure` or None if no valid
     set is available."""
 
-    from sdss.internal.manga.Totoro.dbclasses import Set as TotoroSet
+    from Totoro.dbclasses import Set as TotoroSet
 
     dither = exposure.ditherPosition
 
@@ -232,8 +232,8 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
 
     """
 
-    from sdss.internal.manga.Totoro.dbclasses import Exposure as TotoroExposure
-    from sdss.internal.manga.Totoro.dbclasses import Set as TotoroSet
+    from Totoro.dbclasses import Exposure as TotoroExposure
+    from Totoro.dbclasses import Set as TotoroSet
 
     # Sets logging level
     if silent:
@@ -477,7 +477,7 @@ def applyArrangement(plate, arrangement):
     """Updates a plate with a set arrangement and modifies the DD
     accordingly."""
 
-    from sdss.internal.manga.Totoro.dbclasses import Set as TotoroSet
+    from Totoro.dbclasses import Set as TotoroSet
 
     arrangement = [ss for ss in arrangement
                    if ss.status is None or 'Override' not in ss.status.label]
@@ -586,7 +586,7 @@ def fixBadSets(sets):
     """Receives a list of mock sets and returns the same list but with bad
     sets split into multiple valid sets."""
 
-    from sdss.internal.manga.Totoro.dbclasses import Set as TotoroSet
+    from Totoro.dbclasses import Set as TotoroSet
 
     toRemove = []
     toAdd = []

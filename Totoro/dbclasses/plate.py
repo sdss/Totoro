@@ -14,14 +14,14 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from sdss.internal.manga.Totoro.apoDB import TotoroDBConnection
-from sdss.internal.manga.Totoro import exceptions as TotoroExceptions
-from sdss.internal.manga.Totoro import log, config, dustMap, site
-from sdss.internal.manga.Totoro import utils
-from sdss.internal.manga.Totoro.scheduler import observingPlan
-from sdss.internal.manga.Totoro.dbclasses import Set as TotoroSet
-from sdss.internal.manga.Totoro.dbclasses import Exposure as TotoroExposure
-from sdss.internal.manga.Totoro.dbclasses import plate_utils as plateUtils
+from Totoro.apoDB import TotoroDBConnection
+from Totoro import exceptions as TotoroExceptions
+from Totoro import log, config, dustMap, site
+from Totoro import utils
+from Totoro.scheduler import observingPlan
+from Totoro.dbclasses import Set as TotoroSet
+from Totoro.dbclasses import Exposure as TotoroExposure
+from Totoro.dbclasses import plate_utils as plateUtils
 import warnings
 from astropy import time
 import numpy as np

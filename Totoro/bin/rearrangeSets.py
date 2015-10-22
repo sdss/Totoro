@@ -22,7 +22,7 @@ import sys
 def rearrageSets(plateid, force=False, LST=None, **kwargs):
     """Triggers a set rearrangement for a certain plate."""
 
-    from sdss.internal.manga.Totoro.dbclasses import plate
+    from Totoro.dbclasses import plate
 
     pp = plate.fromPlateID(plateid)
     pp.rearrangeSets(forceLimit=force, LST=LST)
