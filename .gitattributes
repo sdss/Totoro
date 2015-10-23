@@ -23,6 +23,7 @@ Totoro/defaults.yaml -text
 Totoro/exceptions.py -text
 Totoro/readPath.py -text
 Totoro/scheduler/__init__.py -text
+Totoro/scheduler/io.py -text
 Totoro/scheduler/observingPlan.py -text
 Totoro/scheduler/planner.py -text
 Totoro/scheduler/plugger.py -text
