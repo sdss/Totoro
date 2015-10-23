@@ -18,8 +18,6 @@ from __future__ import print_function
 import unittest
 import configparser
 import os
-from simplecrypt import encrypt, decrypt
-import StringIO
 from SDSSconnect import DatabaseConnection
 from SDSSconnect.DatabaseConnect import readProfile
 import warnings
@@ -31,8 +29,6 @@ class TestDatabaseConnect(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Sets up the test suite."""
-
-        cls.password = 'secure'
 
         cls.tmpProfileSimple = os.path.join(os.path.expanduser('~'),
                                             'test_profile_simple.ini')
@@ -55,8 +51,7 @@ class TestDatabaseConnect(unittest.TestCase):
             """
 
         with open(cls.tmpProfileSimple, 'wb') as output:
-            ciphertext = encrypt(cls.password, profileSimpleText)
-            output.write(ciphertext)
+            output.write(profileSimpleText)
 
         cls.tmpProfileDefaults = os.path.join(os.path.expanduser('~'),
                                               'test_profile_defaults.ini')
@@ -78,8 +73,7 @@ class TestDatabaseConnect(unittest.TestCase):
             """
 
         with open(cls.tmpProfileDefaults, 'wb') as output:
-            ciphertext = encrypt(cls.password, profileDefaultsText)
-            output.write(ciphertext)
+            output.write(profileDefaultsText)
 
     @classmethod
     def tearDownClass(cls):
@@ -94,25 +88,19 @@ class TestDatabaseConnect(unittest.TestCase):
     def testConfigurationFile(self):
         """Tests reading an encrypted profile."""
 
-        plainText = decrypt(self.password, open(self.tmpProfileSimple, 'r')
-                            .read()).decode('utf8')
-        buf = StringIO.StringIO(plainText)
-
         cParser = configparser.ConfigParser()
-        cParser.readfp(buf)
+        cParser.read(self.tmpProfileSimple)
 
         self.assertEqual(cParser.get('test', 'user'), 'sdss')
         self.assertEqual(cParser.getint('test', 'port'), 5432)
 
-        config2 = readProfile(path=self.tmpProfileDefaults,
-                              password=self.password)
+        config2 = readProfile(path=self.tmpProfileDefaults)
         self.assertEqual(config2[0]['user'], 'defaultUser')
         self.assertEqual(config2[1], 'DEFAULT')
 
         with warnings.catch_warnings(record=True) as ww:
             warnings.simplefilter('always')
-            config3 = readProfile(path=self.tmpProfileSimple,
-                                  password=self.password)
+            config3 = readProfile(path=self.tmpProfileSimple)
             self.assertIn('no default profile found. '
                           'Using first profile: test', str(ww[-1].message))
 
@@ -161,7 +149,6 @@ class TestDatabaseConnect(unittest.TestCase):
             self.assertIn('returned instance uses profile test while you '
                           'requested production. Maybe you want to use the '
                           'new=True option.', str(ww[-1].message))
-
 
 
 if __name__ == '__main__':
