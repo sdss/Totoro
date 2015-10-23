@@ -138,13 +138,13 @@ class DatabaseConnection(object):
 
         me = object.__new__(cls)
 
-        if profile is not None:
+        if databaseConnectionString is not None:
+            me.databaseConnectionString = databaseConnectionString
+        else:
             profileDict = readProfile(profile=profile, path=profilePath)
             me.databaseConnectionString = (
                 'postgresql+psycopg2://{user}:{password}@'
                 '{host}:{port}/{database}'.format(**profileDict))
-        else:
-            me.databaseConnectionString = databaseConnectionString
 
         me.engine = create_engine(me.databaseConnectionString, echo=False)
 
