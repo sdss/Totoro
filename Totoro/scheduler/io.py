@@ -15,7 +15,7 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from Totoro.dbclasses import Plate, Set, Exposure
+from Totoro.dbclasses import Field, Set, Exposure
 from astropy import table
 import numpy as np
 import os
@@ -108,7 +108,7 @@ def restoreExposures(exposureFile, plates=[]):
     uniqueMangaTileIDs = np.unique(fields['manga_tileid'])
     for mangaTileID in uniqueMangaTileIDs:
         exps = fields[fields['manga_tileid'] == mangaTileID]
-        newPlate = Plate.createMockPlate(ra=exps[0]['ra'], dec=exps[0]['dec'])
+        newPlate = Field.createMockPlate(ra=exps[0]['ra'], dec=exps[0]['dec'])
         newPlate.manga_tileid = mangaTileID
         uniqueSets = np.unique(exps['set_pk'])
         for ss in uniqueSets:
