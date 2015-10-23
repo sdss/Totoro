@@ -1,7 +1,7 @@
 * text=auto !eol
 SDSSconnect/LICENSE -text
 SDSSconnect/README.md -text
-SDSSconnect/SDSSconnect/DatabaseConnect.py -text
+SDSSconnect/SDSSconnect/DatabaseConnection.py -text
 SDSSconnect/SDSSconnect/__init__.py -text
 SDSSconnect/SDSSconnect/etc/repr.dat -text
 SDSSconnect/SDSSconnect/exceptions.py -text
