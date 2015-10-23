@@ -54,7 +54,7 @@ def readProfile(profile=None, path=None, password=None):
     # that fails, the first section in the profiles file.
     if profile is None:
         if len(config.defaults()) > 0:
-            return config.defaults()
+            return (config.defaults(), 'DEFAULT')
         else:
             if len(config.sections()) == 0:
                 raise RuntimeError('no sections found in {0}'
@@ -62,12 +62,12 @@ def readProfile(profile=None, path=None, password=None):
             section = config.sections()[0]
             warnings.warn('no default profile found. Using first profile: {}'
                           .format(section), UserWarning)
-            return dict(config.items(section))
+            return (dict(config.items(section)), section)
 
     if not config.has_section(profile.lower()):
         raise ValueError('profile {0} does not exist'.format(profile.lower()))
 
-    return dict(config.items(profile.lower()))
+    return (dict(config.items(profile.lower())), profile.lower())
 
 
 def clearSearchPathCallback(dbapi_con, connection_record):
@@ -140,11 +140,14 @@ class DatabaseConnection(object):
 
         if databaseConnectionString is not None:
             me.databaseConnectionString = databaseConnectionString
+            me.profile = None
         else:
-            profileDict = readProfile(profile=profile, path=profilePath)
+            profileDict, profileName = readProfile(profile=profile,
+                                                   path=profilePath)
             me.databaseConnectionString = (
                 'postgresql+psycopg2://{user}:{password}@'
                 '{host}:{port}/{database}'.format(**profileDict))
+            me.profile = profileName
 
         me.engine = create_engine(me.databaseConnectionString, echo=False)
 

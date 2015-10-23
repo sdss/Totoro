@@ -106,7 +106,8 @@ class TestDatabaseConnect(unittest.TestCase):
 
         config2 = readProfile(path=self.tmpProfileDefaults,
                               password=self.password)
-        self.assertEqual(config2['user'], 'defaultUser')
+        self.assertEqual(config2[0]['user'], 'defaultUser')
+        self.assertEqual(config2[1], 'DEFAULT')
 
         with warnings.catch_warnings(record=True) as ww:
             warnings.simplefilter('always')
@@ -115,7 +116,8 @@ class TestDatabaseConnect(unittest.TestCase):
             self.assertIn('no default profile found. '
                           'Using first profile: test', str(ww[-1].message))
 
-        self.assertEqual(config3['user'], 'sdss')
+        self.assertEqual(config3[0]['user'], 'sdss')
+        self.assertEqual(config3[1], 'test')
 
     def testConnection(self):
         """Tests connecting to the test database."""
@@ -139,6 +141,7 @@ class TestDatabaseConnect(unittest.TestCase):
         connDefault = DatabaseConnection('test')
         conn2 = DatabaseConnection('test')
         self.assertIs(connDefault, conn2)
+        self.assertEqual(connDefault.profile, 'test')
 
         conn3 = DatabaseConnection('test', new=True)
         self.assertIs(connDefault, conn2)
