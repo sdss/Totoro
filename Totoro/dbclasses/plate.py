@@ -77,9 +77,9 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode).filter(
                 plateDB.Survey.label == 'MaNGA',
                 plateDB.SurveyMode.label == 'MaNGA dither'
-            ).join(plateDB.PlateLocation).filter(
-                plateDB.PlateLocation.label == 'APO').join(
-                    plateDB.PlatePointing, plateDB.Pointing)
+        ).join(plateDB.PlateLocation).filter(
+            plateDB.PlateLocation.label == 'APO').join(
+                plateDB.PlatePointing, plateDB.Pointing)
 
         _checkNumberPlatesAtAPO(plates)
 
@@ -138,12 +138,12 @@ def getAll(onlyIncomplete=False, **kwargs):
     with session.begin():
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
-            ).filter(plateDB.Survey.label == 'MaNGA',
-                     plateDB.SurveyMode.label == 'MaNGA dither').order_by(
-                plateDB.Plate.plate_id)
+        ).filter(plateDB.Survey.label == 'MaNGA',
+                 plateDB.SurveyMode.label == 'MaNGA dither').order_by(
+                     plateDB.Plate.plate_id)
 
     platesAtAPO = plates.join(plateDB.PlateLocation).filter(
-                plateDB.PlateLocation.label == 'APO')
+        plateDB.PlateLocation.label == 'APO')
     _checkNumberPlatesAtAPO(platesAtAPO)
 
     plates = plates.order_by(plateDB.Plate.plate_id).all()
@@ -180,8 +180,7 @@ def getComplete(**kwargs):
                 plateDB.Survey.label == 'MaNGA',
                 plateDB.SurveyMode.label == 'MaNGA dither',
                 plateDB.PluggingStatus.label.in_(['Good', 'Overridden Good'])
-                ).order_by(
-                    plateDB.Plate.plate_id).all()
+        ).order_by(plateDB.Plate.plate_id).all()
 
     return Plates(plates, **kwargs)
 
@@ -240,7 +239,9 @@ class Plate(plateDB.Plate):
         utils.checkOpenSession()
 
         if input is None:
-            return plateDB.Plate.__new__(cls)
+            plate = plateDB.Plate.__new__(cls)
+            super(Plate, plate).__init__(**kwargs)
+            return plate
 
         base = cls.__bases__[0]
 
@@ -261,7 +262,7 @@ class Plate(plateDB.Plate):
 
         return instance
 
-    def __init__(self, input, format='pk', mock=False,
+    def __init__(self, input=None, format='pk', mock=False,
                  updateSets=True, mjd=None, fullCheck=True,
                  manga_tileid=None, **kwargs):
 
@@ -320,9 +321,7 @@ class Plate(plateDB.Plate):
         if ra is None or dec is None:
             raise TotoroExceptions.TotoroError('ra and dec must be specified')
 
-        mockPlate = plateDB.Plate.__new__(cls)
-        mockPlate.__init__(None, mock=True, ra=ra, dec=dec, **kwargs)
-
+        mockPlate = Plate(None, mock=True, ra=ra, dec=dec, **kwargs)
         mockPlate.isMock = True
 
         log.debug('created mock plate with ra={0:.3f} and dec={0:.3f}'.format(
