@@ -107,6 +107,10 @@ class TotoroConfig(dict):
                     'Please, check your totoro.yaml and '
                     '$TOTORO_DB_CONNECTION')
 
+        # If the password is not set, we assume is empty (set it up in pgpass)
+        if 'password' not in self['dbConnection']:
+            self['dbConnection']['password'] = ''
+
     def _assignDBConnection(self, value):
 
         if value.lower() in ['production', 'tunnel', 'dev', 'local', 'test']:
