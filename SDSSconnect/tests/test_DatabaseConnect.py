@@ -22,6 +22,7 @@ from SDSSconnect import DatabaseConnection
 from SDSSconnect.exceptions import SDSSconnectError
 from SDSSconnect.DatabaseConnection import readProfile
 import warnings
+import textwrap
 
 
 class TestDatabaseConnect(unittest.TestCase):
@@ -52,7 +53,7 @@ class TestDatabaseConnect(unittest.TestCase):
             """
 
         with open(cls.tmpProfileSimple, 'wb') as output:
-            output.write(profileSimpleText)
+            output.write(textwrap.dedent(profileSimpleText))
 
         cls.tmpProfileDefaults = os.path.join(os.path.expanduser('~'),
                                               'test_profile_defaults.ini')
@@ -74,7 +75,7 @@ class TestDatabaseConnect(unittest.TestCase):
             """
 
         with open(cls.tmpProfileDefaults, 'wb') as output:
-            output.write(profileDefaultsText)
+            output.write(textwrap.dedent(profileDefaultsText))
 
     @classmethod
     def tearDownClass(cls):
