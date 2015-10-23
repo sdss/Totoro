@@ -184,7 +184,7 @@ class DatabaseConnection(object):
 
         cls._defaultConnectionName = connectionName
 
-    def addModels(self, models):
+    def addModels(self, models, overwrite=False):
         """Adds a list of model classes to the object."""
 
         assert isinstance(models, (list, tuple, basestring)), \
@@ -194,5 +194,7 @@ class DatabaseConnection(object):
             models = __MODELS__
 
         for model in models:
+            if hasattr(self, model) and not overwrite:
+                continue
             exec('from SDSSconnect.{0} import construct_{0}'.format(model))
             exec('self.{0} = construct_{0}(self.Base)'.format(model))
