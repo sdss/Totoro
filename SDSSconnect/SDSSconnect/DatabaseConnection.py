@@ -16,6 +16,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from sqlalchemy import create_engine, MetaData
+import sqlalchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.event import listen
 from sqlalchemy.ext.automap import automap_base
@@ -238,10 +239,12 @@ class DatabaseConnection(object):
             self.metadata.reflect(schema=model.lower())
 
         self.Base = automap_base(metadata=self.metadata)
-        self.Base.prepare(classname_for_table=cameliseClassname,
+        self.Base.prepare(engine=self.engine,
+                          classname_for_table=cameliseClassname,
                           generate_relationship=nullifyRelationship)
 
         createRelationships(self.Base)
+        sqlalchemy.orm.configure_mappers()
 
         # Now that all classes have been added to the Base, we wrap them
         # depending on their schema.
