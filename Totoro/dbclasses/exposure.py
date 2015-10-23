@@ -128,6 +128,8 @@ class Exposure(plateDB.Exposure):
         newExposure.exposure_time = expTime
         newExposure._plugging = plugging
 
+        newExposure._seeing = 1.0
+
         haRange = newExposure.getHA()
         ha = utils.calculateMean(haRange)
         newExposure._airmass = utils.computeAirmass(newExposure.dec, ha)
@@ -146,8 +148,6 @@ class Exposure(plateDB.Exposure):
     def simulateObservedParamters(self, factor=None, dust=None, **kwargs):
         """Simulates the SN2 of the exposure, using dust extinction and airmass
         values."""
-
-        self._seeing = 1.0
 
         if factor is None:
             factor = config['simulation']['factor']
