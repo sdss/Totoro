@@ -17,15 +17,18 @@ from __future__ import division
 from __future__ import print_function
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.event import listen
 from sqlalchemy.pool import Pool
+from SDSSconnect.models import construct_mangaDB, construct_plateDB
+from SDSSconnect.models.utils import ModelWrapper
+from sqlalchemy.ext.automap import automap_base
+
 import warnings
 import configparser
 import os
 
 
-__MODELS__ = ['plateDB']
+__MODELS__ = ['plateDB', 'mangaDB']
 
 
 def readProfile(profile=None, path=None):
@@ -161,8 +164,6 @@ class DatabaseConnection(object):
         me.engine = create_engine(me.databaseConnectionString, echo=False)
 
         me.metadata = MetaData()
-        me.metadata.bind = me.engine
-        me.Base = declarative_base(bind=me.engine)
         me.Session = scoped_session(
             sessionmaker(bind=me.engine, autocommit=True,
                          expire_on_commit=expireOnCommit))
@@ -215,11 +216,26 @@ class DatabaseConnection(object):
         assert isinstance(models, (list, tuple, basestring)), \
             ('models must be \'all\' or a list of strings.')
 
+        metadata = MetaData()
+        self.Base = automap_base(metadata=metadata)
+
         if models == 'all':
             models = __MODELS__
 
         for model in models:
             if hasattr(self, model) and not overwrite:
                 continue
-            exec('from SDSSconnect.{0} import construct_{0}'.format(model))
-            exec('self.{0} = construct_{0}(self.Base)'.format(model))
+            if model.lower() == 'platedb':
+                construct_plateDB(self.engine, self.Base)
+            elif model.lower() == 'mangadb':
+                construct_mangaDB(self.engine, self.Base)
+
+        # Now that all classes have been added to the Base, we wrap them
+        # depending on their schema.
+        for model in models:
+            if hasattr(self, model) and not overwrite:
+                continue
+            if model.lower() == 'platedb':
+                self.plateDB = ModelWrapper(self.Base, 'Platedb_')
+            elif model.lower() == 'mangadb':
+                self.mangaDB = ModelWrapper(self.Base, 'Mangadb_')
