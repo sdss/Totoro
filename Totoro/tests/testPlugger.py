@@ -30,6 +30,7 @@ class TestPlugger(unittest.TestCase):
         """Sets up the test suite."""
 
         cls.originalOfflineCarts = config['offlineCarts']
+        cls._restoreActivePluggings()
 
         config['offlineCarts'] = [2]
 
@@ -62,17 +63,24 @@ class TestPlugger(unittest.TestCase):
                 db.plateDB.Plate.plate_id == 8081).one()
             plate8081.plate_location_pk = 28
 
-            # Restores the list of active pluggings
-            for ii in range(1, 4):
-                session.delete(
-                    session.query(db.plateDB.ActivePlugging).get(ii))
-
-            session.add(db.plateDB.ActivePlugging(plugging_pk=70172, pk=1))
-            session.add(db.plateDB.ActivePlugging(plugging_pk=70173, pk=2))
-            session.add(db.plateDB.ActivePlugging(plugging_pk=70124, pk=3))
+        self._restoreActivePluggings()
 
         # Restores offline carts
         config['offlineCarts'] = self.originalOfflineCarts
+
+    @staticmethod
+    def _restoreActivePluggings():
+        """Restores the active pluggings for the test."""
+
+        # Restores the list of active pluggings
+        for ii in range(1, 4):
+            aP = session.query(db.plateDB.ActivePlugging).get(ii)
+            if aP is not None:
+                session.delete(aP)
+
+        session.add(db.plateDB.ActivePlugging(plugging_pk=70172, pk=1))
+        session.add(db.plateDB.ActivePlugging(plugging_pk=70173, pk=2))
+        session.add(db.plateDB.ActivePlugging(plugging_pk=70124, pk=3))
 
     def test57157(self):
         """Tests Plugger with MJD=57157."""
@@ -81,7 +89,7 @@ class TestPlugger(unittest.TestCase):
 
         validResult = OrderedDict(
             [(1, 8312), (3, 8486), (4, 8550),
-             ('cart_order', [9, 8, 7, 2, 5, 6, 3, 1, 4])])
+             ('cart_order', [9, 8, 7, 5, 6, 2, 3, 1, 4])])
 
         self.assertEqual(validResult, plugger.getASOutput())
 
@@ -97,7 +105,7 @@ class TestPlugger(unittest.TestCase):
         plugger = Plugger(startDate=2457307.806736, endDate=2457307.998611)
 
         validResult = OrderedDict([(1, 8570), (3, 8486), (4, 8081), (5, 8566),
-                                   ('cart_order', [9, 8, 7, 2, 6, 3, 4, 5, 1])
+                                   ('cart_order', [9, 8, 7, 6, 2, 3, 4, 5, 1])
                                    ])
 
         self.assertEqual(validResult, plugger.getASOutput())
@@ -123,7 +131,7 @@ class TestPlugger(unittest.TestCase):
         # first.
         validResult = OrderedDict(
             [(1, 8482), (3, 8486), (4, 7443), (5, 8550),
-             ('cart_order', [9, 8, 7, 2, 6, 3, 1, 4, 5])])
+             ('cart_order', [9, 8, 7, 6, 2, 3, 1, 4, 5])])
 
         self.assertEqual(validResult, plugger.getASOutput())
 
@@ -147,6 +155,22 @@ class TestPlugger(unittest.TestCase):
         self.assertEqual(plugger.getASOutput()['cart_order'],
                          [9, 8, 7, 4, 5, 6, 3, 2, 1])
 
+        # Now we want to test if cart 2 (unplugged) is returned with high
+        # cart order (but still fewer than cart 1, which has incomplete sets)
+        # if we are running in a non-MaNGA night (the remaining tests already
+        # check this for MaNGA nights).
+
+        # We first unplug cart 2 and make it offline
+        with session.begin():
+            session.delete(session.query(db.plateDB.ActivePlugging).get(2))
+
+        config['offlineCarts'] = [2]
+
+        # We run the plugger for a non-MaNGA night
+        pluggerNoMaNGA = Plugger(startDate=None, endDate=None)
+        self.assertEqual(pluggerNoMaNGA.getASOutput()['cart_order'],
+                         [9, 8, 7, 4, 5, 6, 3, 2, 1])
+
     def testOfflineCarts(self):
         """Tests if Plugger works if a plate is plugged in an offline cart."""
 
@@ -161,6 +185,7 @@ class TestPlugger(unittest.TestCase):
                          OrderedDict([(1, 8482), (2, 8312), (3, 8486),
                                       ('cart_order', [9, 8, 7, 4, 5, 6,
                                                       1, 3, 2])]))
+
 
 if __name__ == '__main__':
     unittest.main()

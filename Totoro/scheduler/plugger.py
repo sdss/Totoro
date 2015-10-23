@@ -190,7 +190,7 @@ class Plugger(object):
         log.info('Start date: {0}'.format(self.startDate))
         log.info('End date: {0}'.format(self.endDate))
         log.info('Scheduling {0:.2f} hours'.format(
-                 (self.endDate - self.startDate)*24.))
+                 (self.endDate - self.startDate) * 24.))
 
         self.timeline = Timeline(self.startDate, self.endDate, **kwargs)
 
@@ -353,10 +353,10 @@ class Plugger(object):
             forcePlugPlates = session.query(db.plateDB.Plate).join(
                 db.plateDB.PlateToSurvey, db.plateDB.Survey,
                 db.plateDB.SurveyMode, db.plateDB.PlatePointing
-                ).filter(db.plateDB.Survey.label == 'MaNGA',
-                         db.plateDB.SurveyMode.label.ilike('%MaNGA%'),
-                         db.plateDB.PlatePointing.priority >= forcePlugPriority
-                         ).order_by(db.plateDB.Plate.plate_id).all()
+            ).filter(db.plateDB.Survey.label == 'MaNGA',
+                     db.plateDB.SurveyMode.label.ilike('%MaNGA%'),
+                     db.plateDB.PlatePointing.priority >= forcePlugPriority
+                     ).order_by(db.plateDB.Plate.plate_id).all()
 
         if len(forcePlugPlates) == 0:
             return
@@ -535,6 +535,12 @@ class Plugger(object):
         priority. This is used when `addCartOrder` is called for a `Plugger`
         object initialised without dates, and not scheduling is performed.
 
+        Additionally, we give high priority to offline cart. This is to avoid
+        APOGEE to plug co-designed plates in those carts if possible. If
+        ``metric='scheduled'``, offline carts are given the highest priority
+        after all scheduled carts. If ``metric='completion'`` offline carts are
+        given higher priority than any but carts with incomplete sets.
+
         """
 
         assert metric in ['scheduled', 'completion'], \
@@ -600,8 +606,30 @@ class Plugger(object):
                 [platesWithIncompleteSets[jj]
                  for jj in np.argsort(completionWithIncompleteSets)]
 
+        usedCarts = [cart for cart, plate in
+                     completed + scheduledOrdered + forcePlug]
+
         # Creates master ordered list
-        orderedCarts = completed + scheduledOrdered + forcePlug
+        if metric == 'scheduled':
+            offline = [(cart, None) for cart in config['offlineCarts']
+                       if cart not in usedCarts]
+            orderedCarts = completed + offline + scheduledOrdered + forcePlug
+        else:
+            # Identifies the first plate with incomplete sets
+            ii = 0
+            for cart, plate in scheduledOrdered:
+                if np.any([ss.getStatus()[0] == 'Incomplete'
+                           for ss in plate.sets]):
+                    break
+                ii += 1
+
+            # Adds offline carts before
+            for cart in config['offlineCarts']:
+                if cart in usedCarts:
+                    continue
+                scheduledOrdered.insert(ii, (cart, None))
+
+            orderedCarts = completed + scheduledOrdered + forcePlug
 
         # Now it adds the list to self.carts
         self.carts['cart_order'] = [cart for cart, plate in orderedCarts]
