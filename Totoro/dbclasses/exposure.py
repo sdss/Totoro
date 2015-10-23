@@ -35,8 +35,8 @@ class Exposure(plateDB.Exposure):
                 **kwargs):
 
         if input is None:
-            exp = plateDB.Exposure.__new__(cls)
-            super(Exposure, exp).__init__()
+            exp = plateDB.Exposure.__new__(cls, **kwargs)
+            super(Exposure, exp).__init__(**kwargs)
             return exp
 
         if isinstance(input, plateDB.Exposure):

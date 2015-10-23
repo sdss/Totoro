@@ -55,7 +55,7 @@ class Set(mangaDB.Set):
 
         if input is None:
             ss = mangaDB.Set.__new__(cls)
-            super(Set, ss).__init__()
+            super(Set, ss).__init__(**kwargs)
             return ss
 
         base = cls.__bases__[0]
