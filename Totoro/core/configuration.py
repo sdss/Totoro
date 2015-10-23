@@ -95,6 +95,7 @@ class TotoroConfig(dict):
             result = self._assignDBConnection(
                 os.environ['TOTORO_DB_CONNECTION'])
             if result is True:
+                self._fillPassword()
                 return
 
         if isinstance(self['dbConnection'], dict):
@@ -107,7 +108,11 @@ class TotoroConfig(dict):
                     'Please, check your totoro.yaml and '
                     '$TOTORO_DB_CONNECTION')
 
-        # If the password is not set, we assume is empty (set it up in pgpass)
+        self._fillPassword()
+
+    def _fillPassword(self):
+        """If the password is not set, we assume is empty."""
+
         if 'password' not in self['dbConnection']:
             self['dbConnection']['password'] = ''
 
