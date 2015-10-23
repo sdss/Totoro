@@ -11,3 +11,4 @@ SDSSconnect/SDSSconnect/models/plateDB.py -text
 SDSSconnect/SDSSconnect/models/utils.py -text
 SDSSconnect/SDSSconnect/tests/__init__.py -text
 SDSSconnect/SDSSconnect/tests/test_DatabaseConnect.py -text
+SDSSconnect/__init__.py -text
