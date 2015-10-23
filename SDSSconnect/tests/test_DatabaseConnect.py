@@ -46,7 +46,6 @@ class TestDatabaseConnect(unittest.TestCase):
 
             [test2]
             user: sdss2
-            password: sdsspass2
             host: localhost
             port: 5432
             database: test2
@@ -108,6 +107,11 @@ class TestDatabaseConnect(unittest.TestCase):
 
         self.assertEqual(config3[0]['user'], 'sdss')
         self.assertEqual(config3[1], 'test')
+
+        config4 = readProfile('test2', path=self.tmpProfileSimple)
+        self.assertEqual(config4[1], 'test2')
+        self.assertIn('password', config4[0])
+        self.assertEqual(config4[0]['password'], '')
 
     def testConnection(self):
         """Tests connecting to the test database."""
