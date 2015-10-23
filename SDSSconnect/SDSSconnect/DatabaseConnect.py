@@ -30,7 +30,7 @@ import os
 __MODELS__ = ['plateDB']
 
 
-def readProfile(profile, path=None):
+def readProfile(profile=None, path=None, password=None):
     """Reads a profile and creates the appropriate connection string."""
 
     profilesPath = os.path.join(os.path.expanduser('~'), '.sdssconnect',
@@ -39,15 +39,30 @@ def readProfile(profile, path=None):
     if not os.path.exists(profilesPath):
         raise RuntimeError('profile not found in {0}'.format(profilesPath))
 
-    if 'SDSSCONNECT_PASSWORD' not in os.environ:
+    if 'SDSSCONNECT_PASSWORD' not in os.environ and password is None:
         raise RuntimeError('$SDSSCONNECT_PASSWORD not defined')
 
-    passwd = os.environ['SDSSCONNECT_PASSWORD']
+    passwd = (os.environ['SDSSCONNECT_PASSWORD']
+              if password is None else password)
 
     config = configparser.ConfigParser()
     config.readfp(
         StringIO.StringIO(
             decrypt(passwd, open(profilesPath, 'r').read()).decode('utf8')))
+
+    # If no profile is defined, we try to return the DEFAULTS section and, if
+    # that fails, the first section in the profiles file.
+    if profile is None:
+        if len(config.defaults()) > 0:
+            return config.defaults()
+        else:
+            if len(config.sections()) == 0:
+                raise RuntimeError('no sections found in {0}'
+                                   .format(profilesPath))
+            section = config.sections()[0]
+            warnings.warn('no default profile found. Using first profile: {}'
+                          .format(section), UserWarning)
+            return dict(config.items(section))
 
     if not config.has_section(profile.lower()):
         raise ValueError('profile {0} does not exist'.format(profile.lower()))
@@ -120,13 +135,10 @@ class DatabaseConnection(object):
                            expireOnCommit=True, models='all', **kwargs):
         """Creates a new instance of the connection."""
 
-        assert profile is not None or databaseConnectionString is not None, \
-            ('either profile or databaseConnectionString must be defined.')
-
         me = object.__new__(cls)
 
         if profile is not None:
-            profileDict = readProfile(profile)
+            profileDict = readProfile(profile=profile)
             me.databaseConnectionString = (
                 'postgresql+psycopg2://{user}:{password}@'
                 '{host}:{port}/{database}'.format(**profileDict))
