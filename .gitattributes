@@ -3,6 +3,8 @@ SDSSconnect/LICENSE -text
 SDSSconnect/README.md -text
 SDSSconnect/SDSSconnect/DatabaseConnect.py -text
 SDSSconnect/SDSSconnect/__init__.py -text
+SDSSconnect/SDSSconnect/bin/createProfile.py -text
+SDSSconnect/SDSSconnect/bin/encryptProfile.py -text
 SDSSconnect/SDSSconnect/plateDB.py -text
 SDSSconnect/SDSSconnect/tests/__init__.py -text
 SDSSconnect/SDSSconnect/tests/test_DatabaseConnect.py -text
