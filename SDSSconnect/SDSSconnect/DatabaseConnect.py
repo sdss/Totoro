@@ -128,7 +128,26 @@ class DatabaseConnection(object):
                 cls._singletons[connectionName] = newConn
             return newConn
 
-        return cls._singletons[cls._defaultConnectionName]
+        instanceToReturn = cls._singletons[cls._defaultConnectionName]
+        cls._checkProfileName(instanceToReturn, **kwargs)
+
+        return instanceToReturn
+
+    @staticmethod
+    def _checkProfileName(instanceToReturn, **kwargs):
+        """Checks if the profile of the instance returned matches the input."""
+
+        profile = kwargs.get('profile', None)
+        connectionString = kwargs.get('databaseConnectionString', None)
+
+        if profile is None and connectionString is None:
+            profile = 'DEFAULT'
+
+        if instanceToReturn.profile != profile:
+            warnings.warn('returned instance uses profile {0} while you '
+                          'requested {1}. Maybe you want to use the new=True '
+                          'option.'.format(instanceToReturn.profile, profile),
+                          UserWarning)
 
     @classmethod
     def _createNewInstance(cls, profile=None, databaseConnectionString=None,

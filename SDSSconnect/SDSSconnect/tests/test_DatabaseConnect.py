@@ -155,6 +155,14 @@ class TestDatabaseConnect(unittest.TestCase):
         self.assertIsNot(conn4, conn3)
         self.assertIsNot(conn4, connDefault)
 
+        with warnings.catch_warnings(record=True) as ww:
+            warnings.simplefilter('always')
+            DatabaseConnection('production')
+            self.assertIn('returned instance uses profile test while you '
+                          'requested production. Maybe you want to use the '
+                          'new=True option.', str(ww[-1].message))
+
+
 
 if __name__ == '__main__':
     unittest.main()
