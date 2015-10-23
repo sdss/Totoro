@@ -58,12 +58,20 @@ def readProfile(profile=None, path=None):
             section = config.sections()[0]
             warnings.warn('no default profile found. Using first profile: {}'
                           .format(section), SDSSconnectUserWarning)
-            return (dict(config.items(section)), section)
+            returnDict, returnProfile = dict(config.items(section)), section
+    else:
+        if not config.has_section(profile.lower()):
+            raise ValueError('profile {0} does not exist'
+                             .format(profile.lower()))
+        returnDict = dict(config.items(profile.lower()))
+        returnProfile = profile.lower()
 
-    if not config.has_section(profile.lower()):
-        raise ValueError('profile {0} does not exist'.format(profile.lower()))
+    # If the password is not present, we assume is empty (this is useful if we
+    # don't define a password because it's set in pgpass)
+    if 'password' not in returnDict:
+        returnDict['password'] = ''
 
-    return (dict(config.items(profile.lower())), profile.lower())
+    return returnDict, returnProfile
 
 
 def clearSearchPathCallback(dbapi_con, connection_record):
