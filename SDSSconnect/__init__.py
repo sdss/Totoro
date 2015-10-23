@@ -1,1 +1,1 @@
-from SDSSconnect.DatabaseConnect import DatabaseConnection
+from SDSSconnect.DatabaseConnection import DatabaseConnection

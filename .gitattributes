@@ -1,5 +1,4 @@
 * text=auto !eol
-SDSSconnect/DatabaseConnect.py -text
 SDSSconnect/DatabaseConnection.py -text
 SDSSconnect/LICENSE -text
 SDSSconnect/README.md -text
