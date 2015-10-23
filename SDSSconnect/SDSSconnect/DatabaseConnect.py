@@ -2,7 +2,7 @@
 # encoding: utf-8
 """
 
-DatabaseConnection.py
+DatabaseConnect.py
 
 Created by José Sánchez-Gallego on 10 Oct 2015.
 Licensed under a 3-clause BSD license.
