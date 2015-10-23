@@ -18,10 +18,11 @@ from __future__ import print_function
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.event import listen
-from sqlalchemy.pool import Pool
-from SDSSconnect.models import construct_mangaDB, construct_plateDB
-from SDSSconnect.models.utils import ModelWrapper
 from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.pool import Pool
+from SDSSconnect.models import createRelationships
+from SDSSconnect.models.utils import ModelWrapper, cameliseClassname
+from SDSSconnect.models.utils import nullifyRelationship
 from SDSSconnect.exceptions import SDSSconnectUserWarning, SDSSconnectError
 
 import warnings
@@ -225,8 +226,7 @@ class DatabaseConnection(object):
         assert isinstance(models, (list, tuple, basestring)), \
             ('models must be \'all\' or a list of strings.')
 
-        metadata = MetaData()
-        self.Base = automap_base(metadata=metadata)
+        self.metadata = MetaData(bind=self.engine)
 
         if models == 'all':
             models = __MODELS__
@@ -234,10 +234,14 @@ class DatabaseConnection(object):
         for model in models:
             if hasattr(self, model) and not overwrite:
                 continue
-            if model.lower() == 'platedb':
-                construct_plateDB(self.engine, self.Base)
-            elif model.lower() == 'mangadb':
-                construct_mangaDB(self.engine, self.Base)
+
+            self.metadata.reflect(schema=model.lower())
+
+        self.Base = automap_base(metadata=self.metadata)
+        self.Base.prepare(classname_for_table=cameliseClassname,
+                          generate_relationship=nullifyRelationship)
+
+        createRelationships(self.Base)
 
         # Now that all classes have been added to the Base, we wrap them
         # depending on their schema.

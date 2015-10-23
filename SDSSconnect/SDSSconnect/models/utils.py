@@ -119,8 +119,8 @@ def modelRepr(self):
     return '<{0}: {1}>'.format(fullClassName, ', '.join(reprList))
 
 
-def generateRelationship(base, direction, return_fn, attrname,
-                         local_cls, referred_cls, **kwargs):
+def nullifyRelationship(base, direction, return_fn, attrname,
+                        local_cls, referred_cls, **kwargs):
 
     return None
 

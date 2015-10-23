@@ -1,11 +1,10 @@
 import warnings
 
-warnings.filterwarnings(
-    'ignore',
-    'This declarative base already contains a class with the same '
-    'class name and module name as sqlalchemy.ext.automap')
+# warnings.filterwarnings(
+#     'ignore',
+#     'This declarative base already contains a class with the same '
+#     'class name and module name as sqlalchemy.ext.automap')
 warnings.filterwarnings('ignore',
                         'Skipped unsupported reflection of expression-based')
 
-from mangaDB import construct_mangaDB
-from plateDB import construct_plateDB
+from relationships import createRelationships
