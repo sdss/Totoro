@@ -14,7 +14,7 @@ Python 3 can be used but is not recommended yet as not all the dependences have 
 
 Totoro depends on the following third-party libraries:
 
-- astropy >= 4.1.0
+- astropy >= 1.0
 - astropysics
 - sqlalchemy
 - pyyaml
