@@ -7,30 +7,35 @@ logging:
     wrapperLength: 80
 
 dbConnectionProduction: &dbConnectionProduction
+    name: production
     user: sdssdb_admin
     host: sdss4-db
     port: 5432
     database: apodb
 
 dbConnectionLocal: &dbConnectionLocal
+    name: local
     user: sdssdb_admin
     host: localhost
     port: 5432
     database: apodb
 
 dbConnectionTest: &dbConnectionTest
+    name: test
     user: sdssdb_admin
     host: localhost
     port: 5432
     database: apodb_test
 
 dbConnectionDev: &dbConnectionDev
+    name: dev
     user: sdssdb_admin
     host: sdss4-db
     port: 5440
     database: apo_platedb
 
 dbConnectionTunnel: &dbConnectionTunnel
+    name: tunnel
     user: sdssdb_admin
     host: localhost
     port: 6000
