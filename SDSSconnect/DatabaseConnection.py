@@ -161,7 +161,7 @@ class DatabaseConnection(object):
 
         if databaseConnectionString is not None:
             me.databaseConnectionString = databaseConnectionString
-            me.profile = 'connection_string'
+            me.profile = 'connection_string' if name is None else name
         else:
             profileDict, profileName = readProfile(profile=profile,
                                                    path=profilePath)
@@ -169,10 +169,7 @@ class DatabaseConnection(object):
                 'postgresql+psycopg2://{user}:{password}@'
                 '{host}:{port}/{database}'.format(**profileDict))
 
-            if name is None:
-                me.profile = profileName
-            else:
-                me.profile = name
+            me.profile = profileName if name is None else name
 
         me.engine = create_engine(me.databaseConnectionString, echo=False)
 
