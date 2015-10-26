@@ -26,26 +26,42 @@ import warnings
 
 class Exposure(object):
 
+    _instances = {}
+
+    def __new__(cls, input=None, format='pk', parent='platedb', **kwargs):
+
+        me = object.__new__(cls)
+
+        me.db, Session, plateDB, mangaDB = getConnectionFull()
+        me.session = Session()
+
+        # Initialises DB object
+        if input is None:
+            me._dbObject = plateDB.Exposure()
+            return me
+        else:
+            if isinstance(input, plateDB.Exposure):
+                me._dbObject = input
+            elif isinstance(input, mangaDB.Exposure):
+                me._dbObject = input.platedbExposure
+            else:
+                me._dbObject = me._initFromData(input, format=format,
+                                                parent=parent)
+
+        # If the DB object already exists in the library of Totoro.Exposure
+        # instances, returns it. Otherwise, records it and returns the new
+        # object.
+        if me._dbObject in cls._instances:
+            return cls._instances[me._dbObject]
+        else:
+            cls._instances[me._dbObject] = me
+            return me
+
     def __init__(self, input=None, format='pk', parent='platedb',
                  mock=False, *args, **kwargs):
         """A custom class based on plateDB.Exposure."""
 
-        self.db, Session, plateDB, mangaDB = getConnectionFull()
-        self.session = Session()
-
-        # Initialises DB object
-
-        if input is None:
-            mock = True
-            self._dbObject = plateDB.Exposure()
-        else:
-            if isinstance(input, plateDB.Exposure):
-                self._dbObject = input
-            elif isinstance(input, mangaDB.Exposure):
-                self._dbObject = input.platedbExposure
-            else:
-                self._dbObject = self._initFromData(input, format=format,
-                                                    parent=parent)
+        self.__dbAttributes__ = self._dbObject.__mapper__.attrs
 
         self._valid = None
         self._ditherPosition = None
@@ -60,7 +76,7 @@ class Exposure(object):
 
         self._mangaExposure = (self.mangadbExposure[0]
                                if len(self.mangadbExposure) > 0 else
-                               mangaDB.Exposure())
+                               self.db.mangaDB.Exposure())
 
         if self._mangaExposure.pk is None and not self.isMock:
             warnings.warn('plateDB.Exposure.pk={0} has no mangaDB.Exposure '
@@ -75,7 +91,7 @@ class Exposure(object):
     def __getattr__(self, name):
         """Custom getattr method that first looks into the DB object."""
 
-        if hasattr(self._dbObject, name):
+        if name in object.__getattribute__(self, '__dbAttributes__'):
             return getattr(self._dbObject, name)
         else:
             return object.__getattribute__(self, name)

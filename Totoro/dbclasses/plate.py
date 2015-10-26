@@ -237,32 +237,48 @@ class Plates(list):
 
 def fromPlateID(plateid, **kwargs):
     """Convenience function that returns a `Plate` instance from a plate_id."""
-    return Plate(plateid, format='plate_id', **kwargs)
+    return Plate(input=plateid, format='plate_id', **kwargs)
 
 
 class Plate(object):
+
+    _instances = {}
+
+    def __new__(cls, input=None, format='pk', **kwargs):
+
+        # Checks if an open transaction already exists.
+        utils.checkOpenSession()
+
+        me = object.__new__(cls)
+
+        me.db, Session, plateDB, __ = getConnectionFull()
+        me.session = Session()
+
+        # Initialises DB object
+        if input is None:
+            me._dbObject = plateDB.Plate()
+            return me
+        else:
+            if isinstance(input, plateDB.Plate):
+                me._dbObject = input
+            else:
+                me._dbObject = me._initFromData(input, format=format)
+
+        # If the DB object already exists in the library of Totoro.Plate
+        # instances, returns it. Otherwise, records it and returns the new
+        # object.
+        if me._dbObject in cls._instances:
+            return cls._instances[me._dbObject]
+        else:
+            cls._instances[me._dbObject] = me
+            return me
 
     def __init__(self, input=None, format='pk', mock=False,
                  updateSets=True, mjd=None, fullCheck=True,
                  manga_tileid=None, **kwargs):
         """A custom class based on plateDB.Plate."""
 
-        # Checks if an open transaction already exists.
-        utils.checkOpenSession()
-
-        self.db, Session, plateDB, mangaDB = getConnectionFull()
-        self.session = Session()
-
-        # Initialises DB object
-
-        if input is None:
-            mock = True
-            self._dbObject = plateDB.Plate()
-        else:
-            if isinstance(input, plateDB.Plate):
-                self._dbObject = input
-            else:
-                self._dbObject = self._initFromData(input, format=format)
+        self.__dbAttributes__ = self._dbObject.__mapper__.attrs
 
         self._complete = None
         self._drilled = None
@@ -319,7 +335,7 @@ class Plate(object):
     def __getattr__(self, name):
         """Custom getattr method that first looks into the DB object."""
 
-        if hasattr(self._dbObject, name):
+        if name in object.__getattribute__(self, '__dbAttributes__'):
             return getattr(self._dbObject, name)
         else:
             return object.__getattribute__(self, name)
