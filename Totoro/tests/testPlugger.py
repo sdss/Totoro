@@ -131,8 +131,8 @@ class TestPlugger(unittest.TestCase):
         # We expect the same result as before but with 8550 and 7443 assigned
         # first.
         validResult = OrderedDict(
-            [(1, 8482), (3, 8486), (4, 7443), (5, 8550),
-             ('cart_order', [9, 8, 7, 6, 2, 3, 1, 4, 5])])
+            [(1, 8482), (3, 8486), (4, 7443), (5, 8550), (6, 8312),
+             ('cart_order', [9, 8, 7, 2, 3, 1, 6, 4, 5])])
 
         self.assertEqual(validResult, plugger.getASOutput())
 
