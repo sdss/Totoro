@@ -15,11 +15,12 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from Totoro.scheduler import Plugger
-from Totoro import TotoroDBConnection, config
+from Totoro import config
+from Totoro.db import getConnection
 from collections import OrderedDict
 import unittest
 
-db = TotoroDBConnection()
+db = getConnection('test')
 session = db.Session()
 
 

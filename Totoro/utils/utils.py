@@ -17,7 +17,7 @@ from __future__ import print_function
 from Totoro import log
 from Totoro import config
 from Totoro import exceptions
-from Totoro import TotoroDBConnection
+from Totoro.db import getConnection
 from sdss.manga.mlhalimit import mlhalimit as mlhalimitHours
 from sqlalchemy.exc import InvalidRequestError, ResourceClosedError
 from collections import OrderedDict
@@ -261,7 +261,7 @@ def JDdiff(JD0, JD1):
 def isMaNGA_Led(plate):
     """Returns True if the plate is a MaNGA-led plate."""
 
-    totoroDB = TotoroDBConnection()
+    totoroDB = getConnection()
     plateDB = totoroDB.plateDB
     session = totoroDB.session
 
@@ -288,7 +288,7 @@ def isMaNGA_Led(plate):
 def checkOpenSession():
     """Raises an error if Totoro is being run from inside an open session."""
 
-    totoroDB = TotoroDBConnection()
+    totoroDB = getConnection()
     session = totoroDB.Session()
 
     try:

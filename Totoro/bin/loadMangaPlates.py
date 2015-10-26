@@ -14,7 +14,8 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from Totoro import config, readPath, TotoroDBConnection
+from Totoro import config, readPath
+from Totoro.db import getConnection
 from Totoro.exceptions import TotoroError
 from sdss.utilities import yanny
 from astropy import table
@@ -22,7 +23,7 @@ import glob
 import os
 import sys
 
-db = TotoroDBConnection()
+db = getConnection()
 
 
 def getMangaTileIDs():

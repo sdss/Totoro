@@ -16,7 +16,8 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from Totoro import log, config, TotoroDBConnection, site
+from Totoro import log, config, site
+from Totoro.db import getConnection
 from Totoro.scheduler.timeline import Timeline
 from Totoro import exceptions
 from Totoro.utils import intervals
@@ -26,9 +27,6 @@ import numpy as np
 
 
 __all__ = ['Plugger']
-
-db = TotoroDBConnection()
-session = db.Session()
 
 cartStatusCodes = {0: 'empty', 1: 'noMaNGAplate', 2: 'MaNGA_complete',
                    3: 'MaNGA_noStarted', 4: 'MaNGA_started', 10: 'unknown'}
@@ -346,6 +344,9 @@ class Plugger(object):
 
         from Totoro.dbclasses import Plate
 
+        db = getConnection()
+        session = db.Session()
+
         forcePlugPriority = int(config['plugger']['forcePlugPriority'])
 
         # Does a query and gets all the plates with force plug priority
@@ -412,6 +413,9 @@ class Plugger(object):
 
         # Dictionary to save the cart allocation
         cartPlateMessage = {}
+
+        db = getConnection()
+        session = db.Session()
 
         # Gets active pluggings
         with session.begin():

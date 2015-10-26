@@ -16,8 +16,10 @@ from __future__ import division
 from __future__ import print_function
 import unittest
 from Totoro.dbclasses import Plate, fromPlateID
-from Totoro import TotoroDBConnection
+from Totoro.db import getConnection
 from Totoro import exceptions
+
+db = getConnection('test')
 
 
 class plateTestCase(unittest.TestCase):
@@ -66,7 +68,6 @@ class plateTestCase(unittest.TestCase):
     def testSubtransactions(self):
         """Fails if trying to load a plate from within a subtransaction."""
 
-        db = TotoroDBConnection()
         session = db.Session()
         with self.assertRaises(exceptions.TotoroSubtransactionError):
             with session.begin():

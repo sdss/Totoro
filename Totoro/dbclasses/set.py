@@ -15,7 +15,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from exposure import Exposure
-from Totoro import TotoroDBConnection
+from Totoro.db import getConnectionFull
 from Totoro import log, config, site
 from Totoro import exceptions
 from Totoro import utils
@@ -26,16 +26,13 @@ from copy import copy
 from astropy import time
 
 
-db = TotoroDBConnection()
-plateDB = db.plateDB
-mangaDB = db.mangaDB
-session = db.Session()
-
-
 __all__ = ['Set']
 
 
 def getPlateSets(inp, format='plate_id', **kwargs):
+
+    __, Session, plateDB, mangaDB = getConnectionFull()
+    session = Session()
 
     with session.begin():
         sets = session.query(mangaDB.Set).join(
@@ -49,37 +46,27 @@ def getPlateSets(inp, format='plate_id', **kwargs):
     return [Set(set, **kwargs) for set in sets]
 
 
-class Set(mangaDB.Set):
+class Set(object):
 
-    def __new__(cls, input=None, format='pk', *args, **kwargs):
+    def __init__(self, input=None, mock=False, mjd=None, *args, **kwargs):
+        """A custom class based on mangaDB.Set."""
 
+        self.db, Session, __, mangaDB = getConnectionFull()
+        self.session = Session()
+
+        # Initialises DB object
         if input is None:
-            ss = mangaDB.Set.__new__(cls)
-            super(Set, ss).__init__(**kwargs)
-            return ss
-
-        base = cls.__bases__[0]
-
-        if isinstance(input, base):
-            instance = input
+            mock = True
+            self._dbObject = mangaDB.Set()
         else:
-            with session.begin():
-                instance = session.query(base).filter(
-                    eval('mangaDB.Set.{0} == {1}'.format(format, input))).one()
-
-        instance.__class__ = cls
-
-        return instance
-
-    def __init__(self, inp=None, format='pk', mock=False, mjd=None,
-                 *args, **kwargs):
+            if isinstance(input, mangaDB.Set):
+                self._dbObject = input
+            else:
+                self._dbObject = self._initFromData(input)
 
         self._status = None
 
         self.isMock = mock
-        if inp is None:
-            self.isMock = True
-
         self._kwargs = kwargs
         self.mjd = mjd
 
@@ -95,6 +82,25 @@ class Set(mangaDB.Set):
     def __repr__(self):
         return '<Totoro Set (pk={0}, status={1})>'.format(
             self.pk, self.getQuality(flag=False)[0])
+
+    def _initFromData(self, input):
+        """Init a new Set instance from a DB query."""
+        print(input)
+        with self.session.begin():
+            ss = self.session.query(self.db.mangaDB.Set).get(input)
+            if ss is None:
+                raise exceptions.TotoroError(
+                    'no set found for pk={0}'.format(input))
+
+        return ss
+
+    def __getattr__(self, name):
+        """Custom getattr method that first looks into the DB object."""
+
+        if hasattr(self._dbObject, name):
+            return getattr(self._dbObject, name)
+        else:
+            return object.__getattribute__(self, name)
 
     def update(self, **kwargs):
         """Reloads the set."""
@@ -429,7 +435,8 @@ def setSetStatus(set, status):
 
     """
 
-    # from Totoro.dbclasses import Set
+    db, Session, __, __ = getConnectionFull()
+    session = Session()
 
     if isinstance(set, (Set, db.mangaDB.Set)):
         pk = set.pk

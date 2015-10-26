@@ -14,6 +14,7 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+from Totoro.db import setDefaulProfile
 import nose
 import sys
 
@@ -25,6 +26,8 @@ if __name__ == '__main__':
     writing "nosetests". Otherwise, the production DB may be used, which may
     (or may not) break something.
     """
+
+    setDefaulProfile('test')
 
     if '-v' not in sys.argv:
         sys.argv.append('-v')

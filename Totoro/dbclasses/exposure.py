@@ -15,55 +15,37 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from Totoro.exceptions import TotoroError, NoMangaExposure
-from Totoro import TotoroDBConnection
+from Totoro.db import getConnectionFull
 from Totoro import log, config, site, dustMap
 from Totoro import utils
 import numpy as np
 from astropy import time
+from sqlalchemy.orm.exc import NoResultFound
 import warnings
 
 
-db = TotoroDBConnection()
-plateDB = db.plateDB
-mangaDB = db.mangaDB
-session = db.Session()
+class Exposure(object):
 
+    def __init__(self, input=None, format='pk', parent='platedb',
+                 mock=False, *args, **kwargs):
+        """A custom class based on plateDB.Exposure."""
 
-class Exposure(plateDB.Exposure):
+        self.db, Session, plateDB, mangaDB = getConnectionFull()
+        self.session = Session()
 
-    def __new__(cls, input=None, format='pk', parent='plateDB', *args,
-                **kwargs):
+        # Initialises DB object
 
         if input is None:
-            exp = plateDB.Exposure.__new__(cls, **kwargs)
-            super(Exposure, exp).__init__(**kwargs)
-            return exp
-
-        if isinstance(input, plateDB.Exposure):
-            instance = input
-
-        elif isinstance(input, mangaDB.Exposure):
-            instance = input.platedbExposure
-
+            mock = True
+            self._dbObject = plateDB.Exposure()
         else:
-            if parent.lower() == 'platedb':
-                with session.begin():
-                    instance = session.query(plateDB.Exposure).filter(
-                        eval('plateDB.Exposure.{0} == {1}'
-                             .format(format, input))).one()
-
-            elif parent.lower() == 'mangadb':
-                with session.begin():
-                    instance = session.query(plateDB.Exposure).join(
-                        mangaDB.Exposure).filter(
-                            eval('mangaDB.Exposure.{0} == {1}'.format(
-                                format, input))).one()
-
-        instance.__class__ = cls
-
-        return instance
-
-    def __init__(self, input=None, format='pk', mock=False, *args, **kwargs):
+            if isinstance(input, plateDB.Exposure):
+                self._dbObject = input
+            elif isinstance(input, mangaDB.Exposure):
+                self._dbObject = input.platedbExposure
+            else:
+                self._dbObject = self._initFromData(input, format=format,
+                                                    parent=parent)
 
         self._valid = None
         self._ditherPosition = None
@@ -89,6 +71,39 @@ class Exposure(plateDB.Exposure):
                 'ditherPos={2}, valid={3})>'
                 .format(self._mangaExposure.pk, self.exposure_no,
                         self.ditherPosition, self.valid))
+
+    def __getattr__(self, name):
+        """Custom getattr method that first looks into the DB object."""
+
+        if hasattr(self._dbObject, name):
+            return getattr(self._dbObject, name)
+        else:
+            return object.__getattribute__(self, name)
+
+    def _initFromData(self, input, format, parent='platedb'):
+        """Init a new Set instance from a DB query."""
+
+        with self.session.begin():
+            try:
+                if parent.lower() == 'platedb':
+                    exposure = self.session.query(
+                        self.db.plateDB.Exposure).filter(
+                            eval('self.db.plateDB.Exposure.{0} == {1}'
+                                 .format(format, input))).one()
+                elif parent.lower() == 'mangadb':
+                    exposure = self.session.query(
+                        self.db.plateDB.Exposure).join(
+                            self.db.mangaDB.Exposure).filter(
+                                eval('self.db.mangaDB.Exposure.{0} == {1}'
+                                     .format(format, input))).one()
+                else:
+                    raise ValueError('parent {0} not allowed'.format(parent))
+            except NoResultFound:
+                raise TotoroError(
+                    'no exposure found for parent={0} and {1}={2}'
+                    .format(parent, format, input))
+
+        return exposure
 
     def update(self, **kwargs):
         """Reloads the exposure."""
@@ -444,6 +459,9 @@ def setExposureStatus(exposure, status):
       >> setExposureStatus(43, 'Totoro Good')
 
     """
+
+    db, __, __, __ = getConnectionFull()
+    session = db.Session()
 
     if isinstance(exposure, Exposure):
         pk = exposure._mangaExposure.pk
