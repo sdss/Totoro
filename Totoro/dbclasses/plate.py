@@ -324,6 +324,14 @@ class Plate(object):
         else:
             return object.__getattribute__(self, name)
 
+    def __setattr__(self, name, value):
+        """Custom setattr method that first looks into the DB object."""
+
+        if hasattr(self, '_dbObject') and hasattr(self._dbObject, name):
+            setattr(self._dbObject, name, value)
+        else:
+            super(Plate, self).__setattr__(name, value)
+
     @classmethod
     def fromSets(cls, sets, **kwargs):
 
