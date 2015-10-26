@@ -48,21 +48,38 @@ def getPlateSets(inp, format='plate_id', **kwargs):
 
 class Set(object):
 
-    def __init__(self, input=None, mock=False, mjd=None, *args, **kwargs):
-        """A custom class based on mangaDB.Set."""
+    _instances = {}
 
-        self.db, Session, __, mangaDB = getConnectionFull()
-        self.session = Session()
+    def __new__(cls, input=None, **kwargs):
+
+        me = object.__new__(cls)
+
+        me.db, Session, __, mangaDB = getConnectionFull()
+        me.session = Session()
 
         # Initialises DB object
         if input is None:
-            mock = True
-            self._dbObject = mangaDB.Set()
+            me._dbObject = mangaDB.Set()
+            return me
         else:
             if isinstance(input, mangaDB.Set):
-                self._dbObject = input
+                me._dbObject = input
             else:
-                self._dbObject = self._initFromData(input)
+                me._dbObject = me._initFromData(input)
+
+        # If the DB object already exists in the library of Totoro.Set
+        # instances, returns it. Otherwise, records it and returns the new
+        # object.
+        if me._dbObject in cls._instances:
+            return cls._instances[me._dbObject]
+        else:
+            cls._instances[me._dbObject] = me
+            return me
+
+    def __init__(self, input=None, mock=False, mjd=None, *args, **kwargs):
+        """A custom class based on mangaDB.Set."""
+
+        self.__dbAttributes__ = self._dbObject.__mapper__.attrs
 
         self._status = None
 
@@ -97,7 +114,7 @@ class Set(object):
     def __getattr__(self, name):
         """Custom getattr method that first looks into the DB object."""
 
-        if hasattr(self._dbObject, name):
+        if name in object.__getattribute__(self, '__dbAttributes__'):
             return getattr(self._dbObject, name)
         else:
             return object.__getattribute__(self, name)
