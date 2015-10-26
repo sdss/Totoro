@@ -18,13 +18,13 @@ import unittest
 import numpy as np
 import warnings
 
-from Totoro import TotoroDBConnection
+from Totoro.db import getConnectionFull
 from Totoro.dbclasses.plate_utils import removeOrphanedSets
 from Totoro.bin.overrideSet import main
 from Totoro.dbclasses import Exposure, Set, fromPlateID
 
 
-db = TotoroDBConnection()
+db, Session, plateDB, mangaDB = getConnectionFull('test')
 session = db.Session()
 
 

@@ -15,3 +15,6 @@ plates with incomplete sets.
 - Totoro moved to its own repo.
 - Now uses SDSSconnect for connecting to the DB. Requires passwords to be
 defined in .pgpass.
+- DB classes now don't inherit from model classes. Instead, the DB query object
+is recorded as object.\_dbObject. DB attributes can still be accessed from the
+Totoro object via a custom `__getattr__` method.

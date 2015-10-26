@@ -15,7 +15,8 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 
-from Totoro import log, TotoroDBConnection
+from Totoro import log
+from Totoro.db import getConnection
 from Totoro.dbclasses.exposure import Exposure, setExposureStatus
 from Totoro.dbclasses.set import Set, checkSet, setErrorCodes
 from Totoro.dbclasses.plate_utils import getConsecutiveSets, removeOrphanedSets
@@ -31,12 +32,13 @@ import os
 
 
 warnings.simplefilter('always')
-db = TotoroDBConnection()
-session = db.Session()
 
 
 def _getStatusPK(status):
     """Returns the pk for a set status label."""
+
+    db = getConnection()
+    session = db.Session()
 
     with session.begin():
         statuses = session.query(db.mangaDB.SetStatus).all()
@@ -85,6 +87,9 @@ def _checkExposures(exposures):
 
 def override(args):
     """Overrides a set of exposures as good or bad."""
+
+    db = getConnection()
+    session = db.Session()
 
     mode = args.mode.capitalize()
     exposures = args.EXPOSURE_NO
@@ -187,6 +192,9 @@ def override(args):
 
 def removeStatus(args):
     """Removes set status."""
+
+    db = getConnection()
+    session = db.Session()
 
     setPK = args.SET_PK
     assert isinstance(setPK, int), 'SET_PK must be an integer'

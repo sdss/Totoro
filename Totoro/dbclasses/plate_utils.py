@@ -16,17 +16,14 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from Totoro import TotoroDBConnection, log, config, site
+from Totoro import log, config, site
+from Totoro.db import getConnection
 from Totoro import exceptions
 from Totoro.utils import intervals, checkOpenSession
 from scipy.misc import factorial
 import numpy as np
 import collections
 import itertools
-
-
-db = TotoroDBConnection()
-session = db.Session()
 
 
 def updatePlate(plate, rearrangeIncomplete=True, **kwargs):
@@ -89,6 +86,9 @@ def assignExposureToOptimalSet(plate, exposure):
     set for it."""
 
     from Totoro.dbclasses import Set as TotoroSet
+
+    db = plate.db
+    session = plate.session
 
     optimalSet = getOptimalSet(plate, exposure)
 
@@ -287,6 +287,8 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
     if len(validExposures) == 0:
         return True
 
+    session = plate.session
+
     if mode.lower() == 'sequential':
         # If mode is sequential, removes set_pk from all selected exposures
         # and triggers a plate update.
@@ -389,8 +391,9 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
             completions.append(plateCompletion)
             goodArrangements.append(fixBadSets(sets))
 
-        if (nn+1)*100./nPermutations % 10 == 0:
-            logMode('{0:d}% completed'.format(int((nn+1)*100./nPermutations)))
+        if (nn + 1) * 100. / nPermutations % 10 == 0:
+            logMode('{0:d}% completed'
+                    .format(int((nn + 1) * 100. / nPermutations)))
 
         permutationCounter += 1
 
@@ -479,6 +482,9 @@ def applyArrangement(plate, arrangement):
 
     from Totoro.dbclasses import Set as TotoroSet
 
+    db = plate.db
+    session = plate.session
+
     arrangement = [ss for ss in arrangement
                    if ss.status is None or 'Override' not in ss.status.label]
 
@@ -549,7 +555,7 @@ def calculatePermutations(inputList):
     nExpPerDither = [len(ii) for ii in indicesSeed]
     for ii in indicesSeed:
         if len(ii) < np.max(nExpPerDither):
-            ii += [None] * (np.max(nExpPerDither)-len(ii))
+            ii += [None] * (np.max(nExpPerDither) - len(ii))
 
     if len(indicesSeed) > 0:
         indices = [[tuple(indicesSeed[0])]]
@@ -579,7 +585,7 @@ def getNumberPermutations(ditherPositions):
         if repDict[key] > maxNDither:
             maxNDither = repDict[key]
 
-    return int(factorial(maxNDither)**(len(repDict.keys())-1))
+    return int(factorial(maxNDither) ** (len(repDict.keys()) - 1))
 
 
 def fixBadSets(sets):
@@ -644,6 +650,9 @@ def fixBadSets(sets):
 def getConsecutiveSets(nSets=1):
     """Returns a list of consecutive set pks that are not assigned."""
 
+    db = getConnection()
+    session = db.Session()
+
     # Finds already used set pks
     with session.begin():
         setPKs = session.query(db.mangaDB.Set.pk).all()
@@ -651,7 +660,7 @@ def getConsecutiveSets(nSets=1):
     # Creates a list of unused set pks
     setPKs = np.array(setPKs).squeeze().tolist()
     setPKs = sorted(setPKs)
-    candidatePKs = np.array([ii for ii in range(1, setPKs[-1]+1)
+    candidatePKs = np.array([ii for ii in range(1, setPKs[-1] + 1)
                              if ii not in setPKs])
 
     # Splits the pks into groups of consecutive values
@@ -676,6 +685,9 @@ def removeOrphanedSets():
     """Removes sets without exposures."""
 
     nRemoved = 0
+
+    db = getConnection()
+    session = db.Session()
 
     with session.begin():
         sets = session.query(db.mangaDB.Set).all()

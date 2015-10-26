@@ -14,7 +14,7 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from Totoro import TotoroDBConnection
+from Totoro.db import getConnectionFull
 from Totoro import exceptions as TotoroExceptions
 from Totoro import log, config, dustMap, site
 from Totoro import utils
@@ -34,16 +34,13 @@ __all__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plate',
            'fromPlateID']
 
 
-totoroDB = TotoroDBConnection()
-plateDB = totoroDB.plateDB
-mangaDB = totoroDB.mangaDB
-session = totoroDB.Session()
-
-
 def getPlugged(**kwargs):
 
     kwargs.setdefault('fullCheck', False)
     kwargs.setdefault('updateSets', False)
+
+    __, Session, plateDB, __ = getConnectionFull()
+    session = Session()
 
     with session.begin():
         activePluggings = session.query(
@@ -71,6 +68,9 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
     kwargs.setdefault('updateSets', False)
 
     minimumPriority = config['plugger']['noPlugPriority']
+
+    __, Session, plateDB, __ = getConnectionFull()
+    session = Session()
 
     with session.begin():
         plates = session.query(plateDB.Plate).join(
@@ -135,6 +135,9 @@ def getAll(onlyIncomplete=False, **kwargs):
     kwargs.setdefault('fullCheck', False)
     kwargs.setdefault('updateSets', False)
 
+    __, Session, plateDB, __ = getConnectionFull()
+    session = Session()
+
     with session.begin():
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
@@ -173,6 +176,9 @@ def getComplete(**kwargs):
     kwargs.setdefault('fullCheck', False)
     kwargs.setdefault('updateSets', False)
 
+    db, Session, plateDB, mangaDB = getConnectionFull()
+    session = Session()
+
     with session.begin():
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode,
@@ -203,9 +209,11 @@ class Plates(list):
 
     def __init__(self, inp, format='pk', **kwargs):
 
+        __, __, plateDB, __ = getConnectionFull()
+
         if all([isinstance(ii, Plate) for ii in inp]):
             list.__init__(self, inp)
-        elif all([isinstance(ii, totoroDB.plateDB.Plate) for ii in inp]):
+        elif all([isinstance(ii, plateDB.Plate) for ii in inp]):
             list.__init__(self, [Plate(ii, **kwargs) for ii in inp])
         else:
             list.__init__(self, [Plate(ii, format=format, **kwargs)
@@ -232,39 +240,29 @@ def fromPlateID(plateid, **kwargs):
     return Plate(plateid, format='plate_id', **kwargs)
 
 
-class Plate(plateDB.Plate):
-
-    def __new__(cls, input=None, format='pk', **kwargs):
-
-        utils.checkOpenSession()
-
-        if input is None:
-            plate = plateDB.Plate.__new__(cls)
-            super(Plate, plate).__init__(**kwargs)
-            return plate
-
-        base = cls.__bases__[0]
-
-        if isinstance(input, base):
-            instance = input
-        else:
-            try:
-                with session.begin():
-                    instance = session.query(base).filter(
-                        eval('plateDB.Plate.{0} == {1}'
-                             .format(format, input))).one()
-            except NoResultFound:
-                raise TotoroExceptions.TotoroError('no plate found for input '
-                                                   '{0}={1}'
-                                                   .format(format, input))
-
-        instance.__class__ = cls
-
-        return instance
+class Plate(object):
 
     def __init__(self, input=None, format='pk', mock=False,
                  updateSets=True, mjd=None, fullCheck=True,
                  manga_tileid=None, **kwargs):
+        """A custom class based on plateDB.Plate."""
+
+        # Checks if an open transaction already exists.
+        utils.checkOpenSession()
+
+        self.db, Session, plateDB, mangaDB = getConnectionFull()
+        self.session = Session()
+
+        # Initialises DB object
+
+        if input is None:
+            mock = True
+            self._dbObject = plateDB.Plate()
+        else:
+            if isinstance(input, plateDB.Plate):
+                self._dbObject = input
+            else:
+                self._dbObject = self._initFromData(input, format=format)
 
         self._complete = None
         self._drilled = None
@@ -303,11 +301,33 @@ class Plate(plateDB.Plate):
                 .format(self.plate_id, self.manga_tileid,
                         self.getPlateCompletion()))
 
+    def _initFromData(self, input, format):
+        """Init a new Plate instance from a DB query."""
+
+        with self.session.begin():
+            try:
+                plate = self.session.query(self.db.plateDB.Plate).filter(
+                    eval('self.db.plateDB.Plate.{0} == {1}'
+                         .format(format, input))).one()
+            except NoResultFound:
+                raise TotoroExceptions.TotoroError('no plate found for input '
+                                                   '{0}={1}'
+                                                   .format(format, input))
+
+        return plate
+
+    def __getattr__(self, name):
+        """Custom getattr method that first looks into the DB object."""
+
+        if hasattr(self._dbObject, name):
+            return getattr(self._dbObject, name)
+        else:
+            return object.__getattribute__(self, name)
+
     @classmethod
     def fromSets(cls, sets, **kwargs):
 
-        newPlate = plateDB.Plate.__new__(cls)
-        newPlate.__init__(None, mock=True, **kwargs)
+        newPlate = cls(None, mock=True, **kwargs)
         newPlate.sets = sets
 
         log.debug('created mock plate from sets pk={0}'.format(
@@ -321,7 +341,7 @@ class Plate(plateDB.Plate):
         if ra is None or dec is None:
             raise TotoroExceptions.TotoroError('ra and dec must be specified')
 
-        mockPlate = Plate.__new__(cls, mock=True, ra=ra, dec=dec, **kwargs)
+        mockPlate = cls(mock=True, ra=ra, dec=dec, **kwargs)
         mockPlate.isMock = True
 
         log.debug('created mock plate with ra={0:.3f} and dec={0:.3f}'.format(
@@ -336,8 +356,11 @@ class Plate(plateDB.Plate):
         """Returns a list of mangaDB.ModelClasses.Set instances with all the
         sets matching exposures in this plate. Removes duplicates."""
 
+        plateDB = self.db.plateDB
+        mangaDB = self.db.mangaDB
+
         # Finds the sets for this plate
-        sets = session.query(mangaDB.Set).join(
+        sets = self.session.query(mangaDB.Set).join(
             mangaDB.Exposure, plateDB.Exposure, plateDB.Observation,
             plateDB.PlatePointing, plateDB.Plate).filter(
                 plateDB.Plate.pk == self.pk).all()
@@ -550,6 +573,9 @@ class Plate(plateDB.Plate):
     def getActivePlugging(self):
         """Returns the active plugging or None if none found."""
 
+        if self.isMock:
+            return None
+
         for plugging in self.pluggings:
             if len(plugging.activePlugging) > 0:
                 return plugging
@@ -578,8 +604,10 @@ class Plate(plateDB.Plate):
 
         scienceExps = []
 
+        plateDB = self.db.plateDB
+
         for plugging in self.pluggings:
-            exposures = session.query(plateDB.Exposure).join(
+            exposures = self.session.query(plateDB.Exposure).join(
                 plateDB.Observation, plateDB.ExposureFlavor).filter(
                     plateDB.Observation.plugging_pk == plugging.pk).filter(
                         plateDB.ExposureFlavor.label == 'Science').all()
@@ -808,7 +836,7 @@ class Plate(plateDB.Plate):
     @priority.setter
     def priority(self, value):
         if not self.isMock:
-            with session.begin():
+            with self.session.begin():
                 self.plate_pointings[0].priority = value
         else:
             self._priority = value

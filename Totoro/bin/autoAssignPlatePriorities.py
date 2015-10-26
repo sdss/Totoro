@@ -15,14 +15,14 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 from Totoro.dbclasses import getAll
-from Totoro import TotoroDBConnection
+from Totoro.db import getConnection
 import numpy as np
 import argparse
 import os
 import sys
 
 
-db = TotoroDBConnection()
+db = getConnection()
 
 points = np.array([[-15, 4],
                    [-10, 4],
