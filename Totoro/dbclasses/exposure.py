@@ -80,6 +80,14 @@ class Exposure(object):
         else:
             return object.__getattribute__(self, name)
 
+    def __setattr__(self, name, value):
+        """Custom setattr method that first looks into the DB object."""
+
+        if hasattr(self, '_dbObject') and hasattr(self._dbObject, name):
+            setattr(self._dbObject, name, value)
+        else:
+            super(Exposure, self).__setattr__(name, value)
+
     def _initFromData(self, input, format, parent='platedb'):
         """Init a new Set instance from a DB query."""
 
