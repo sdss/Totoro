@@ -141,7 +141,7 @@ def override(args):
 
     # Reflags the remaining sets
     for setPK in np.unique(originalSetPKs):
-        if setPK == overridenSetPK:
+        if setPK == overridenSetPK or setPK is None:
             continue
 
         try:
