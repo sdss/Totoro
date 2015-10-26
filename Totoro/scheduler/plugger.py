@@ -204,6 +204,12 @@ class Plugger(object):
 
         self._scheduleForced(**kwargs)
 
+        # Removes force scheduled plates from the list of plates to schedule.
+        forceScheduled = [plate.plate_id for plate in self.timeline.scheduled]
+        for plate in self._platesToSchedule:
+            if plate.plate_id in forceScheduled:
+                self._platesToSchedule.remove(plate)
+
         if (len(self.timeline.scheduled) >= len(self.carts) or
                 self.timeline.remainingTime <= 0):
             pass
