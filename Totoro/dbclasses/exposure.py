@@ -395,6 +395,13 @@ class Exposure(object):
         """Gets the MJD for this exposure."""
         return self.mjd()
 
+    def mjd(self):
+    	"""Returns the *SDSS* MJD. See line ~140 (the mjd4Gang function) here
+        for notes on this value.
+    	https://svn.sdss.org/deprecated/operations/iop/trunk/etc/iopUtils.tcl
+        """
+        return int(float(self.start_time) / 86400.0 + 0.3)
+
     def getPlugging(self):
         """Returns the Plugging instance from ModelClasses for the exposure."""
 
