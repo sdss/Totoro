@@ -45,10 +45,10 @@ class TestDatabaseConnect(unittest.TestCase):
             database: test
 
             [test2]
-            user: sdss2
+            user: sdssdb
             host: localhost
             port: 5432
-            database: test2
+            database: apodb
             """
 
         with open(cls.tmpProfileSimple, 'wb') as output:
@@ -59,11 +59,10 @@ class TestDatabaseConnect(unittest.TestCase):
 
         profileDefaultsText = """
             [DEFAULT]
-            user: defaultUser
-            password: defaultPass
+            user: sdssdb
             host: localhost
             port: 5432
-            database: defaultTestDB
+            database: apodb
 
             [test]
             user: sdss
@@ -96,7 +95,7 @@ class TestDatabaseConnect(unittest.TestCase):
         self.assertEqual(cParser.getint('test', 'port'), 5432)
 
         config2 = readProfile(path=self.tmpProfileDefaults)
-        self.assertEqual(config2[0]['user'], 'defaultUser')
+        self.assertEqual(config2[0]['user'], 'sdssdb')
         self.assertEqual(config2[1], 'DEFAULT')
 
         with warnings.catch_warnings(record=True) as ww:
@@ -118,44 +117,47 @@ class TestDatabaseConnect(unittest.TestCase):
 
         self.assertEqual(len(DatabaseConnection.listConnections()), 0)
 
-        db = DatabaseConnection('test')
+        db = DatabaseConnection('test2', profilePath=self.tmpProfileSimple)
 
         self.assertEqual(len(DatabaseConnection.listConnections()), 1)
 
         # Runs a simple query in the test DB
         session = db.Session()
         with session.begin():
-            actPlug = session.query(db.plateDB.ActivePlugging).get(1)
+            plate = session.query(db.plateDB.Plate).get(10639)
 
-        self.assertEqual(actPlug.plugging_pk, 70172)
+        self.assertEqual(plate.plate_id, 7495)
 
     def testMultipleConnections(self):
         """Tests creating multiple connections."""
 
-        connDefault = DatabaseConnection('test')
-        conn2 = DatabaseConnection('test')
+        connDefault = DatabaseConnection('test2',
+                                         profilePath=self.tmpProfileSimple)
+        conn2 = DatabaseConnection('test2', profilePath=self.tmpProfileSimple)
         self.assertIs(connDefault, conn2)
-        self.assertEqual(connDefault.profile, 'test')
+        self.assertEqual(connDefault.profile, 'test2')
 
         with warnings.catch_warnings(record=True) as ww:
             warnings.simplefilter('always')
-            conn3 = DatabaseConnection('test', new=True)
-            self.assertIn('overwritting profile test', str(ww[-1].message))
+            conn3 = DatabaseConnection('test2', new=True,
+                                       profilePath=self.tmpProfileSimple)
+            self.assertIn('overwritting profile test2', str(ww[-1].message))
 
         self.assertIs(connDefault, conn2)
         self.assertIsNot(connDefault, conn3)
         self.assertIsNot(conn2, conn3)
 
-        conn4 = DatabaseConnection('test', new=True, name='testConn',
-                                   default=True)
-        self.assertItemsEqual(conn4.listConnections(), ['test', 'testConn'])
+        conn4 = DatabaseConnection('test2', new=True, name='testConn',
+                                   default=True,
+                                   profilePath=self.tmpProfileSimple)
+        self.assertItemsEqual(conn4.listConnections(), ['test2', 'testConn'])
         self.assertItemsEqual(conn4.listConnections(),
                               DatabaseConnection.listConnections())
         self.assertIsNot(conn4, conn3)
         self.assertIsNot(conn4, connDefault)
         self.assertEqual(conn4.getDefaultConnectionName(), 'testConn')
 
-        conn5 = DatabaseConnection()
+        conn5 = DatabaseConnection(profilePath=self.tmpProfileDefaults)
         self.assertIs(conn5, conn4)
 
         with self.assertRaises(SDSSconnectError):
