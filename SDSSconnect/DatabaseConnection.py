@@ -23,7 +23,6 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.pool import Pool
 from SDSSconnect.models import createRelationships
 from SDSSconnect.models.utils import ModelWrapper, cameliseClassname
-from SDSSconnect.models.utils import nullifyRelationship
 from SDSSconnect.exceptions import SDSSconnectUserWarning, SDSSconnectError
 
 import warnings
