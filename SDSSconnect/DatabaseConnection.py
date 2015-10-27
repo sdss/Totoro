@@ -245,8 +245,12 @@ class DatabaseConnection(object):
 
         self.Base = automap_base(metadata=self.metadata)
         self.Base.prepare(engine=self.engine,
-                          classname_for_table=cameliseClassname,
-                          generate_relationship=nullifyRelationship)
+                          classname_for_table=cameliseClassname)
+
+        # We are going to create our own relationships, so we remove these.
+        for model in self.Base.classes:
+            for relationship in model.__mapper__.relationships.keys():
+                delattr(model, str(relationship))
 
         createRelationships(self.Base)
         sqlalchemy.orm.configure_mappers()
