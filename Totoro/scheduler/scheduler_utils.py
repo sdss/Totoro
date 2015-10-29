@@ -97,13 +97,12 @@ def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
     # we use normalise=True here because we want to take into account the
     # observing windows of the plates already plugged/started.
     if len(priorityPlates) > 0:
-        simulatePlates(priorityPlates, jdRange, mode,
-                       **kwargs)
+        simulatePlates(priorityPlates, jdRange, mode, **kwargs)
         optimalPlate = selectPlate(priorityPlates, jdRange, scope='plugged',
                                    normalise=True)
 
         if optimalPlate:
-            newExps = cleanupPlates(observablePlates, optimalPlate, jdRange)
+            newExps = cleanupPlates(priorityPlates, optimalPlate, jdRange)
             return optimalPlate, newExps
         else:
             cleanupPlates(priorityPlates, None, jdRange)
@@ -132,11 +131,18 @@ def _normaliseWindowLength(plates, jdRange, factor=1.0, apply=True):
                                             wrapAt=24.)
         for plate in plates])
 
-    plateWindowLenghtNormalised = np.array((plateWindowLength /
-                                            np.min(plateWindowLength)))
+    # When called for the next night, some plates may have length 0. We reject
+    # those for the calculation of the minimum length.
+    minLength = np.min(plateWindowLength[plateWindowLength > 0])
+
+    plateWindowLenghtNormalised = np.array((plateWindowLength / minLength))
 
     plateWindowLenghtNormalisedFactor = (
         factor * (plateWindowLenghtNormalised - 1.) + 1)
+
+    # We restore the original factor for plates with window length 0.
+    # To be improved at some point.
+    plateWindowLenghtNormalisedFactor[np.where(plateWindowLength == 0)] = 1
 
     if apply:
         _completionFactor(plates, plateWindowLenghtNormalisedFactor)
@@ -189,7 +195,8 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
     # We check if any of the plate is complete after the simulation.
     # If so, we return the one with fewer new exposures.
     completePlates = [plate for plate in plates
-                      if plate._after['completion'] > 1]
+                      if plate._after['completion'] > 1 and
+                      plate._before['completion'] == 0]
     nNewExposures = [plate._after['nNewExposures'] for plate in completePlates]
     if len(completePlates) > 0:
         return completePlates[np.argmin(nNewExposures)]
@@ -416,20 +423,32 @@ def cleanupPlates(plates, optimalPlate, jdRange):
 
     # We start by removing everything from non-optimal plates
     for plate in plates:
+
         if plate is optimalPlate:
             continue
+
+        for attr in ['_before', '_after', '_tmp']:
+            if hasattr(plate, attr):
+                delattr(plate, attr)
+
         for ss in plate.sets:
             ss.totoroExposures = [exp for exp in ss.totoroExposures
                                   if not hasattr(exp, '_tmp') or not exp._tmp]
+            ss._status = None
+
         plate.sets = [ss for ss in plate.sets
                       if not ss.isMock or len(ss.totoroExposures) > 0]
 
     if optimalPlate is None:
         return
 
-    # Calculates change in completion rate
+    # Calculates change in completion rate in the optimal plate
     completionChange = (optimalPlate._after['completion'] -
                         optimalPlate._before['completion'])
+
+    for attr in ['_before', '_after', '_tmp']:
+        if hasattr(optimalPlate, attr):
+            delattr(optimalPlate, attr)
 
     # Calculates how much time we have actually scheduled with the
     # optimal plate
@@ -447,6 +466,8 @@ def cleanupPlates(plates, optimalPlate, jdRange):
         lastSet = optimalPlate.getLastSet()
 
         if lastSet.getStatus()[0] in ['Incomplete', 'Unplugged']:
+
+            lastSet._status = None
 
             # Finds new exposures in the last set and calculates the jd range
             # they cover.
