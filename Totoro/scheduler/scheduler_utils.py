@@ -131,6 +131,9 @@ def _normaliseWindowLength(plates, jdRange, factor=1.0, apply=True):
                                             wrapAt=24.)
         for plate in plates])
 
+    if len(plateWindowLength[plateWindowLength > 0]) == 0:
+        return
+
     # When called for the next night, some plates may have length 0. We reject
     # those for the calculation of the minimum length.
     minLength = np.min(plateWindowLength[plateWindowLength > 0])
