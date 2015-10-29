@@ -154,6 +154,10 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
     plates = [plate for plate in plates
               if plate._after['nNewExposures'] > 0]
 
+    # Sorts plates by inverse plate completion.
+    plates = sorted(plates, reverse=True,
+                    key=lambda plate: plate.getPlateCompletion())
+
     if len(plates) == 0:
         return None
 
