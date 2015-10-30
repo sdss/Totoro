@@ -143,7 +143,7 @@ class Planner(object):
 
     @staticmethod
     def getPlates(usePlatesNotAtAPO=True, usePlatesBeingDrilled=True,
-                  optimiseFootprint=True, skipDrilled=False, **kwargs):
+                  skipDrilled=False, **kwargs):
         """Gets plates that are already drilled or in process of being so,
         with some filtering."""
 
@@ -161,10 +161,6 @@ class Planner(object):
                     validPlate = False
             if not usePlatesNotAtAPO and plate.getLocation() != 'APO':
                 validPlate = False
-            if optimiseFootprint:
-                if ((plate.ra < 100 or plate.ra > 300) and
-                        (plate.dec < -1 or plate.dec > 1)):
-                    validPlate = False
             if skipDrilled:
                 if len(plate.getScienceExposures()) == 0:
                     validPlate = False
