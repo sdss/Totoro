@@ -66,7 +66,7 @@ dustMap:
     grid: +data/IGincrease.fits
 
 scheduling:
-    patchSetFactor: 0.1
+    patchSetFactor: 0.4
     platePriorityFactor: 0.25
     nextNightFactor: 0.5
 
