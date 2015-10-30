@@ -343,7 +343,7 @@ class Set(object):
         status = checkSet(self, **kwargs)
 
         if self.isMock and status[0] != 'Incomplete':
-            self._quality = status
+            self._status = status
 
         return status
 
