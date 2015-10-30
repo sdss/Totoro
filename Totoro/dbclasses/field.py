@@ -15,17 +15,13 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 import Totoro
-import plate
-from Totoro.db import getConnection
+import plate as TotoroPlate
+from Totoro.db import getConnectionFull
 from Totoro.exceptions import TotoroError
 import os
 from astropy import table
 import numpy as np
 from numbers import Integral
-
-
-db = getConnection()
-plateDB = db.plateDB
 
 
 __all__ = ['Fields', 'Field', 'getTilingCatalogue']
@@ -77,23 +73,28 @@ class Fields(list):
         placeholder for future functionality when fields might be rejected
         based on the coordinates of drilled plates."""
 
-        plates = plate.getAll(onlyIncomplete=False, silent=True,
-                              updateSets=False, fullCheck=False)
+        __, Session, plateDB, __ = getConnectionFull()
+        session = Session()
 
-        alreadyDrilled = []
-        for pp in plates:
-            inputFP = pp.design.inputs[0].filepath
-            try:
-                mangaTileID = int(inputFP.split('_')[1])
-                alreadyDrilled.append(mangaTileID)
-            except:
-                pass
+        with session.begin():
+            plates = session.query(plateDB.Plate).join(
+                plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
+            ).filter(plateDB.Survey.label == 'MaNGA',
+                     plateDB.SurveyMode.label == 'MaNGA dither').order_by(
+                         plateDB.Plate.plate_id).all()
 
-        nRemoved = 0
-        for mangaTileID in alreadyDrilled:
-            result = self.removeField(mangaTileID)
-            if result:
-                nRemoved += 1
+        plateMangaTileIds = np.unique(
+            [plate.mangadbPlate.manga_tileid
+             for plate in plates if plate is not None])
+
+        drilledFields = []
+        for field in self:
+            if field.manga_tileid in plateMangaTileIds:
+                drilledFields.append(field)
+
+        nRemoved = len(drilledFields)
+        for dField in drilledFields:
+            self.remove(dField)
 
         logMsg = ('rejected {0} fields because they have already been drilled'
                   .format(nRemoved))
@@ -126,7 +127,7 @@ class Fields(list):
                               ' instance.')
 
 
-class Field(plate.Plate):
+class Field(TotoroPlate.Plate):
 
     def __repr__(self):
         return '<Field: manga_tileid={0}>'.format(self.manga_tileid)
