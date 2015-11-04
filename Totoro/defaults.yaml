@@ -72,7 +72,7 @@ scheduling:
 
 planner:
     efficiency: 0.8
-    maxAltitude: 80
+    maxAltitude: 85
     noPlugPriority: 1
     forcePlugPriority: 10
     goodWeatherFraction: 0.45
