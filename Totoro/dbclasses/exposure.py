@@ -398,7 +398,7 @@ class Exposure(object):
     def mjd(self):
     	"""Returns the *SDSS* MJD. See line ~140 (the mjd4Gang function) here
         for notes on this value.
-    	https://svn.sdss.org/deprecated/operations/iop/trunk/etc/iopUtils.tcl
+        https://svn.sdss.org/deprecated/operations/iop/trunk/etc/iopUtils.tcl
         """
         return int(float(self.start_time) / 86400.0 + 0.3)
 
@@ -444,6 +444,13 @@ class Exposure(object):
         if self._mlhalimit is None:
             self._mlhalimit = utils.mlhalimit(self.dec)
         return self._mlhalimit
+
+    def getMeanAirmass(self):
+        """Returns airmass at mid exposure."""
+
+        midHA = utils.calculateMean(self.getHA())
+
+        return utils.computeAirmass(self.dec, midHA)
 
 
 def flagExposure(exposure, status, errorCode, flag=True, message=None):
