@@ -23,6 +23,9 @@ plates with incomplete sets.
 - Module file
 ### Changed
 - Totoro moved to its own repo.
+- scheduler_utils: plates are sorted by completion so that, if several plates
+complete with the same number of exposures, the one with highest completion
+gets chosen.
 - Now uses SDSSconnect for connecting to the DB. Requires passwords to be
 defined in .pgpass.
 - DB classes now don't inherit from model classes. Instead, the DB query object
