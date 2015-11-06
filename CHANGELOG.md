@@ -1,6 +1,15 @@
 # Change Log
 
-## [Unreleased]
+## [1.0.1] - 2015-11-06
+### Added
+- New method in Exposure to get the mean airmass during the exposure.
+### Changed
+- Zenith avoidance set to 5 degrees by default for planner.
+### Fixed
+- Small bug fixes
+- Fixes a bug when there are no exposures to clean in a simulation.
+
+## [1.0.0] - 2015-10-30
 ### Added
 - CHANGELOG.md
 - SDSSconnect added to Totoro root
