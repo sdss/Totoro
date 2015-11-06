@@ -477,21 +477,22 @@ def cleanupPlates(plates, optimalPlate, jdRange):
             exposuresToRemove = [exp for exp in lastSet.totoroExposures
                                  if hasattr(exp, '_tmp') and exp._tmp]
 
-            exposuresToRemoveJD = np.array(
-                [exp.getJD() for exp in exposuresToRemove])
-            timeToRemove = np.sum(exposuresToRemoveJD[:, 1] -
-                                  exposuresToRemoveJD[:, 0])
+            if len(exposuresToRemove) > 0:
+                exposuresToRemoveJD = np.array(
+                    [exp.getJD() for exp in exposuresToRemove])
+                timeToRemove = np.sum(exposuresToRemoveJD[:, 1] -
+                                      exposuresToRemoveJD[:, 0])
 
-            # Calculates how much time unscheduled there is if we remove the
-            # exposures.
-            timeLeftAfterRemoval = (jdRange[1] - jdRange[0] - timeJDRange +
-                                    timeToRemove)
+                # Calculates how much time unscheduled there is if we remove
+                # the exposures.
+                timeLeftAfterRemoval = (jdRange[1] - jdRange[0] - timeJDRange +
+                                        timeToRemove)
 
-            # If the time is > 1 hour, it might be that we can do something
-            # more useful with that time, so we remove the exposures.
-            if timeLeftAfterRemoval * 24. > minSchedulingTime:
-                for exp in exposuresToRemove:
-                    lastSet.totoroExposures.remove(exp)
+                # If the time is > 1 hour, it might be that we can do something
+                # more useful with that time, so we remove the exposures.
+                if timeLeftAfterRemoval * 24. > minSchedulingTime:
+                    for exp in exposuresToRemove:
+                        lastSet.totoroExposures.remove(exp)
 
     # For the remaining mock exposures, we remove the _simulationData and _tmp
     # attributes.
