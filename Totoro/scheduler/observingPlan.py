@@ -209,7 +209,7 @@ class ObservingPlan(object):
         log.info(('1 block (days) selected, '
                   'making a total of {0:.2f} hours').format(totalTime))
 
-        return table.Table(tmpPlan[len(tmpPlan)-1])
+        return table.Table(tmpPlan[len(tmpPlan) - 1])
 
     def getRun(self, startDate=None):
 
