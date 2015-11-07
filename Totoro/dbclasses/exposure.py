@@ -167,7 +167,7 @@ class Exposure(object):
         newExposure.exposure_time = expTime
         newExposure._plugging = plugging
 
-        newExposure._seeing = 1.0
+        newExposure._seeing = config['simulation']['seeing']
 
         haRange = newExposure.getHA()
         ha = utils.calculateMean(haRange)
