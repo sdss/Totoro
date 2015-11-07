@@ -93,6 +93,7 @@ simulation:
     alphaBlue: 1.25
     redSN2: 6.64
     alphaRed: 0.65
+    seeing: 1.5
     factor: 1.0
 
 SN2thresholds:
