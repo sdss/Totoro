@@ -19,6 +19,12 @@ import os
 import sys
 
 
+TotoroPath = os.path.realpath(os.path.join(os.path.dirname(__file__),
+                                           '../../'))
+if TotoroPath not in sys.path:
+    sys.path.append(TotoroPath)
+
+
 def rearrageSets(plateid, force=False, LST=None, **kwargs):
     """Triggers a set rearrangement for a certain plate."""
 
