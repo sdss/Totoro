@@ -1,6 +1,10 @@
 # Change Log
 
-## [1.1.0] - Unreleased
+## [1.1.1] - 2015-11-09
+### Fixed
+- Bug in set rearrangement when one or more of the exposures is invalid
+
+## [1.1.0] - 2015-11-08
 ### Changed
 - Seeing for simulated exposures changed from 1 to 1.5 arcsec and set as a
 configurable option in defaults.simulation.seeing.
@@ -9,7 +13,7 @@ configurable option in defaults.simulation.seeing.
 number of sets. In that case, the orphaned exposures are removed and the
 remaining time is to be observed with a different plate. However, if there is
 no other plate that can be used to observe at least one whole set, the
-original, already plugged plate must be favoured. 
+original, already plugged plate must be favoured.
 
 ## [1.0.1] - 2015-11-06
 ### Added
