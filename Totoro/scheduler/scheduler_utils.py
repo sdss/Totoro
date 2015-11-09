@@ -49,6 +49,18 @@ def _getNextNightRange(jdRange):
         return (nextNight['JD0'][0], nextNight['JD1'][0])
 
 
+def _addBookkeepingAttrs(plates):
+    """Stores some information about the plates before the simulation"""
+
+    for plate in plates:
+        plate._before = {}
+        plate._before['completion'] = plate.getPlateCompletion(useMock=True)
+        plate._before['completion+'] = plate.getPlateCompletion(
+            useMock=True, includeIncompleteSets=True)
+        plate._before['nExposures'] = len(
+            plate.getTotoroExposures(onlySets=True))
+
+
 def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
     """Gets the optimal plate to observe in a range of JDs."""
 
@@ -72,17 +84,6 @@ def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
     if len(observablePlates) == 0:
         observablePlates = incompletePlates
 
-    # Stores some information about the plates before the simulation
-    for plate in observablePlates:
-        plate._before = {}
-        plate._before['completion'] = plate.getPlateCompletion(useMock=True)
-        plate._before['completion+'] = plate.getPlateCompletion(
-            useMock=True, includeIncompleteSets=True)
-        plate._before['nExposures'] = len(
-            plate.getTotoroExposures(onlySets=True))
-
-    # Now selects the optimal plate
-
     # If mode is plugger. We try using the plates that are plugged. If mode is
     # planner we prioritise plates with signal.
     if mode == 'plugger':
@@ -92,6 +93,9 @@ def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
         priorityPlates = [plate for plate in observablePlates
                           if plate.drilled or
                           len(plate.getTotoroExposures()) > 0]
+
+    # Adss bookkeeping information
+    _addBookkeepingAttrs(priorityPlates)
 
     # Tries finding an optimal plate among the priority plates. Note that
     # we use normalise=True here because we want to take into account the
@@ -106,8 +110,10 @@ def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
             return optimalPlate, newExps
         else:
             cleanupPlates(priorityPlates, None, jdRange)
-            observablePlates = [plate for plate in observablePlates
-                                if plate not in priorityPlates]
+            observablePlates = [plate for plate in observablePlates]
+
+    # Stores some information about the plates before the simulation
+    _addBookkeepingAttrs(observablePlates)
 
     # If that is not the case, we use all the observable plates. Note that in
     # this case we use rearrange=False to speed up the simulation a bit. In
@@ -179,9 +185,17 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
 
     # minSchedulingTime ensures that if the remaining time < length of a set,
     # we still use the plugged plates, if any.
-    if scope == 'plugged' and availableTime > minSchedulingTime:
-        if np.all(completionIncrease == 0):
+    if scope == 'plugged':
+        if (availableTime > minSchedulingTime and
+                np.all(completionIncrease == 0)):
             return None
+    else:
+        # If no plate has been observed for a whole set, we try to use first
+        # plates that are already plugged.
+        if np.all(completionIncrease == 0):
+            pluggedPlates = [plate for plate in plates if plate.isPlugged]
+            if len(pluggedPlates) > 0:
+                plates = pluggedPlates
 
     # Tries to select only plates at APO
     platesAtAPO = [plate for plate in plates if plate.getLocation() == 'APO']

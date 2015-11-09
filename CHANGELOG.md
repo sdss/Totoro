@@ -1,5 +1,16 @@
 # Change Log
 
+## [1.1.0] - Unreleased
+### Changed
+- Seeing for simulated exposures changed from 1 to 1.5 arcsec and set as a
+configurable option in defaults.simulation.seeing.
+### Fixed
+- Plugger: fixes a bug when a plugged plate cannot be observed for an integer
+number of sets. In that case, the orphaned exposures are removed and the
+remaining time is to be observed with a different plate. However, if there is
+no other plate that can be used to observe at least one whole set, the
+original, already plugged plate must be favoured. 
+
 ## [1.0.1] - 2015-11-06
 ### Added
 - New method in Exposure to get the mean airmass during the exposure.
