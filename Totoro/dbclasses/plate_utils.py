@@ -264,10 +264,10 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
     # invalid.
     validExposures = []
     for exp in exposures:
-        status = _getSetStatusLabel(exp)
-        if status is not None and 'Override' in status:
+        setStatus = _getSetStatusLabel(exp)
+        if setStatus is not None and 'Override' in setStatus:
             continue
-        elif not exp.isValid(force=True, flag=True):
+        elif not exp.isValid(force=True, flag=True)[0]:
             continue
         elif exp.isMock:
             validExposures.append(exp)
@@ -596,6 +596,7 @@ def fixBadSets(sets):
 
     toRemove = []
     toAdd = []
+
     for ss in sets:
 
         if ss.getStatus(silent=True)[0] != 'Bad':

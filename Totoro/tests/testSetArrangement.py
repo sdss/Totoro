@@ -56,6 +56,11 @@ class TestSetArrangement(unittest.TestCase):
 
         cls.setUpClass()
 
+    def setUp(self):
+        """Similar to set up."""
+
+        self.setUpClass()
+
     def testExposureAssignment(self):
         """Tests if an exposure is assigned to a correct incomplete set."""
 
@@ -128,6 +133,27 @@ class TestSetArrangement(unittest.TestCase):
                             for exp in plate.sets[ii].totoroExposures]
             self.assertItemsEqual(setExposures, correctSetExposures[ii])
 
+    def testRearrangementWithBadExposure(self):
+        """Tests a rearrangement in a plate with a bad exposure."""
+
+        with session.begin():
+            exp18 = session.query(db.mangaDB.Exposure).get(18)
+            exp18.set.set_status_pk = None
+            exp18.set_pk = None
+            exp18.exposure_status_pk = 3
+
+        plate = fromPlateID(7495)
+        plate.rearrangeSets()
+
+        correctSetExposures = [[17, 19],
+                               [20, 21, 22],
+                               [23, 24, 25],
+                               [26, 27, 28]]
+
+        for ii, ss in enumerate(plate.sets):
+            setExposures = [exp._mangaExposure.pk
+                            for exp in plate.sets[ii].totoroExposures]
+            self.assertItemsEqual(setExposures, correctSetExposures[ii])
 
 if __name__ == '__main__':
     unittest.main()
