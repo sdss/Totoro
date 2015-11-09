@@ -299,7 +299,9 @@ class Exposure(object):
     def isValid(self, flag=True, **kwargs):
         """Checks if an exposure is valid and the error code."""
 
-        if self._valid is not None:
+        force = kwargs.get('force', False)
+
+        if self._valid is not None and not force:
             return (self._valid, -1)
 
         status = checkExposure(self, flag=flag, **kwargs)
