@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.1.2] - 2015-11-09
+### Changed
+- Adds Totoro to the PYTHONPATH when running the rearrangeSets scripts. This
+fixes a problem when rearrangeSets is called from Petunia and Totoro is not in
+the PYTHONPATH.
+
 ## [1.1.1] - 2015-11-09
 ### Fixed
 - Bug in set rearrangement when one or more of the exposures is invalid
