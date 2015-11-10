@@ -76,36 +76,39 @@ class TestSetArrangement(unittest.TestCase):
                          for exp in plate.sets[4].totoroExposures]
         self.assertIn(1348, setExposurePK)
 
-    def testIncompleteSetsRearrangement(self):
-        """Tests whether the rearrang. of incomplete sets works properly."""
-
-        # Removes all set assignment for plate 8551
-        plate8551 = fromPlateID(8551)
-        exposures = plate8551.getScienceExposures()
-        with session.begin():
-            for exp in exposures:
-                setPK = exp.mangadbExposure[0].set_pk
-                exp.mangadbExposure[0].set_pk = None
-                if setPK is not None:
-                    ss = session.query(db.mangaDB.Set).get(setPK)
-                    session.delete(ss)
-
-        # Reloads plate 8551
-        plate8551 = fromPlateID(8551, force=True)
-
-        # Checks new arrangement
-        self.assertEqual(len(plate8551.sets), 5)
-
-        # This is the expected assignment of exposures for each set
-        correctSetExposures = [[198628, 198629],
-                               [198624],
-                               [198625, 198626, 198627],
-                               [198623, 198621, 198622],
-                               [198618, 198619, 198620]]
-        for ii, ss in enumerate(plate8551.sets):
-            setExposures = [exp.exposure_no
-                            for exp in plate8551.sets[ii].totoroExposures]
-            self.assertItemsEqual(setExposures, correctSetExposures[ii])
+    # This test is disabled as we now don't rearrange exposures in incomplete
+    # sets anymore.
+    
+    # def testIncompleteSetsRearrangement(self):
+    #     """Tests whether the rearrang. of incomplete sets works properly."""
+    #
+    #     # Removes all set assignment for plate 8551
+    #     plate8551 = fromPlateID(8551)
+    #     exposures = plate8551.getScienceExposures()
+    #     with session.begin():
+    #         for exp in exposures:
+    #             setPK = exp.mangadbExposure[0].set_pk
+    #             exp.mangadbExposure[0].set_pk = None
+    #             if setPK is not None:
+    #                 ss = session.query(db.mangaDB.Set).get(setPK)
+    #                 session.delete(ss)
+    #
+    #     # Reloads plate 8551
+    #     plate8551 = fromPlateID(8551, force=True)
+    #
+    #     # Checks new arrangement
+    #     self.assertEqual(len(plate8551.sets), 5)
+    #
+    #     # This is the expected assignment of exposures for each set
+    #     correctSetExposures = [[198628, 198629],
+    #                            [198624],
+    #                            [198625, 198626, 198627],
+    #                            [198623, 198621, 198622],
+    #                            [198618, 198619, 198620]]
+    #     for ii, ss in enumerate(plate8551.sets):
+    #         setExposures = [exp.exposure_no
+    #                         for exp in plate8551.sets[ii].totoroExposures]
+    #         self.assertItemsEqual(setExposures, correctSetExposures[ii])
 
     def testRearrangementWithOverriddenSet(self):
         """Tests a rearrangement in a plate with an overriden set."""

@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.2.0] - 2015-11-10
+### Changed
+- When adding new exposures found in the DB, Totoro won't try to rearrange the
+exposures in incomplete sets to optimise SN2 and patch dithers.
+The rearrangement still happens for simulated exposures (plugger and planner).
+
 ## [1.1.2] - 2015-11-09
 ### Changed
 - Adds Totoro to the PYTHONPATH when running the rearrangeSets scripts. This

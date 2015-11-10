@@ -26,7 +26,7 @@ import collections
 import itertools
 
 
-def updatePlate(plate, rearrangeIncomplete=True, **kwargs):
+def updatePlate(plate, rearrangeIncomplete=False, **kwargs):
     """Finds new exposures and assigns them a new set. If
     `rearrangeIncomplete=True`, exposures in incomplete sets are then
     arranged in the best possible mode."""
