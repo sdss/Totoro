@@ -270,7 +270,7 @@ class TestOverrideSet(unittest.TestCase):
         main(argv=['-v', 'remove', '--reload', str(overridenSetPK)])
 
         # Checks that all exposures don't have exposure status or set_pk
-        expSetPKs = [2, 2, 1]
+        expSetPKs = [1, 1, 2]
         with session.begin():
             for ii, exp in enumerate(exps):
                 ee = session.query(db.plateDB.Exposure).filter(
@@ -279,10 +279,11 @@ class TestOverrideSet(unittest.TestCase):
                 self.assertEqual(mangaDBexp.set_pk, expSetPKs[ii])
                 self.assertEqual(mangaDBexp.exposure_status_pk, 4)
 
+        setStatus = [1, None]
         with session.begin():
-            for setPK in [1, 2]:
+            for ii, setPK in enumerate([1, 2]):
                 ss = session.query(db.mangaDB.Set).get(setPK)
-                self.assertEqual(ss.status.label, 'Good')
+                self.assertEqual(ss.set_status_pk, setStatus[ii])
 
     def testInfo(self):
         """Test getting information from a set."""
