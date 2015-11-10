@@ -78,7 +78,7 @@ class TestSetArrangement(unittest.TestCase):
 
     # This test is disabled as we now don't rearrange exposures in incomplete
     # sets anymore.
-    
+
     # def testIncompleteSetsRearrangement(self):
     #     """Tests whether the rearrang. of incomplete sets works properly."""
     #
