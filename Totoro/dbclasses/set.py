@@ -102,7 +102,7 @@ class Set(object):
 
     def _initFromData(self, input):
         """Init a new Set instance from a DB query."""
-        print(input)
+
         with self.session.begin():
             ss = self.session.query(self.db.mangaDB.Set).get(input)
             if ss is None:
