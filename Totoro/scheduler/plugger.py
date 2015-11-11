@@ -210,7 +210,7 @@ class Plugger(object):
 
     """
 
-    def __init__(self, startDate=None, endDate=None, **kwargs):
+    def __init__(self, startDate=None, endDate=None):
 
         startDate = None if not startDate else startDate
         endDate = None if not endDate else endDate
@@ -222,7 +222,7 @@ class Plugger(object):
             raise TotoroPluggerError('PLUGGER: either startDate = endDate = '
                                      'None or both need to be defined.')
         else:
-            self._initFromDates(startDate, endDate, **kwargs)
+            self._initFromDates(startDate, endDate)
 
     def _initNoManga(self):
         """Inits a Plugger instance when no MaNGA time is scheduled.
@@ -251,7 +251,7 @@ class Plugger(object):
                 cart = plate.getActiveCartNumber()
                 self.carts[cart] = plate
 
-    def _initFromDates(self, jd0, jd1, **kwargs):
+    def _initFromDates(self, jd0, jd1):
         """Initialites the Plugger instance from two JD dates.
 
         This method does not actually schedules plates for the range
@@ -273,10 +273,10 @@ class Plugger(object):
         log.info('PLUGGER: scheduling {0:.2f} hours'.format(scheduledTime))
 
         # Creates the timeline object for this plugging request.
-        self.timeline = Timeline(self.startDate, self.endDate, **kwargs)
+        self.timeline = Timeline(self.startDate, self.endDate)
 
         # Determines the plates to schedule.
-        self._platesToSchedule = self.getPlatesToSchedule(**kwargs)
+        self._platesToSchedule = self.getPlatesToSchedule()
         log.info('PLUGGER: scheduling {0} plates'
                  .format(len(self._platesToSchedule)))
 
@@ -285,8 +285,7 @@ class Plugger(object):
 
     def getPlatesToSchedule(
             self, onlyMarked=False,
-            onlyVisiblePlates=config['plugger']['onlyVisiblePlates'],
-            **kwargs):
+            onlyVisiblePlates=config['plugger']['onlyVisiblePlates']):
         """Selects plates to schedule.
 
         Determines the list of plates to schedule by rejecting those which
@@ -341,6 +340,7 @@ class Plugger(object):
 
         Schedules the plates selected during the initialisation of the instance
         and determines the list of of plates to plug and the cart allocation.
+
         """
 
         forcePlugPriority = int(config['plugger']['forcePlugPriority'])
@@ -432,7 +432,7 @@ class Plugger(object):
             if self.carts[cart[0]] is None:
                 return cart
 
-    def allocateCarts(self, plates, **kwargs):
+    def allocateCarts(self, plates):
         """Allocates plates into carts in the most efficient way."""
 
         offlineCarts = config['offlineCarts']
