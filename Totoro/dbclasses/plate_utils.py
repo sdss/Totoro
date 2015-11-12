@@ -27,9 +27,12 @@ import itertools
 
 
 def updatePlate(plate, rearrangeIncomplete=False, **kwargs):
-    """Finds new exposures and assigns them a new set. If
-    `rearrangeIncomplete=True`, exposures in incomplete sets are then
-    arranged in the best possible mode."""
+    """Finds new exposures and assigns them a new set.
+
+    If `rearrangeIncomplete=True`, exposures in incomplete sets are then
+    arranged in the best possible mode.
+
+    """
 
     # updatePlate will likely fail if the code is being run within an open,
     # external session. So, we check to make sure that's not the case
@@ -75,8 +78,12 @@ def getUnassignedExposures(plate):
 
 
 def assignExposureToOptimalSet(plate, exposure):
-    """Assigns `exposure` to the best possible set in `plate` or creates a new
-    set for it."""
+    """Assigns `exposure` to the best possible set in `plate`.
+
+    Loops over all the sets in `plate` to find the best placement for a new
+    `exposure`. If no set is suitable, creates a new one.
+
+    """
 
     from Totoro.dbclasses import Set as TotoroSet
 
@@ -121,8 +128,7 @@ def assignExposureToOptimalSet(plate, exposure):
 
 
 def getOptimalSet(plate, exposure):
-    """Returns the best set in `plate` for an `exposure` or None if no valid
-    set is available."""
+    """Returns the best set in `plate` for an `exposure` or None."""
 
     from Totoro.dbclasses import Set as TotoroSet
 
@@ -203,26 +209,54 @@ def _getSetStatusLabel(exposure):
 
 
 def rearrangeSets(plate, mode='complete', scope='all', force=False,
-                  LST=None, silent=False, **kwargs):
+                  LST=None, silent=False):
     """Rearranges exposures in a plate.
 
-    Uses a brute-force approach to obtain the best possible arrangement for
-    exposures into sets.
+    If `mode='complete'`, uses a brute-force approach to obtain the best
+    possible arrangement for exposures into sets. If `mode='sequential'`,
+    removes the set allocation for the exposures in the plate and adds them
+    back in the order in which they were observed.
+
+    In `mode='complete'`, the function determines all the possible combinations
+    of exposures in sets and chooses the one that maximises the SN2. Of all the
+    permutations with SN2 within `config.setRearrangement.factor * maxSN2` and
+    `maxSN2`, selects the one that leaves most of the incomplete sets at the
+    beginning of the visibility window of the plate or to `LST`.
+
+    Sets overridden good or bad are not affected by the rearrangement.
 
     Parameters
     ----------
-    parameter1 : int
-        Description.
+    plate : `Totoro.Plate` instance
+        The plate to rearrange.
+    mode : str
+        The mode of the rearrangement, either `'complete'` or `'sequential'`.
+    scope : str
+        If `'all'`, all the exposures in the plate are rearranged. If
+        `'incomplete'`, only exposures in incomplete sets are used.
+    force : bool
+        The limit of permutations to tests depends on the number of exposures,
+        and can be calculated using `getNumberPermutations`.
+        config.setArrangement.permutationLimitPlate and
+        config.setArrangement.permutationLimitIncomplete determine the maximum
+        number of permutations to test. If `force` is True, those limits are
+        ignored.
+    LST : None or float
+        If multiple permutations have optimal SN2, the one that moves the
+        average of the medium points of the incomplete sets closer to this LST
+        is selected. If `LST=None`, the current LST is used.
+    silent : bool
+        Determines the verbosity of the function
 
     Returns
     -------
-    result : str
-        Description.
+    result : bool
+        Returns True if the rearrangement was successful, False otherwise.
 
     """
 
-    from Totoro.dbclasses import Exposure as TotoroExposure
-    from Totoro.dbclasses import Set as TotoroSet
+    from Totoro.dbclasses import Exposure
+    from Totoro.dbclasses import Set
 
     # Sets logging level
     if silent:
@@ -233,19 +267,17 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
     # Selects exposures to consider
     if scope.lower() == 'all':
         permutationLimit = config['setArrangement']['permutationLimitPlate']
-        exposures = [TotoroExposure(exp)
-                     for exp in plate.getScienceExposures()]
+        exposures = [Exposure(exp) for exp in plate.getScienceExposures()]
     elif scope.lower() == 'incomplete':
         permutationLimit = config['setArrangement'][
             'permutationLimitIncomplete']
         exposures = []
         for ss in plate.sets:
-            if ss.getStatus()[0] not in ['Incomplete', 'Unplugged']:
-                continue
-            for exposure in ss.totoroExposures:
-                if not isinstance(exposure, TotoroExposure):
-                    exposure = TotoroExposure(exposure)
-                exposures.append(exposure)
+            if ss.getStatus()[0] in ['Incomplete', 'Unplugged']:
+                for exposure in ss.totoroExposures:
+                    if not isinstance(exposure, Exposure):
+                        exposure = Exposure(exposure)
+                    exposures.append(exposure)
     else:
         raise exceptions.TotoroError('scope={0} is invalid'.format(scope))
 
@@ -273,6 +305,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
     logMode('plate_id={0}: found {1} valid exposures'
             .format(plate.plate_id, len(validExposures)))
 
+    # No exposures to consider.
     if len(validExposures) == 0:
         return True
 
@@ -293,7 +326,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
 
         return True
 
-    # The remainder of this function assumes that the mode is optimal.
+    # The remainder of the function assumes that the mode is optimal.
 
     ditherPositions = [exp.ditherPosition for exp in validExposures]
     nPermutations = getNumberPermutations(ditherPositions)
@@ -315,8 +348,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
     permutations = calculatePermutations(ditherPositions)
 
     def getSetId(ss):
-        """Creates a unique identifier for a set based on the ids of its
-        exposures."""
+        """Returns unique identifier for a set from the ids of its exposures"""
         return np.sum([id(exp) for exp in ss.totoroExposures])
 
     zeroSN2 = np.array([0.0, 0.0, 0.0, 0.0])
@@ -335,10 +367,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
         else:
             setSN2[setId] = zeroSN2
 
-    # Counts the actual number of permutations, from the iterator.
-    # For testing purposes.
-    permutationCounter = 0
-    setRearrFactor = config['set']['setRearrangementFactor']
+    setRearrFactor = config['setArrangement']['factor']
 
     for nn, permutation in enumerate(permutations):
 
@@ -349,7 +378,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
             setExposures = [validExposures[ii] for ii in setIndices
                             if ii is not None]
 
-            ss = TotoroSet.fromExposures(setExposures)
+            ss = Set.fromExposures(setExposures)
             sets.append(ss)
 
             # To avoid calculating the state of a set more than one, creates
@@ -375,18 +404,19 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
         redCompletion = redSN2 / config['SN2thresholds']['plateRed']
         plateCompletion = np.min([blueCompletion, redCompletion])
 
+        # If the plate completion is lower than setRearrFactor times the
+        # current maximum completion, we don't bother storing this permutation.
         if (len(completions) == 0 or
                 plateCompletion >= setRearrFactor * np.max(completions)):
             completions.append(plateCompletion)
             goodArrangements.append(fixBadSets(sets))
 
+        # Every 10% of the permutations.
         if (nn + 1) * 100. / nPermutations % 10 == 0:
             logMode('{0:d}% completed'
                     .format(int((nn + 1) * 100. / nPermutations)))
 
-        permutationCounter += 1
-
-    logMode('{0} permutations tested.'.format(permutationCounter))
+    logMode('{0} permutations tested.'.format(nPermutations))
 
     completions = np.array(completions)
 
@@ -396,7 +426,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
         completions += plateCompletion
 
     # From the good arrangements already selected, find the optimal one.
-    optimalArrangement = selectOpticalArrangement(goodArrangements,
+    optimalArrangement = selectOptimalArrangement(goodArrangements,
                                                   completions, LST=LST)
 
     # If the scope is 'incomplete', adds the good sets to the optimal
@@ -413,7 +443,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
     return status
 
 
-def selectOpticalArrangement(arrangements, completions, LST=None):
+def selectOptimalArrangement(arrangements, completions, LST=None):
     """Selects the best possible option from a list of set arrangements."""
 
     arrangements = np.array(arrangements)
@@ -434,7 +464,7 @@ def selectOpticalArrangement(arrangements, completions, LST=None):
     completions = completions / nSets
 
     # Selects the top tier arrangements.
-    setRearrFactor = config['set']['setRearrangementFactor']
+    setRearrFactor = config['setArrangement']['factor']
     minCompletion = np.max(completions) * setRearrFactor
 
     topArrangements = arrangements[completions >= minCompletion]
@@ -445,7 +475,6 @@ def selectOpticalArrangement(arrangements, completions, LST=None):
 
     # If several top arrangements exist, we select the one that has more
     # incomplete sets after the selected LST.
-
     if LST is None:
         LST = site.localSiderealTime()
 
@@ -466,10 +495,9 @@ def selectOpticalArrangement(arrangements, completions, LST=None):
 
 
 def applyArrangement(plate, arrangement):
-    """Updates a plate with a set arrangement and modifies the DD
-    accordingly."""
+    """Applies a set arrangement to a plate."""
 
-    from Totoro.dbclasses import Set as TotoroSet
+    from Totoro.dbclasses import Set
 
     db = plate.db
     session = plate.session
@@ -517,7 +545,7 @@ def applyArrangement(plate, arrangement):
         # Finally, reloads the exposures and sets into plate.
         plate.sets = []
         for ss in plate.getMangaDBSets():
-            plate.sets.append(TotoroSet(ss))
+            plate.sets.append(Set(ss))
 
     else:
 
@@ -530,8 +558,7 @@ def applyArrangement(plate, arrangement):
 
 
 def calculatePermutations(inputList):
-    """Calculates all the possible permutations based on an input list of
-    dithered positions."""
+    """Calculates all the possible permutations of a list of dithers."""
 
     pairs = [(nn, inputList[nn]) for nn in range(len(inputList))]
     pairs = sorted(pairs, key=lambda value: value[1])
@@ -559,8 +586,7 @@ def calculatePermutations(inputList):
 
 
 def getNumberPermutations(ditherPositions):
-    """Estimates the number of permutations to check for a certain list of
-    dithered positions."""
+    """Estimates the number of permutations for a list of dithers."""
 
     if len(ditherPositions) == 0:
         return 0
@@ -578,10 +604,9 @@ def getNumberPermutations(ditherPositions):
 
 
 def fixBadSets(sets):
-    """Receives a list of mock sets and returns the same list but with bad
-    sets split into multiple valid sets."""
+    """Splits bad sets into a series of valid, incomplete sets."""
 
-    from Totoro.dbclasses import Set as TotoroSet
+    from Totoro.dbclasses import Set as Set
 
     toRemove = []
     toAdd = []
@@ -598,22 +623,20 @@ def fixBadSets(sets):
                 'found bad set with one exposure. This is probably a bug.')
         elif len(ss.totoroExposures) == 2:
             # If the bad set has two exposures, splits it.
-            toAdd += [TotoroSet.fromExposures(exp)
-                      for exp in ss.totoroExposures]
+            toAdd += [Set.fromExposures(exp) for exp in ss.totoroExposures]
         else:
             # Tests all possible combinations of two exposures to check if one
             # of them is a valid set.
             validSets = []
             for ii, jj in [[0, 1], [0, 2], [1, 2]]:
-                testSet = TotoroSet.fromExposures(
+                testSet = Set.fromExposures(
                     [ss.totoroExposures[ii], ss.totoroExposures[jj]])
                 if testSet.getStatus(silent=True)[0] != 'Bad':
                     validSets.append(testSet)
 
             if len(validSets) == 0:
                 # If no valid combinations, each exposures goes to a set.
-                toAdd += [TotoroSet.fromExposures(exp)
-                          for exp in ss.totoroExposures]
+                toAdd += [Set.fromExposures(exp) for exp in ss.totoroExposures]
             else:
                 # Otherwise, selects the combination that produces an
                 # incomplete set with maximum SN2.
@@ -626,7 +649,7 @@ def fixBadSets(sets):
                 missingExposure = [exp for exp in ss.totoroExposures
                                    if exp not in maxSet.totoroExposures]
 
-                toAdd.append(TotoroSet.fromExposures(missingExposure))
+                toAdd.append(Set.fromExposures(missingExposure))
 
     for ss in toRemove:
         sets.remove(ss)
