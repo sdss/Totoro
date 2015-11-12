@@ -20,6 +20,7 @@ from Totoro.scheduler import observingPlan
 from Totoro.core.colourPrint import _color_text
 from Totoro import exceptions
 from astropy import table
+from astropy.io.ascii.core import InconsistentTableError
 from astropy import time
 import warnings
 import numpy as np
@@ -34,20 +35,39 @@ minimumPlugPriority = config['planner']['noPlugPriority']
 
 
 class Planner(object):
-    """A class for field selection."""
+    """A class for field selection.
+
+    This class is intended for multi-day simulations either for full survey
+    layout simulations or for field selection for plate design purposes.
+
+    Parameters
+    ----------
+    startDate : float or None
+        The JD of the beginning of the simulation. If `None`, the current JD
+        is used.
+    endDate : float or None
+        The JD of the end of the simulation. If `None`, the last JD in the
+        official schedule will be used.
+    useFields : bool
+        If `True`, not drilled fields will be used when drilled plated are not
+        enough to allocate all the available time.
+    plates : list or None
+        Either a list of `Totoro.Plate` to be used or `None`, in which case the
+        list is determined by `Planner.getPlates`.
+    fields : list or None
+        Either a list of `Totoro.Field` to use or `None`, in which case the
+        list of fields is determined by `Planner.getFields`.
+    kwargs : dict
+        Additional arguments to be passed to `Planner.getPlates`.
+
+    """
 
     def __init__(self, startDate=None, endDate=None, useFields=True,
-                 optimiseFootprint=True, plates=None, fields=None, **kwargs):
+                 plates=None, fields=None, **kwargs):
 
-        log.info('entering PLANNER mode.')
-
-        if startDate is None:
-            startDate = time.Time.now().jd
-        if endDate is None:
-            endDate = observingPlan.plan[-1]['JD1']
-
-        self.startDate = startDate
-        self.endDate = endDate
+        self.startDate = time.Time.now().jd if startDate is None else startDate
+        self.endDate = (observingPlan.plan[-1]['JD1']
+                        if endDate is None else endDate)
 
         assert self.startDate < self.endDate, 'startDate > endDate'
 
@@ -56,8 +76,8 @@ class Planner(object):
 
         assert len(self.blocks) >= 1, 'no observing blocks selected'
 
-        self.timelines = Timelines(self.blocks, **kwargs)
-        log.debug('created PlannerScheduler with {0} timelines'
+        self.timelines = Timelines(self.blocks)
+        log.debug('PLANNER: created Planner instance with {0} timelines'
                   .format(len(self.timelines)))
 
         # If plates is defined, we use that list of plates
@@ -65,62 +85,70 @@ class Planner(object):
             self.plates = plates
         else:
             # Selects all valid plates, including complete ones.
-            self._allPlates = self.getPlates(
-                optimiseFootprint=optimiseFootprint, **kwargs)
+            allPlates = self.getPlates(**kwargs)
 
             # Selects only plates that are incomplete and have enough priority
-            self.plates = [plate for plate in self._allPlates
+            self.plates = [plate for plate in allPlates
                            if len(plate.getTotoroExposures()) == 0 and
                            plate.priority > minimumPlugPriority]
 
+            # Outputs the number of plates.
             drilling = [plate for plate in self.plates if not plate.drilled]
 
             txtDrilling = ''
             if len(drilling) > 0:
                 txtDrilling = _color_text(
-                    '({0} in process of being drilled)'.format(len(drilling)),
-                    'red')
+                    '({0} in process of being drilled)'
+                    .format(len(drilling)), 'red')
 
-            log.info('Plates found: {0} {1}'.format(len(self.plates),
-                                                    txtDrilling))
+            log.info('PLANNER: Plates found: {0} {1}'.format(len(self.plates),
+                                                             txtDrilling))
 
-        # Gets fields (rejectDrilled=False because we do our own rejection)
-        self.fields = []
+        # Gets fields
         if fields is not None:
             self.fields = fields
         elif useFields:
-            self.createFields(self._allPlates)
+            self.getFields(allPlates)
 
-        # Defines priorities
-        if optimiseFootprint:
-            self._assignPriorities()
+    def getFields(self, allPlates):
+        """Creates a field list from the tiling catalogue.
 
-    def createFields(self, allPlates):
-        """Creates a field list from a tiling catalogue."""
+        Returns the list of tiles (as `Totoro.Field` instances) to be used
+        when no drilled plates are available to cover the scheduled time.
+
+        Tiles with `manga_tileids` that have already been drilled are rejected.
+        Additionally, if a tile contains fewer than
+        `config.fields.minTargetsInTile` targets, we skip it.
+
+        """
+
+        from Totoro.dbclasses import Fields
 
         try:
             scienceCatalogue = table.Table.read(
                 readPath(config['fields']['scienceCatalogue']))
             if 'MANGA_TILEID' not in scienceCatalogue.columns:
-                warnings.warn('science catalogue does not contain '
-                              'MANGA_TILEID. Won\'t check for number of '
+                warnings.warn('PLANNER: science catalogue does not contain '
+                              'MANGA_TILEID. Will not check for number of '
                               'targets', exceptions.TotoroPlannerWarning)
                 scienceCatalogue = None
         except:
             scienceCatalogue = None
-            warnings.warn('science catalogue cannot be found. '
-                          'Won\'t check for number of targets',
+            warnings.warn('PLANNER: science catalogue cannot be found. '
+                          'Will not check for number of targets',
                           exceptions.TotoroPlannerWarning)
 
-        from Totoro.dbclasses import Fields
-
-        tmpFields = Fields(rejectDrilled=False)
+        tmpFields = Fields(rejectDrilled=True)
         tileIDPlates = [plate.manga_tileid for plate in allPlates]
 
         self.fields = []
 
         for field in tmpFields:
 
+            # Even if we have already rejected drilled fields, we double check.
+            # For instance, if we have added plates that are actually tiles
+            # in the process of being drilled, we want to make sure we don't
+            # use those tiles again here.
             if field.manga_tileid in tileIDPlates:
                 continue
 
@@ -129,128 +157,184 @@ class Planner(object):
                 scienceCatRows = scienceCatalogue[
                     scienceCatalogue['MANGA_TILEID'] == field.manga_tileid]
 
-                if len(scienceCatRows) < 12:
-                    log.debug('no targets for manga_tileid={0}. Skipping.'
-                              .format(field.manga_tileid))
+                if len(scienceCatRows) < config['fields']['minTargetsInTile']:
+                    log.debug(
+                        'PLANNER: no targets for manga_tileid={0}. Skipping.'
+                        .format(field.manga_tileid))
                     continue
 
             self.fields.append(field)
 
         nFieldsDrilled = len(tmpFields) - len(self.fields)
         if nFieldsDrilled > 0:
-            log.info('rejected {0} fields because they have already '
+            log.info('PLANNER: rejected {0} fields because they have already '
                      'been drilled or have no targets.'.format(nFieldsDrilled))
 
     @staticmethod
-    def getPlates(usePlatesNotAtAPO=True, usePlatesBeingDrilled=True,
-                  skipDrilled=False, **kwargs):
-        """Gets plates that are already drilled or in process of being so,
-        with some filtering."""
+    def getPlates(usePlatesNotAtAPO=True, useTilesBeingDrilled=True):
+        """Gets the list of plates to schedule.
 
-        from Totoro.dbclasses import getAll, Plate, getTilingCatalogue
+        Returns a list of `Totoro.Plate` instances with plates that have a
+        valid status. Plates marked as `Rejected` or `Unobservable` are
+        rejected, as are those marked special for MaNGA (all-sky, star plates,
+        etc.)
 
+        If `config.dateAtAPO` is defined, the date at which the plate will be
+        available at APO will be included. This information is used during
+        scheduling to determine if a plate can be observed at a certain time.
+        `config.dateAtAPO` must be the path to a plaintext file with the format
+        `plate_id, dateAtAPO`.
+
+        This is a staticmethod and can be called independently.
+
+        Parameters
+        ----------
+        usePlatesNotAtAPO : bool
+            If True, plates that are already drilled but not at APO (they may
+            be at Cosmic or in transit) will be considered. This includes
+            plates already in the DB but not yet drilled.
+        useTilesBeingDrilled : bool
+            If True, tiles that are in the process of being drilled but have
+            not yet been added to the DB will be considered as drilled plates.
+            The list of `manga_tileids` to be considered should be given in a
+            file whose path is defined in `config.fields.tilesBeingDrilled`.
+            The file must contain as many lines as tiles to be considered
+            drilled, with the format `manga_tileid,  dateAtAPO`. `dateAtAPO`
+            can be ommited (e.g., `6325,`), in which case the tile will be made
+            available immediately.
+
+        Returns
+        -------
+        result : list
+            A list of `Totoro.Plate` that match the input requirements.
+
+        """
+
+        from Totoro.dbclasses import getAll
+
+        # Gets a list with all the plates
         allPlates = getAll(rejectSpecial=True, updateSets=False, silent=True,
                            fullCheck=False)
 
         # Selects plates with valid statuses
         validPlates = []
         for plate in allPlates:
-            validPlate = True
-            for status in plate.statuses:
-                if status.label in ['Rejected', 'Unobservable']:
-                    validPlate = False
+            statuses = [status.label for status in plate.statuses]
+            if 'Rejected' in statuses or 'Unobservable' in statuses:
+                continue
             if not usePlatesNotAtAPO and plate.getLocation() != 'APO':
-                validPlate = False
-            if skipDrilled:
-                if len(plate.getScienceExposures()) == 0:
-                    validPlate = False
-            if validPlate:
-                validPlates.append(plate)
+                continue
+            validPlates.append(plate)
 
-        # Now we open the dateAtAPO file and add the date to the corresponging
-        # plates. This is useful when, even if the plate is at APO, you want to
-        # delay its scheduling until a certain time.
+        # Adds information about when the plates will be at APO.
         if config['dateAtAPO'].lower() != 'none':
 
-            dateAtAPO_Path = readPath(config['dateAtAPO'])
-
-            if not os.path.exists(dateAtAPO_Path):
-                warnings.warn('dateAtAPO file does not exists.',
+            if not os.path.exists(readPath(config['dateAtAPO'])):
+                warnings.warn('PLANNER: dateAtAPO file does not exists.',
                               exceptions.TotoroPlannerWarning)
 
             else:
-                dateAtAPO_Table = table.Table.read(
-                    dateAtAPO_Path, format='ascii.commented_header',
-                    delimiter=',')
+                try:
+                    dateAtAPO = table.Table.read(readPath(config['dateAtAPO']),
+                                                 format='ascii.no_header',
+                                                 delimiter=',',
+                                                 names=['plateid', 'jd'])
 
-                for plate_id, dateAtAPO in dateAtAPO_Table:
                     for plate in validPlates:
-                        if plate.plate_id == plate_id:
-                            plate.dateAtAPO = dateAtAPO
+                        row = dateAtAPO[dateAtAPO['plateid'] == plate.plate_id]
+                        if len(row) > 0:
+                            plate.dateAtAPO = row['jd'][0]
+                        else:
+                            plate.dateAtAPO = 0.
 
-        # Adds tiles being drilled from file
-        if (config['fields']['tilesBeingDrilled'].lower() != 'none' and
-                usePlatesBeingDrilled):
+                except InconsistentTableError:
+                    warnings.warn(
+                        'PLANNER: dateAtAPO file exists but could not be read',
+                        exceptions.TotoroPlannerWarning)
 
-            tilesPath = readPath(config['fields']['tilesBeingDrilled'])
+        if useTilesBeingDrilled:
+            platesBeingDrilled = Planner._getPlatesBeingDrilled()
+        else:
+            platesBeingDrilled = []
 
-            if not os.path.exists(tilesPath):
+        return validPlates + platesBeingDrilled
+
+    @staticmethod
+    def _getPlatesBeingDrilled():
+        """Returns a list of mock plates with the tiles being drilled."""
+
+        from Totoro.dbclasses import Plate, getTilingCatalogue
+
+        # Checks that the file exists and can be read
+        if ('tilesBeingDrilled' not in config['fields'] or
+                config['fields']['tilesBeingDrilled'].lower() == 'none'):
+            return []
+
+        path = readPath(config['fields']['tilesBeingDrilled'].lower())
+        if not os.path.exists(path):
+            warnings.warn('PLANNER: tilesBeingDrilled file does not exist.',
+                          exceptions.TotoroPlannerWarning)
+            return []
+
+        try:
+            tilesBeingDrilled = table.Table.read(
+                path, format='ascii.no_header', delimiter=',')
+        except InconsistentTableError:
+            warnings.warn(
+                'PLANNER: tilesBeingDrilled could not be read although it '
+                'exists. Make sure the file is not empty.',
+                exceptions.TotoroPlannerWarning)
+            return []
+        except:
+            raise exceptions.TotoroPlannerError(
+                'PLANNER: unknown error while reading tilesBeingDrilled')
+
+        tiles = getTilingCatalogue()
+
+        platesBeingDrilled = []
+
+        for manga_tileid, dateAtAPO in tilesBeingDrilled:
+
+            if manga_tileid not in tiles['ID']:
                 warnings.warn(
-                    'tilesBeingDrilled path does not exists. Skipping '
-                    'additional tiles.', exceptions.TotoroPlannerWarning)
+                    'PLANNER: manga_tileid={0}: tile being drilled '
+                    'not in tiling catalogue.'.format(manga_tileid),
+                    exceptions.TotoroPlannerWarning)
+                continue
 
-            else:
+            tileRow = tiles[tiles['ID'] == manga_tileid]
 
-                tilesBeingDrilled = table.Table.read(
-                    tilesPath, format='ascii.commented_header', delimiter=',')
+            mockPlate = Plate.createMockPlate(
+                ra=tileRow['RA'][0], dec=tileRow['DEC'][0],
+                manga_tileid=manga_tileid, silent=True)
 
-                if len(tilesBeingDrilled) > 0:
+            mockPlate.manga_tileid = manga_tileid
+            mockPlate.drilled = False
 
-                    tiles = getTilingCatalogue()
+            if dateAtAPO is not np.ma.masked:
+                mockPlate.dateAtAPO = dateAtAPO
 
-                    for manga_tileid, dateAtAPO in tilesBeingDrilled:
+            platesBeingDrilled.append(mockPlate)
 
-                        if manga_tileid not in tiles['ID']:
-                            warnings.warn('manga_tileid={0}: tile being '
-                                          'drilled not in tiling '
-                                          'catalogue.'.format(manga_tileid),
-                                          exceptions.TotoroPlannerWarning)
-                            continue
+        return platesBeingDrilled
 
-                        tileRow = tiles[tiles['ID'] == manga_tileid]
+    def schedule(self,
+                 goodWeatherFraction=config['planner']['goodWeatherFraction'],
+                 efficiency=config['planner']['efficiency'], **kwargs):
+        """Runs the scheduling simulation.
 
-                        mockPlate = Plate.createMockPlate(
-                            ra=tileRow['RA'][0], dec=tileRow['DEC'][0],
-                            manga_tileid=manga_tileid, silent=True)
+        Parameters
+        ----------
+        goodWeatherFraction : float
+            The fraction of good weather to use. Defaults to
+            `config.planner.goodWeatherFraction`.
+        efficiency : float
+            The efficiency to use to account for the overheads.Defaults to
+            `config.planner.efficiency`.
+        kwargs : dict
+            Additional arguments to be passed to `getOptimalPlate`.
 
-                        mockPlate.manga_tileid = manga_tileid
-                        mockPlate.drilled = False
-
-                        if dateAtAPO is not np.ma.masked:
-                            mockPlate.dateAtAPO = dateAtAPO
-
-                        validPlates.append(mockPlate)
-
-        return validPlates
-
-    def _assignPriorities(self):
-        """Defines footprint priorities."""
-
-        for field in self.fields:
-            if ((field.ra < 100 or field.ra > 300) and
-                    (field.dec > -1 and field.dec < 1)):
-                field.priority = 9
-            elif ((field.ra > 199.5 - 7.5 and field.ra < 199.5 + 7.5) and
-                    (field.dec > 29 - 5 and field.dec < 29 + 5)):
-                field.priority = 9
-            elif ((field.ra > 11 * 15. and field.ra < 14 * 15.) and
-                    (field.dec > 45 and field.dec < 50)):
-                field.priority = 9
-            elif field.dec < 20:
-                field.priority = 6.5
-
-    def schedule(self, useFields=True, goodWeatherFraction=None, **kwargs):
-        """Runs the scheduling simulation."""
+        """
 
         goodWeatherFraction = goodWeatherFraction \
             if goodWeatherFraction is not None \
@@ -259,24 +343,22 @@ class Planner(object):
         SN2_red = config['SN2thresholds']['plateRed']
         SN2_blue = config['SN2thresholds']['plateBlue']
 
-        efficiency = kwargs.get('efficiency', config['planner']['efficiency'])
+        log.info('PLANNER: Good weather fraction: {0:.2f}'
+                 .format(goodWeatherFraction))
+        log.info('PLANNER: Efficiency: {0:.2f}'.format(efficiency))
+        log.info('PLANNER SN2 red={0:.1f}, blue={1:.1f}'
+                 .format(SN2_red, SN2_blue))
 
-        log.info('Good weather fraction: {0:.2f}'.format(goodWeatherFraction))
-        log.info('Efficiency: {0:.2f}'.format(efficiency))
-        log.info('SN2 red={0:.1f}, blue={1:.1f}'.format(SN2_red, SN2_blue))
-
-        goodWeatherIdx = self.getGoodWeatherIndices(goodWeatherFraction,
-                                                    **kwargs)
+        # Gets the indices of the timelines with good weather.
+        goodWeatherIdx = self.getGoodWeatherIndices(goodWeatherFraction)
 
         for nn, timeline in enumerate(self.timelines):
-
-            nAssigned = 0
 
             startDate = time.Time(timeline.startDate, format='jd')
             totalTime = 24. * (timeline.endDate - timeline.startDate)
 
-            log.info('Scheduling timeline {0:.3f}-{1:.3f} ({2:.2f}-{3:.2f}) '
-                     '[{4}] ({5:.1f}h). '
+            log.info('Scheduling timeline '
+                     '{0:.3f}-{1:.3f} ({2:.2f}-{3:.2f}) [{4}] ({5:.1f}h). '
                      .format(timeline.startDate, timeline.endDate,
                              site.localSiderealTime(timeline.startDate),
                              site.localSiderealTime(timeline.endDate),
@@ -300,19 +382,17 @@ class Planner(object):
                     '... plates observed: {0} (Unused time {1:.2f}h)'
                     .format(len(timeline.scheduled), remainingTime), colour))
 
-            nAssigned += len(timeline.scheduled)
-
             nCarts = len(config['mangaCarts']) - len(config['offlineCarts'])
-            if nAssigned > nCarts:
-                warnings.warn('more plates ({0}) scheduled than carts '
-                              'available ({1})'.format(nAssigned, nCarts),
-                              exceptions.TotoroPlannerWarning)
+            if len(timeline.scheduled) > nCarts:
+                warnings.warn(
+                    'more plates ({0}) scheduled than carts available ({1})'
+                    .format(len(timeline.scheduled), nCarts),
+                    exceptions.TotoroPlannerWarning)
 
-    def getGoodWeatherIndices(self, goodWeatherFraction, seed=None, **kwargs):
+    def getGoodWeatherIndices(self, goodWeatherFraction, seed=None):
         """Returns random indices with good weather."""
 
-        np.random.seed(seed if seed is not None
-                       else config['planner']['seed'])
+        np.random.seed(seed if seed is not None else config['planner']['seed'])
 
         nTimelines = int(len(self.timelines) * goodWeatherFraction)
         indices = np.random.choice(np.arange(len(self.timelines)), nTimelines,
