@@ -189,11 +189,12 @@ class Timeline(object):
             location = plate.getLocation()
             if not location and not isinstance(plate, Field):
                 flags = _color_text('** unknown location **', 'red')
-            elif location != 'APO' and location != 'Cosmic':
+            elif location == 'Cosmic' or location == 'Storage':
+                flags = _color_text('** in {0} **'.format(location), 'red')
+            elif location == 'APO':
+                pass
+            else:
                 flags = _color_text('** not on the mountain **', 'red')
-            elif location == 'Cosmic':
-                flags = _color_text('** in Cosmic **', 'red')
-
         # Calculates completion before and after the simulation.
         completionPre = self.calculatePlateCompletion(
             plate, rejectExposures=newExposures, useMock=True)
