@@ -30,6 +30,7 @@ __all__ = ['Set', 'checkSet']
 
 
 def getPlateSets(inp, format='plate_id', **kwargs):
+    """Returns a list of sets for a plate_id."""
 
     __, Session, plateDB, mangaDB = getConnectionFull()
     session = Session()
