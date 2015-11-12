@@ -23,6 +23,8 @@ from astropy import time
 from sqlalchemy.orm.exc import NoResultFound
 import warnings
 
+__all__ = ['Exposure', 'checkExposure']
+
 
 class Exposure(object):
 
