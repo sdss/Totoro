@@ -210,10 +210,13 @@ class Plugger(object):
 
     """
 
-    def __init__(self, startDate=None, endDate=None):
+    def __init__(self, startDate=None, endDate=None, **kwargs):
 
         startDate = None if not startDate else startDate
         endDate = None if not endDate else endDate
+
+        self._nNewExposures = []
+        self._platesToSchedule = []
 
         # Runs init method depending on startDate and endDate.
         if startDate is None and endDate is None:
@@ -251,7 +254,7 @@ class Plugger(object):
                 cart = plate.getActiveCartNumber()
                 self.carts[cart] = plate
 
-    def _initFromDates(self, jd0, jd1):
+    def _initFromDates(self, jd0, jd1, **kwargs):
         """Initialites the Plugger instance from two JD dates.
 
         This method does not actually schedules plates for the range
@@ -276,7 +279,7 @@ class Plugger(object):
         self.timeline = Timeline(self.startDate, self.endDate)
 
         # Determines the plates to schedule.
-        self._platesToSchedule = self.getPlatesToSchedule()
+        self._platesToSchedule = self.getPlatesToSchedule(**kwargs)
         log.info('PLUGGER: scheduling {0} plates'
                  .format(len(self._platesToSchedule)))
 
