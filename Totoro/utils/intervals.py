@@ -20,8 +20,7 @@ import itertools
 
 
 def getIntervalIntersectionLength(aa, bb, wrapAt=360):
-    """Returns the length of the instersection between two intervals aa and bb.
-    """
+    """Returns the length of the instersection between two intervals."""
 
     intersection = getIntervalIntersection(aa, bb, wrapAt=wrapAt)
 
@@ -75,8 +74,8 @@ def isIntervalInsideOther(aa, bb, wrapAt=360, onlyOne=False):
         p1 = (aa[0] >= bb[0]) and (aa[0] <= bb[1])
         p2 = (aa[1] >= bb[0]) and (aa[1] <= bb[1])
     else:
-        p1 = ((aa[0] - bb[0]) % wrapAt < (bb[1]-bb[0]) % wrapAt)
-        p2 = ((aa[1] - bb[0]) % wrapAt < (bb[1]-bb[0]) % wrapAt)
+        p1 = ((aa[0] - bb[0]) % wrapAt < (bb[1] - bb[0]) % wrapAt)
+        p2 = ((aa[1] - bb[0]) % wrapAt < (bb[1] - bb[0]) % wrapAt)
 
     if p1 and p2:
         return True
@@ -87,6 +86,8 @@ def isIntervalInsideOther(aa, bb, wrapAt=360, onlyOne=False):
 
 
 def intervalLength(aa, wrapAt=360.):
+    """Returns the length of an interval."""
+
     if wrapAt is None:
         return (aa[1] - aa[0])
     else:
@@ -94,6 +95,7 @@ def intervalLength(aa, wrapAt=360.):
 
 
 def getMinMaxIntervalSequence(intervals, wrapAt=360):
+    """Given a list of intervals, returns the minimum an maximum points."""
 
     if intervals.shape[0] < 1:
         raise TotoroError('input needs to be an Nx2 array with N>=1.')
@@ -132,6 +134,8 @@ def getMinMaxIntervalSequence(intervals, wrapAt=360):
 
 
 def calculateMean(interval, wrapAt=360.):
+    """Calculates the mean point of an interval."""
+
     if wrapAt is None:
         return (interval[0] + (interval[1] - interval[0]) / 2.)
     else:
@@ -140,6 +144,7 @@ def calculateMean(interval, wrapAt=360.):
 
 
 def getIntervalFromPoints(points, wrapAt=360.):
+    """Given a list of `points`, retuns an interval that encompass them all."""
 
     if wrapAt is None:
         points = np.array(points)
@@ -208,9 +213,12 @@ def removeInterval(master, interToRemove, wrapAt=360.):
 
 
 def splitInterval(interval, wrapAt=360.):
-    """Splits an interval in a list of intervals that do not
+    """Splits an interval.
+
+    Given an interval, returns a list of intervals that do not
     wrap around wrapAt. For instance, the interval [300, 120] would be
-    returned as [[300, 360], [0, 120]]."""
+    returned as [[300, 360], [0, 120]].
+    """
 
     assert len(interval) == 2, 'interval must have length 2'
 
