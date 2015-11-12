@@ -19,7 +19,6 @@ from Totoro.db import getConnectionFull
 from Totoro import log, config, site
 from Totoro import exceptions
 from Totoro import utils
-# from Totoro import scheduler
 import numpy as np
 import warnings
 from copy import copy
@@ -242,26 +241,7 @@ class Set(object):
             haRange, np.array([-plateHALimit, plateHALimit]), wrapAt=360.)
         haRangePlate[haRangePlate > 180] -= 360
 
-        # if intersect is False:
         return haRangePlate
-
-        # if mjd is None:
-        #     mjd = int(np.round(time.Time.now().mjd))
-        #     log.debug('Set.getHARange: MJD set to {0:d}'.format(mjd))
-        # else:
-        #     mjd = int(mjd)
-
-        # jdRange = scheduler.observingPlan.getMJD(mjd)
-        # mangaLSTRange = np.array(site.localSiderealTime(jdRange))
-
-        # mangaHARange = (mangaLSTRange * 15. - self.ra) % 360.
-
-        # haRange = utils.getIntervalIntersection(haRangePlate, mangaHARange,
-        #                                         wrapAt=360.)
-        # if haRange is False:
-        #     return False
-        # else:
-        #     return haRange
 
     def getDitherPositions(self):
         """Returns a list of dither positions in the set."""
