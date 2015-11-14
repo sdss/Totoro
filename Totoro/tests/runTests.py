@@ -14,7 +14,8 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from Totoro.db import setDefaulProfile
+from subprocess import Popen, PIPE
+from Totoro.core.colourPrint import _color_text
 import nose
 import sys
 
@@ -27,11 +28,28 @@ if __name__ == '__main__':
     (or may not) break something.
     """
 
-    setDefaulProfile('test')
-
     if '-v' not in sys.argv:
         sys.argv.append('-v')
     if '--nologcapture' not in sys.argv:
         sys.argv.append('--nologcapture')
+    if '--no-restore' not in sys.argv:
+        # We try to run the script that restores the test DB. If it fails we
+        # still run the test suite.
+        sys.stdout.write('Restoring test DB ... ')
+        sys.stdout.flush()
+        command = Popen('restoreTestDB.sh', stdout=PIPE,
+                        stderr=PIPE, shell=True, close_fds=True)
+        out, err = command.communicate()
+
+        if err != '':
+            print(_color_text('FAILED', 'red'))
+        else:
+            print('ok')
+
+    # We wait to import setDefaulProfile until now because otherwise
+    # restoreTestDB would fail when trying to remove the DB, as there would be
+    # an open connection.
+    from Totoro.db import setDefaulProfile
+    setDefaulProfile('test')
 
     nose.main()
