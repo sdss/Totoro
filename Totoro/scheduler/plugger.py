@@ -144,8 +144,7 @@ class Plugger(object):
 
         if startDate is None and endDate is None:
             self._initNoManga()
-        elif ((startDate is None and endDate is not None) or
-                (startDate is not None and endDate is None)):
+        elif any([startDate, endDate]) and not all([startDate, endDate]):
             raise exceptions.TotoroPluggerError(
                 'either startDate=endDate=None or '
                 'both dates need to be defined.')
