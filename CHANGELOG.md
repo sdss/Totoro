@@ -1,5 +1,17 @@
 # Change Log
 
+## [1.2.1] - 2015-11-13
+### Added
+- runTests.py now restores, if possible, the test DB before running. If the
+script is called with '--no-restore' it will skip the restoration.
+
+### Fixed
+- Fixed a bug in the plugging logic that would chose a plate for a single 
+exposure when another started plate was available for that same LST window, but
+had lower increase in SN2. The code now looks for plates that already have
+signal (either real or simulated) and prioritises those.
+
+
 ## [1.2.0] - 2015-11-10
 ### Changed
 - When adding new exposures found in the DB, Totoro won't try to rearrange the

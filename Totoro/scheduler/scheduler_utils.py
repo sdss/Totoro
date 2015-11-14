@@ -283,25 +283,28 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
          for plate in plates])
 
     plates = np.array(plates)
+    maxCompletionIncrease = np.max(completionIncrease)
+    plates = plates[np.where(completionIncrease == maxCompletionIncrease)]
 
-    platesMaxCompletionIncrease = plates[
-        np.where(completionIncrease == np.max(completionIncrease))]
+    if len(plates) == 1:
+        return plates[0]
 
-    if len(platesMaxCompletionIncrease) == 0:
-        return None
-    elif len(platesMaxCompletionIncrease) == 1:
-        return platesMaxCompletionIncrease[0]
+    # If maxCompletionIncrease is 0, it means that no plate has been
+    # observed for at least a set. In this case, if possible, we want to use
+    # a plate that already has signal.
+    if maxCompletionIncrease == 0:
+        platesWithSignal = [plate for plate in plates
+                            if plate._before['completion+'] > 0]
+        if len(platesWithSignal) > 0:
+            plates = platesWithSignal
 
     # If several plates have maximum completion increase, use the incomplete
-    # sets to break the tie
-    completionIncreaseIncomplete = np.array(
+    # sets to break the tie.
+    completionIncreasePlus = np.array(
         [plate._after['completion+'] - plate._before['completion+']
-         for plate in platesMaxCompletionIncrease])
+         for plate in plates])
 
-    optimalPlateWithIncomplete = platesMaxCompletionIncrease[
-        np.argmax(completionIncreaseIncomplete)]
-
-    return optimalPlateWithIncomplete
+    return plates[np.argmax(completionIncreasePlus)]
 
 
 def _completionFactor(plates, factor):
