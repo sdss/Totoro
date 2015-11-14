@@ -66,17 +66,10 @@ def getUnassignedExposures(plate):
 
     scienceExposures = plate.getScienceExposures()
 
-    unassigned = []
-    for scienceExp in scienceExposures:
+    unassigned = [TotoroExposure(exp) for exp in scienceExposures
+                  if exp.mangadbExposure[0].set_pk is None]
 
-        # If the exposure is not assigned to a set, adds it to the list.
-        if scienceExp.mangadbExposure[0].set_pk is None:
-            unassigned.append(TotoroExposure(scienceExp))
-
-    # Sorts exposures by exposure_no
-    exposureNo = [exp.exposure_no for exp in unassigned]
-    order = np.argsort(exposureNo)
-    unassignedSorted = [unassigned[ii] for ii in order]
+    unassignedSorted = sorted(unassigned, key=lambda exp: exp.exposure_no)
 
     return unassignedSorted
 
@@ -203,14 +196,10 @@ def getValidDither(ss):
 def _getSetStatusLabel(exposure):
     """Returns the set status for an exposure or None."""
 
-    if len(exposure.mangadbExposure) == 0:
-        return None
-    elif exposure.mangadbExposure[0].set is None:
-        return None
-    elif exposure.mangadbExposure[0].set.status is None:
-        return None
-    else:
+    try:
         return exposure.mangadbExposure[0].set.status.label
+    except (AttributeError, IndexError):
+        return None
 
 
 def rearrangeSets(plate, mode='complete', scope='all', force=False,
