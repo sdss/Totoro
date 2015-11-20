@@ -24,6 +24,7 @@ from sqlalchemy.pool import Pool
 from SDSSconnect.models import createRelationships
 from SDSSconnect.models.utils import ModelWrapper, cameliseClassname
 from SDSSconnect.exceptions import SDSSconnectUserWarning, SDSSconnectError
+from SDSSconnect.models import methods
 
 import warnings
 import ConfigParser
@@ -255,11 +256,12 @@ class DatabaseConnection(object):
         sqlalchemy.orm.configure_mappers()
 
         # Now that all classes have been added to the Base, we wrap them
-        # depending on their schema.
+        # depending on their schema. We also add additional methods.
         for model in models:
             if hasattr(self, model) and not overwrite:
                 continue
             if model.lower() == 'platedb':
                 self.plateDB = ModelWrapper(self.Base, 'Platedb_')
+                methods.addFunctionsPlateDB(self.plateDB)
             elif model.lower() == 'mangadb':
                 self.mangaDB = ModelWrapper(self.Base, 'Mangadb_')
