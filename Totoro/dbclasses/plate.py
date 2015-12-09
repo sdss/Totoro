@@ -766,6 +766,25 @@ class Plate(object):
 
         return True if secIntersectionLength >= minLength else False
 
+    def isSpecial(self):
+        """Returns True if a plate is all_sky or commissioning."""
+
+        if self.mangadbPlate is None:
+            return False
+        if (self.mangadbPlate.all_sky_plate is True or
+                self.mangadbPlate.commissioning_plate is True):
+            return True
+        return False
+
+    def isNeverObserve(self):
+        """Returns True if the plate is marked as neverobserve."""
+
+        if self.mangadbPlate is None:
+            return False
+        if self.mangadbPlate.neverobserve is True:
+            return True
+        return False
+
     def addMockExposure(self, exposure=None, startTime=None, set=None,
                         expTime=None, silent=False, rearrange=True, **kwargs):
         """Creates a mock expusure in the best possible way."""
