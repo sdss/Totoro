@@ -63,10 +63,10 @@ def saveExposures(plates, outfile):
                      exp.exposure_time, exp.ditherPosition, ra, dec,
                      exp.getSN2Array()))
 
-        if os.path.exists(outfile):
-            os.remove(outfile)
+    if os.path.exists(outfile):
+        os.remove(outfile)
 
-        template.write(outfile, format='fits')
+    template.write(outfile, format='fits')
 
 
 def createExposure(row):
