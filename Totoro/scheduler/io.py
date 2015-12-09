@@ -21,7 +21,7 @@ import numpy as np
 import os
 
 
-def saveExposures(plates, outfile):
+def saveExposures(plates, outfile, startDate=None):
     """Writes information about simulated plates to a FITS file."""
 
     template = table.Table(
@@ -62,6 +62,12 @@ def saveExposures(plates, outfile):
                     (plate_id, manga_tileid, set_pk, real_set, exp.getJD()[0],
                      exp.exposure_time, exp.ditherPosition, ra, dec,
                      exp.getSN2Array()))
+
+    # Records the start date
+    if startDate:
+        template.meta['STRTDATE'] = startDate
+    else:
+        template.meta['STRTDATE'] = np.min(template['start_jd'])
 
     if os.path.exists(outfile):
         os.remove(outfile)
