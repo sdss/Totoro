@@ -111,6 +111,9 @@ def loadMangaPlates():
 
             if plate.plate_id in neverobserve:
                 newPlate.neverobserve = bool(neverobserve[plate.plate_id])
+            # Some harcoded values that may not appear in neverobserve
+            elif plate.plate_id in [7566, 7567, 7568]:
+                newPlate.neverobserve = True
             else:
                 newPlate.neverobserve = False
 
