@@ -91,20 +91,34 @@ class Timeline(object):
     @property
     def remainingTime(self):
         """Returns the amount of unallocated time, in hours."""
+
         unallocatedRange = np.atleast_2d(self.unallocatedRange)
+
         if unallocatedRange.size == 0:
             return 0
-        unallocatedTime = 0.0
-        for interval in unallocatedRange:
-            unallocatedTime += (interval[1] - interval[0])
-        return unallocatedTime * 24.
 
-    def schedule(self, plates, mode='plugger', showUnobservedTimes=True,
-                 useDateAtAPO=True, **kwargs):
-        """Schedules a list of plates in the LST ranges not yet observed in the
-        timeline."""
+        return np.sum(unallocatedRange[:, 1] - unallocatedRange[:, 0]) * 24.
 
-        from Totoro.dbclasses import Field
+    def schedule(self, plates, mode='plugger', useDateAtAPO=True, **kwargs):
+        """Schedules a list of plates.
+
+        Uses a list of `plates` to schedule all the available time in the
+        timeline.
+
+        Parameters
+        ----------
+        plates : list
+            The list of `Totoro.Plate` instances to schedule.
+        mode : str
+            Either `'plugger'` or `'planner'`. Depending on the `mode`, the
+            scheduling algorithm will make different choices for the list
+            of optimal plates to be scheduled.
+        useDateAtAPO : bool
+            If True, only plates with `Totoro.Plate.dateAtAPO <= startDate`
+            will be used. This assumes that the user has somehow added the
+            `dateAtAPO` information to the `plates` before calling the method.
+
+        """
 
         mode = mode.lower()
 
@@ -113,19 +127,21 @@ class Timeline(object):
 
         jd0 = self.startDate
 
+        if useDateAtAPO:
+            platesToSchedule = [plate for plate in plates
+                                if plate.dateAtAPO is None or
+                                plate.dateAtAPO <= self.startDate]
+        else:
+            platesToSchedule = plates
+
         while jd0 <= self.endDate:
 
-            if useDateAtAPO:
-                platesToSchedule = [plate for plate in plates
-                                    if plate.dateAtAPO is None or
-                                    plate.dateAtAPO <= jd0]
-            else:
-                platesToSchedule = plates
-
+            # Finds the optimal plate for the range [jd0, self.endDate]
             optimalPlate, newExposures = logic.getOptimalPlate(
                 platesToSchedule, [jd0, self.endDate], mode=mode, **kwargs)
 
             if optimalPlate is None:
+                # If no optimal plate is found, moves jd0 by one exposure time.
                 if jd0 < self.endDate - 2 * expTimeJD:
                     jd0 += expTimeJD
                     continue
@@ -136,72 +152,76 @@ class Timeline(object):
                 if optimalPlate in self.scheduled:
                     # Removes old version of optimalPlate in self.scheduled.
                     self.scheduled.remove(optimalPlate)
+
                 self.scheduled.append(optimalPlate)
 
+                # Updates self.unallocatedRange with the new exposures.
                 self.allocateJDs(newExposures)
+
+                # Updates the current jd0
                 jd0 = np.max([exp.getJD()[1] for exp in newExposures])
 
-                # Defines some flags to be logged if plate is in Cosmic, being
-                # drilled or not on the mountain.
+                # Logs the scheduled plate
+                self.log(optimalPlate, newExposures, mode)
 
-                flags = ''
+        if self.remainingTime <= expTimeJD:
+            return True
+        else:
+            log.info('... unobserved times: {0}'.format(
+                     str(self.unallocatedRange)))
+            return False
 
-                if (optimalPlate.drilled is False and
-                        not isinstance(optimalPlate, Field)):
-                    flags = _color_text('** not yet drilled **', 'white')
-                elif not isinstance(optimalPlate, Field):
-                    location = optimalPlate.getLocation()  # May be None
-                    if not location and not isinstance(optimalPlate, Field):
-                        flags = _color_text('** unknown location **', 'red')
-                    elif location != 'APO' and location != 'Cosmic':
-                        flags = _color_text('** not on the mountain **',
-                                            'red')
-                    elif location == 'Cosmic':
-                        flags = _color_text('** in Cosmic **', 'red')
+    def log(self, plate, newExposures, mode):
+        """Logs an schedule plate."""
 
-                # Calculates completion before and after the simulation.
-                completionPre = self.calculatePlateCompletion(
-                    optimalPlate, rejectExposures=newExposures, useMock=True)
-                completionPost = self.calculatePlateCompletion(
-                    optimalPlate, useMock=True)
-                nExps = len(newExposures)
+        from Totoro.dbclasses import Field
 
-                # Gets number of orphaned exposures after the simulation
-                nOrphanedPost = 0
-                for ss in optimalPlate.sets:
-                    if ss.getStatus()[0] in ['Incomplete', 'Unplugged']:
-                        for exp in ss.totoroExposures:
-                            if exp.isMock:
-                                nOrphanedPost += 1
+        # Defines some flags to be logged if plate is in Cosmic, being
+        # drilled or not on the mountain.
 
-                # Logs the result of the simulation. Format changed depending
-                # on whether this is plate or a field.
-                if not isinstance(optimalPlate, Field):
-                    log.info('...... plate_id={0}, ({1} new exps, '
-                             '{2:.2f} -> {3:.2f} complete) {4}'
-                             .format(optimalPlate.plate_id,
-                                     nExps, completionPre, completionPost,
-                                     flags))
+        flags = ''
 
-                    if nOrphanedPost > 0 and mode == 'plugger':
-                        warnings.warn('... plate_id={0} has {1} orphaned '
-                                      'exps after simulation'
-                                      .format(optimalPlate.plate_id,
-                                              nOrphanedPost),
-                                      TotoroUserWarning)
+        if plate.drilled is False and not isinstance(plate, Field):
+            flags = _color_text('** not yet drilled **', 'white')
+        elif not isinstance(plate, Field):
+            location = plate.getLocation()
+            if not location and not isinstance(plate, Field):
+                flags = _color_text('** unknown location **', 'red')
+            elif location != 'APO' and location != 'Cosmic':
+                flags = _color_text('** not on the mountain **', 'red')
+            elif location == 'Cosmic':
+                flags = _color_text('** in Cosmic **', 'red')
 
-                else:
-                    log.info(_color_text(
-                        '...... manga_tiledid={0} ({1} new exps, '
-                        '{2:.2f} -> {3:.2f} complete) {4}'
-                        .format(optimalPlate.getMangaTileID(),
-                                nExps, completionPre, completionPost, flags),
-                        'yellow'))
+        # Calculates completion before and after the simulation.
+        completionPre = self.calculatePlateCompletion(
+            plate, rejectExposures=newExposures, useMock=True)
+        completionPost = self.calculatePlateCompletion(plate, useMock=True)
+        nExps = len(newExposures)
 
-        if showUnobservedTimes:
-            if self.remainingTime <= expTimeJD:
-                return True
-            else:
-                log.info('... unobserved times: {0}'.format(
-                         str(self.unallocatedRange)))
-                return False
+        # Gets number of orphaned exposures after the simulation
+        nOrphanedPost = 0
+        for ss in plate.sets:
+            if ss.getStatus()[0] == 'Incomplete':
+                nOrphanedPost += len([exp for exp in ss.totoroExposures
+                                      if exp.isMock])
+
+        # Logs the result of the simulation. Format changed depending
+        # on whether this is plate or a field.
+        if not isinstance(plate, Field):
+            log.info('...... plate_id={0}, ({1} new exps, '
+                     '{2:.2f} -> {3:.2f} complete) {4}'
+                     .format(plate.plate_id, nExps, completionPre,
+                             completionPost, flags))
+
+            if nOrphanedPost > 0 and mode == 'plugger':
+                warnings.warn('... plate_id={0} has {1} orphaned '
+                              'exps after simulation'
+                              .format(plate.plate_id, nOrphanedPost),
+                              TotoroUserWarning)
+
+        else:
+            log.info(_color_text('...... manga_tiledid={0} ({1} new exps, '
+                                 '{2:.2f} -> {3:.2f} complete) {4}'
+                                 .format(plate.getMangaTileID(), nExps,
+                                         completionPre, completionPost, flags),
+                                 'yellow'))
