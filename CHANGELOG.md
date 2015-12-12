@@ -1,12 +1,20 @@
 # Change Log
 
+## [1.2.2] - 2015-12-12
+
+### Fixed
+- Plate.addMockExposure only rearranges exposures in complete sets if the
+number of such exposures in the plate is <= 5. Otherwise, it can cause serious
+delays for plugging.
+
+
 ## [1.2.1] - 2015-11-13
 ### Added
 - runTests.py now restores, if possible, the test DB before running. If the
 script is called with '--no-restore' it will skip the restoration.
 
 ### Fixed
-- Fixed a bug in the plugging logic that would chose a plate for a single 
+- Fixed a bug in the plugging logic that would chose a plate for a single
 exposure when another started plate was available for that same LST window, but
 had lower increase in SN2. The code now looks for plates that already have
 signal (either real or simulated) and prioritises those.

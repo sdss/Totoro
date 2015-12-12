@@ -820,7 +820,17 @@ class Plate(object):
         validSet.totoroExposures.append(exposure)
 
         if rearrange:
-            self.rearrangeSets(mode='optimal', scope='incomplete', silent=True)
+            # We only run this rearrangement if the list of exposures in
+            # incomplete sets is small
+            nExpIncompleteSets = len(self.getExposuresInIncompleteSets())
+            if nExpIncompleteSets <= 5:
+                self.rearrangeSets(mode='optimal', scope='incomplete',
+                                   silent=True)
+            else:
+                warnings.warn('plate={0}: skipping incomplete set '
+                              'rearrangement because plate has > 5 exposures '
+                              'in incomplete sets',
+                              TotoroExceptions.TotoroUserWarning)
 
         return exposure
 
@@ -846,6 +856,17 @@ class Plate(object):
                 return set
 
         return None
+
+    def getExposuresInIncompleteSets(self):
+        """Returns a list of exposures in incomplete sets."""
+
+        incompleteSetExposures = []
+
+        incompleteSets = [set for set in self.sets if not set.complete]
+        for ss in incompleteSets:
+            incompleteSetExposures += ss.totoroExposures
+
+        return incompleteSetExposures
 
     def getLastExposure(self):
         """Returns the last exposure taken."""
