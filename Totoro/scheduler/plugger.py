@@ -195,7 +195,20 @@ def prioritiseCarts(carts):
 
 
 class Plugger(object):
-    """A class to schedule plugging requests."""
+    """A class to schedule plugging requests.
+
+    A new `Plugger` instance is initiated by providing a `startDate` and
+    `endDate`. If both of them are None, no scheduling is performed and only
+    the already plugged plates are included.
+
+    Parameters
+    ----------
+    startDate : float or None
+        The JD at which the scheduling begins.
+    endDate : float or None
+        The JD at which the scheduling ends.
+
+    """
 
     def __init__(self, startDate=None, endDate=None, **kwargs):
 
