@@ -63,9 +63,12 @@ def computeAirmass(dec, ha, lat=config['observatory']['latitude'],
 
 def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
                     **kwargs):
-    """Returns if a plate is complete using the MaNGA logic. If
-    forceCheckCompletion is False and the plugging is marked as complete,
-    no plateCompletion check is performed (this saves some time)."""
+    """Returns True if a plate is complete using the MaNGA logic.
+
+    If `forceCheckCompletion` is False and the plugging is marked as complete,
+    no plateCompletion check is performed (this saves some time).
+
+    """
 
     from Totoro.dbclasses.plate import Plate
 
@@ -115,7 +118,41 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
 def getAPOcomplete(plates, format='plate_id',
                    SN2_blue=None, SN2_red=None, limitSN=False,
                    func=np.max, createFile=False, **kwargs):
-    """Returns a dictionary with the APOcomplete output."""
+    """Returns a dictionary with the APOcomplete output.
+
+    Parameters
+    ----------
+    plates : list of `Totoro.Plate` instances or list of ints
+        Either a single `Totoro.Plate` instance or and integer, or a list of
+        them. If an integer (or list), the appropriate plate(s) will be
+        obtained from that value and the `format` paramenter.
+    format : string
+        If `plates` are integers, the field of the plate table on which to
+        perform the query. Normally either `'plate_id'` or `'pk'`.
+    SN2_blue, SN2_red : None or float
+        The SN2 plate thresholds in blue and red, respectively. If None,
+        the values in config.SN2thresholds.plate(Blue|Red) will be used.
+    limitSN : bool
+        If True, the function will use only the combination of sets that gets
+        a cumulated SN2 closer (but higher) than `SN2_blue` and `SN2_red.
+        If the sum of all the valid sets is not enough to reach the SN2
+        thresholds, all the sets will be used. That is, if a plate has four
+        valid sets but three of them are enough to reach the SN2 thresholds,
+        only those are used.
+    func : function
+        If limitSN is True and several combinations of sets meet the
+        requirement of having SN2 higher than the thresholds, this function
+        is used to determine which combination to use. Usual options are
+        `np.max` to use the combination that gives higher SN2 with fewer sets,
+        or `np.min` to use the combination that gets closer to the SN2
+        thresholds (but still above them).
+    createFile : bool
+        If True, `createAPOcompleteFile` is called for each of the plates.
+    kwargs : dict
+        Additional parameters to be passed to `Totoro.Plates` and to
+        `createAPOcompleteFile`.
+
+    """
 
     from Totoro.dbclasses import Plate
 
@@ -149,7 +186,7 @@ def getAPOcomplete(plates, format='plate_id',
         validSets = plate.getValidSets()
 
         if limitSN:
-            for nSets in range(1, len(validSets)+1):
+            for nSets in range(1, len(validSets) + 1):
 
                 combSets = list(combinations(validSets, nSets))
                 SN2 = np.array([_cumulatedSN2(sets) for sets in combSets])
