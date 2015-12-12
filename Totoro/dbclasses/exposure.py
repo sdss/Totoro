@@ -564,12 +564,10 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     ----------
     exposure : `Totoro.dbclasses.Exposure`
         The Totoro exposure object to be checked and flagged.
-
     flag : bool
         If True and `exposure` is not mock, the status of `exposure` will
         be set to `Totoro Good` or `Totoro Bad` depending on the result of the
         check.
-
     force : bool
         If True, the exposure will be reflagged even if a status has been
         previously assigned.
@@ -595,6 +593,7 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     8: exposure taken during twilight
     9: plateDB status is Bad or Override Bad.
     10: status read from DB.
+
     """
 
     # Checks that exposure is a Totoro exposure.
