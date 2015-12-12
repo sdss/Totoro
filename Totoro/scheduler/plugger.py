@@ -386,6 +386,10 @@ class Plugger(object):
     def logCartAllocation(self, activePluggings):
         """Logs the cart allocation."""
 
+        mjd = int(self.timeline.endDate - 2400000.5)
+        log.important('Plugging allocation for MJD={0:d} follows:'
+                      .format(mjd))
+
         for cartNo, plate in self.carts.iteritems():
 
             cartStatus = getCartStatus(activePluggings, cartNo)
@@ -405,7 +409,7 @@ class Plugger(object):
                 else:
                     message = 'empty'
 
-                log.important('PLUGGER: Cart #{0} -> {1}'
+                log.important('Cart #{0} -> {1}'
                               .format(cartNo, message))
 
             else:
@@ -425,7 +429,7 @@ class Plugger(object):
                             plate.location.label == 'APO'):
                         message += ', plate has not been marked'
 
-                log.important('PLUGGER: Cart #{0} -> plate_id={1} ({2})'
+                log.important('Cart #{0} -> plate_id={1} ({2})'
                               .format(cartNo, plate.plate_id, message))
 
     def _getCart(self, sortedCarts):
@@ -538,11 +542,6 @@ class Plugger(object):
                     pluggedPlate is not None):
                 # If this is a MaNGA plate, keeps it.
                 self.carts[cartNumber] = pluggedPlate
-
-        # Logs the allocation
-        mjd = int(self.timeline.endDate - 2400000.5)
-        log.important('PLUGGER: Plugging allocation for MJD={0:d} follows:'
-                      .format(mjd))
 
         # Logs the allocation
         self.logCartAllocation(activePluggings)
