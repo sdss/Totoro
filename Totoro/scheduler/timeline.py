@@ -28,7 +28,7 @@ expTimeJD = config['exposure']['exposureTime'] / 86400.
 class Timelines(list):
     """A list of Timelines."""
 
-    def __init__(self, observingBlocks, mode='planner', **kwargs):
+    def __init__(self, observingBlocks, mode='planner'):
 
         self.mode = mode
         initList = []
@@ -117,6 +117,8 @@ class Timeline(object):
             If True, only plates with `Totoro.Plate.dateAtAPO <= startDate`
             will be used. This assumes that the user has somehow added the
             `dateAtAPO` information to the `plates` before calling the method.
+        kwargs : dict
+            Additional parameters to be passed to `getOptimalPlate`.
 
         """
 
