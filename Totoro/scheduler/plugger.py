@@ -412,34 +412,6 @@ class Plugger(object):
                 log.important('PLUGGER: Cart #{0} -> plate_id={1} ({2})'
                               .format(cartNo, plate.plate_id, message))
 
-        # if not isinstance(messages, (list, tuple)):
-        #     messages = [messages]
-        #
-        # if plate is None:
-        #     if len(messages) == 0:
-        #         log.important('PLUGGER: Cart #{0} -> empty'.format(cartNumber))
-        #     else:
-        #         log.important('PLUGGER: Cart #{0} -> {1}'
-        #                       .format(cartNumber, ', '.join(messages)))
-        #     return
-        #
-        # plateid = plate.plate_id
-        # status = plate.statuses[0].label
-        #
-        # if status == 'Shipped' and plate.location.label == 'APO':
-        #     messages.append('plate has not been marked')
-        #
-        # if hasattr(plate, 'isReplug') and plate.isReplug:
-        #     messages.append('replug')
-        #
-        # message = ', '.join(messages)
-        # msgStr = '({0})'.format(message) if message != '' else ''
-        #
-        # log.important('PLUGGER: Cart #{0} -> plate_id={1} {2}'
-        #               .format(cartNumber, plateid, msgStr))
-        #
-        # return
-
     def _getCart(self, sortedCarts):
         """Given a list of sorted carts returns the first not allocated."""
 
