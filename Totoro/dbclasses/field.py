@@ -28,6 +28,8 @@ __all__ = ['Fields', 'Field', 'getTilingCatalogue']
 
 
 def getTilingCatalogue(tilingCatalogue=None):
+    """Returns the tiling catalogue"""
+
     tilingCatalogue = Totoro.readPath(
         Totoro.config['fields']['tilingCatalogue']) \
         if tilingCatalogue is None else Totoro.readPath(
@@ -46,6 +48,24 @@ class Fields(list):
 
     def __init__(self, tilingCatalogue=None, rejectDrilled=True, silent=False,
                  **kwargs):
+        """Returns a list of `Totoro.Field` instances.
+
+        Reads a tiling catalogue and returns a list of `Totoro.Field` objects,
+        one for each tile. If `rejectDrilled=True`, tiles that have already
+        been drilled are skipped.
+
+        Parameters
+        ----------
+        tilingCatalogue : str or None
+            The path to the tiling catalogue to be used
+        rejectDrilled : bool
+            If True, already drilled tiles are skipped.
+        silent : bool
+            If True, does limited logging.
+        kwarg : dict
+            Additional arguments to be passed during `Field` creation.
+
+        """
 
         self._tiles = getTilingCatalogue(tilingCatalogue=tilingCatalogue)
 
@@ -67,11 +87,8 @@ class Fields(list):
         if rejectDrilled:
             self._rejectDrilled(silent=silent, **kwargs)
 
-    def _rejectDrilled(self, silent=False, rejectMode='manga_tileid',
-                       **kwargs):
-        """Rejects plates in self that have been drilled. rejectMode is a
-        placeholder for future functionality when fields might be rejected
-        based on the coordinates of drilled plates."""
+    def _rejectDrilled(self, silent=False):
+        """Rejects plates in self that have been drilled."""
 
         __, Session, plateDB, __ = getConnectionFull()
         session = Session()
@@ -105,6 +122,7 @@ class Fields(list):
             Totoro.log.debug(logMsg)
 
     def removeField(self, inp):
+        """Removes a field."""
 
         if isinstance(inp, Integral):
             mangaTileIDs = np.array([ff.manga_tileid for ff in self], int)

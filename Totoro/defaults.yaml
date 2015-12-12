@@ -52,6 +52,7 @@ fields:
     mangacore: $MANGACORE_DIR
     tilesBeingDrilled: ~/.totoro/tiles_drilling.dat
     scienceCatalogue: $MANGASAMPLE_SCIENCE_CATALOGUE
+    minTargetsInTile: 12
 
 observatory:
     longitude: 254.179722   # In East degrees

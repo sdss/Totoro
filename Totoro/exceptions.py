@@ -29,6 +29,11 @@ class TotoroPluggerError(TotoroError):
     pass
 
 
+class TotoroPlannerError(TotoroError):
+    """Exception for the Planner class."""
+    pass
+
+
 class NoMangaPlate(TotoroError):
     """Exception to be raised if a plate is not MaNGA."""
     pass

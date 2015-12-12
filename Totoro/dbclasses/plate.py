@@ -1029,5 +1029,5 @@ class Plate(object):
 
     @dateAtAPO.setter
     def dateAtAPO(self, value):
-        assert value > 0, 'value must be a JD.'
+        assert value >= 0, 'value must be a JD.'
         self._dateAtAPO = value
