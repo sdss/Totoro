@@ -33,3 +33,6 @@ except:
 
 from sdss.utilities.Site import Site
 site = Site()
+
+from Totoro.dbclasses import *
+from Totoro.scheduler import Planner, Plugger

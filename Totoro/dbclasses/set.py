@@ -26,7 +26,7 @@ from copy import copy
 from astropy import time
 
 
-__all__ = ['Set']
+__all__ = ['Set', 'checkSet']
 
 
 def getPlateSets(inp, format='plate_id', **kwargs):
