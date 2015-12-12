@@ -19,7 +19,7 @@ from __future__ import print_function
 from Totoro import log, config, site
 from Totoro.db import getConnection
 from Totoro.scheduler.timeline import Timeline
-from Totoro import exceptions
+from Totoro.exceptions import TotoroPluggerWarning, TotoroPluggerError
 from Totoro.utils import intervals
 from collections import OrderedDict
 import warnings
@@ -30,6 +30,7 @@ __all__ = ['Plugger']
 
 cartStatusCodes = {0: 'empty', 1: 'noMaNGAplate', 2: 'MaNGA_complete',
                    3: 'MaNGA_noStarted', 4: 'MaNGA_started', 10: 'unknown'}
+
 replaceMsgs = {0: 'empty cart', 1: 'replacing non-MaNGA plate',
                2: 'replacing complete MaNGA plate',
                3: 'replacing non-started MaNGA plate',
@@ -37,9 +38,50 @@ replaceMsgs = {0: 'empty cart', 1: 'replacing non-MaNGA plate',
                10: 'replacing plate with unknown status'}
 
 
+def getForcePlugPlates():
+    """Returns a list of plates with priority `forcePlugPriority`."""
+
+    from Totoro.dbclasses.plate import Plates
+
+    forcePlugPriority = int(config['plugger']['forcePlugPriority'])
+
+    db = getConnection()
+    session = db.Session()
+    plateDB = db.plateDB
+
+    with session.begin():
+        plates = session.query(plateDB.Plate).join(
+            plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode,
+            plateDB.PlatePointing, plateDB.PlateLocation).filter(
+                plateDB.Survey.label == 'MaNGA',
+                plateDB.SurveyMode.label == 'MaNGA dither',
+                plateDB.PlateLocation.label == 'APO',
+                plateDB.PlatePointing.priority == forcePlugPriority).order_by(
+                    plateDB.Plate.plate_id).all()
+
+    return Plates(plates)
+
+
+def getActivePluggings():
+    """Returns a list with the active pluggings."""
+
+    db = getConnection()
+    session = db.Session()
+
+    # Gets active pluggings
+    with session.begin():
+        activePluggings = session.query(
+            db.plateDB.ActivePlugging).order_by(
+                db.plateDB.ActivePlugging.pk).all()
+
+    return activePluggings
+
+
 def getCartStatus(activePluggings, cartNumber):
-    """Returns the status of the plate in a cart. The returned tuple is
-    (cart_number, plate, status_number, status_code, completion)"""
+    """Returns the status of the plate in a cart.
+
+    The returned tuple is (cart_number, plate, status_code, completion)
+    """
 
     from Totoro.dbclasses.plate import Plate
 
@@ -47,11 +89,11 @@ def getCartStatus(activePluggings, cartNumber):
                            if aP.plugging.cartridge.number == cartNumber]
 
     if len(cartActivePluggings) == 0:
-        return (cartNumber, None, 0, cartStatusCodes[0], 0)  # Empty cart
+        return (cartNumber, None, 0, 0)  # Empty cart
     elif len(cartActivePluggings) > 1:
-        raise exceptions.TotoroError(
-            'something went wrong. Cart #{0} has more than '
-            'one active plugging'.format(cartNumber))
+        raise TotoroPluggerError(
+            'PLUGGER: something went wrong. Cart #{0} has more than one '
+            'active plugging'.format(cartNumber))
     else:
         cartActivePlugging = cartActivePluggings[0]
 
@@ -61,22 +103,22 @@ def getCartStatus(activePluggings, cartNumber):
                     'MaNGA' in plate.currentSurveyMode.label)
 
     if not isMaNGAPlate:
-        return (cartNumber, plate, 1, cartStatusCodes[1], 0)  # No MaNGA plate
+        return (cartNumber, plate, 1, 0)  # No MaNGA plate
 
     totoroPlate = Plate(plate)
 
     if totoroPlate.isComplete:
-        return (cartNumber, totoroPlate, 2,
-                cartStatusCodes[2], 1.)  # Complete MaNGA plate
+        return (cartNumber, totoroPlate, 2, 1.)  # Complete MaNGA plate
 
-    if totoroPlate.getPlateCompletion() == 0:
-        return (cartNumber, totoroPlate, 3,
-                cartStatusCodes[3], 0.)  # Non-stated MaNGA plate
+    plateCompletion = totoroPlate.getPlateCompletion()
+    if plateCompletion == 0:
+        # Non-stated MaNGA plate
+        return (cartNumber, totoroPlate, 3, plateCompletion)
     else:
-        return (cartNumber, totoroPlate, 4, cartStatusCodes[4],
-                totoroPlate.getPlateCompletion())  # Started MaNGA plate
+        # Started MaNGA plate
+        return (cartNumber, totoroPlate, 4, plateCompletion)
 
-    return (cartNumber, None, 10, cartStatusCodes[10], 0)  # Unknown
+    return (cartNumber, None, 10, 0)  # Unknown
 
 
 def getCartPlate(activePluggings, cartNumber):
@@ -88,8 +130,8 @@ def getCartPlate(activePluggings, cartNumber):
     return None
 
 
-def getCartForReplug(plate):
-    """Returns the cart of the last plugging."""
+def getCartLastPlugging(plate):
+    """Returns the cart number of the last plugging."""
 
     if len(plate.pluggings) == 0:
         return None
@@ -98,8 +140,28 @@ def getCartForReplug(plate):
     return plate.pluggings[np.argmax(scanMJDs)].cartridge.number
 
 
-def prioritiseCarts(cartStatus, activePluggings):
-    """Returns a list of carts sorted by priority for being allocated."""
+def prioritiseCarts(carts):
+    """Returns a list of carts sorted by priority for being allocated.
+
+    Parameters
+    ----------
+    carts : list
+        A list with all or a subset of the MaNGA carts. Each element in the
+        list is a tuple of the form
+        `(cart_number, plate, status_code, completion)`
+
+    Returns
+    -------
+    result : list
+        Returns `carts` sorted in the following order:
+        - Empty carts
+        - Carts with complete plates
+        - Carts with plates of unknown status
+        - Carts with non-MaNGA plates
+        - Carts with MaNGA plates that have not been started
+        - Carts with started plates sorted by completion.
+
+    """
 
     # Creates some intermediate lists
     empty = []
@@ -110,8 +172,8 @@ def prioritiseCarts(cartStatus, activePluggings):
     started = []
 
     # Assigns carts to the appropriate list.
-    for cart in cartStatus:
-        statusLabel = cart[3]
+    for cart in carts:
+        statusLabel = cartStatusCodes[cart[2]]
         if statusLabel == 'empty':
             empty.append(cart)
         elif statusLabel == 'noMaNGAplate':
@@ -125,8 +187,8 @@ def prioritiseCarts(cartStatus, activePluggings):
         elif statusLabel == 'MaNGA_started':
             started.append(cart)
 
-    # Sorts started carts using the completion (fifth element of the tuple).
-    started = sorted(started, key=lambda xx: xx[4])
+    # Sorts started carts using the completion (fourth element of the tuple).
+    started = sorted(started, key=lambda xx: xx[3])
 
     # Returns carts in the desired order.
     return empty + complete + unknown + noMaNGA + noStarted + started
@@ -137,34 +199,35 @@ class Plugger(object):
 
     def __init__(self, startDate=None, endDate=None, **kwargs):
 
-        if startDate == 0.:
-            startDate = None
-        if endDate == 0.:
-            endDate = None
+        startDate = None if not startDate else startDate
+        endDate = None if not endDate else endDate
 
+        # Runs init method depending on startDate and endDate.
         if startDate is None and endDate is None:
             self._initNoManga()
         elif any([startDate, endDate]) and not all([startDate, endDate]):
-            raise exceptions.TotoroPluggerError(
-                'either startDate=endDate=None or '
-                'both dates need to be defined.')
+            raise TotoroPluggerError('PLUGGER: either startDate = endDate = '
+                                     'None or both need to be defined.')
         else:
             self._initFromDates(startDate, endDate, **kwargs)
 
     def _initNoManga(self):
-        """Inits a Plugger instance when no MaNGA time is scheduled. The cart
-        assignement contains only those plugged MaNGA plates that are not
-        complete."""
+        """Inits a Plugger instance when no MaNGA time is scheduled.
+
+        In this case, the cart assignement contains only those plugged MaNGA
+        plates that are not complete, sorted by preference of the carts being
+        overridden by APOGEE."""
 
         from Totoro.dbclasses import getPlugged
 
         self.startDate = None
         self.endDate = None
 
-        warnings.warn(
-            'no JD1, JD2 values provided. Plugger will only return plugged, '
-            'non-completed plates.', exceptions.TotoroPluggerWarning)
+        warnings.warn('PLUGGER: no JD1, JD2 values provided. Plugger will '
+                      'only return plugged, on-completed plates.',
+                      TotoroPluggerWarning)
 
+        # Get MaNGA plugged plates
         pluggedPlates = getPlugged(fullCheck=False, updateSets=False)
 
         self.carts = OrderedDict()
@@ -175,363 +238,367 @@ class Plugger(object):
                 cart = plate.getActiveCartNumber()
                 self.carts[cart] = plate
 
-        self.addCartOrder(metric='completion')
-
     def _initFromDates(self, jd0, jd1, **kwargs):
-        """Initialites the Plugger instance from two JD dates."""
+        """Initialites the Plugger instance from two JD dates.
 
-        assert jd0 < jd1
+        This method does not actually schedules plates for the range
+        `[jd0, jd1]`. Instead, it creates the `Totoro.Timeline` object for
+        this plugging requests and obtains the list of plates that can be
+        scheduled. The real scheduling happens when `Plugger.schedule()`
+        is called.
+
+        """
+
+        assert jd0 < jd1, 'JD1 cannot be lower than JD1'
 
         self.startDate = jd0
         self.endDate = jd1
-        log.info('Start date: {0}'.format(self.startDate))
-        log.info('End date: {0}'.format(self.endDate))
-        log.info('Scheduling {0:.2f} hours'.format(
-                 (self.endDate - self.startDate) * 24.))
+        scheduledTime = (self.endDate - self.startDate) * 24.
 
+        log.info('PLUGGER: start date: {0}'.format(self.startDate))
+        log.info('PLUGGER: end date: {0}'.format(self.endDate))
+        log.info('PLUGGER: scheduling {0:.2f} hours'.format(scheduledTime))
+
+        # Creates the timeline object for this plugging request.
         self.timeline = Timeline(self.startDate, self.endDate, **kwargs)
 
-        self._platesToSchedule = self.selectPlates(**kwargs)
-        log.info('scheduling {0} plates'.format(len(self._platesToSchedule)))
+        # Determines the plates to schedule.
+        self._platesToSchedule = self.getPlatesToSchedule(**kwargs)
+        log.info('PLUGGER: scheduling {0} plates'
+                 .format(len(self._platesToSchedule)))
 
-        # Initialises a dictionary with the MaNGA carts. Removes offline carts.
-        self.carts = OrderedDict([(key, None)
-                                  for key in config['mangaCarts']
-                                  if key not in config['offlineCarts']])
+        # Initialises a dictionary with the MaNGA carts.
+        self.carts = OrderedDict([(key, None) for key in config['mangaCarts']])
 
-    def schedule(self, **kwargs):
+    def getPlatesToSchedule(
+            self, onlyMarked=False,
+            onlyVisiblePlates=config['plugger']['onlyVisiblePlates'],
+            **kwargs):
+        """Selects plates to schedule.
 
-        self._scheduleForced(**kwargs)
+        Determines the list of plates to schedule by rejecting those which
+        are invalid or outside the LST window for the night.
 
-        # Removes force scheduled plates from the list of plates to schedule.
-        forceScheduled = [plate.plate_id for plate in self.timeline.scheduled]
-        for plate in self._platesToSchedule:
-            if plate.plate_id in forceScheduled:
-                self._platesToSchedule.remove(plate)
-
-        if (len(self.timeline.scheduled) >= len(self.carts) or
-                self.timeline.remainingTime <= 0):
-            pass
-        else:
-            self.timeline.schedule(self._platesToSchedule, mode='plugger',
-                                   **kwargs)
-
-        # We log the number of new exposures for the plates in the timeline.
-        # We'll use this later when we prioritise carts.
-        self._nNewExposures = dict(
-            [(plate.plate_id, len(plate.getMockExposures()))
-             for plate in self.timeline.scheduled])
-
-        self.allocateCarts(self.timeline.scheduled)
-        self._cleanUp()  # Removes cart without MaNGA plates
-
-        remainingTime = self.timeline.remainingTime
-        if remainingTime > 0:
-            log.important('{0:.2f}h hours not allocated'.format(remainingTime))
-        else:
-            log.debug('all time has been allocated.')
-
-    def getASOutput(self, **kwargs):
-        """Returns the plugging request as a cart dictionary, in a format
-        that the master autoscheduler can understand."""
-
-        if self.startDate is not None and self.endDate is not None:
-            self.schedule(**kwargs)
-
-        # First we add carts not used to cart_order, with lower priority
-        nonUsedCarts = [cartNo for cartNo in config['mangaCarts']
-                        if cartNo not in self.carts['cart_order']]
-
-        self.carts['cart_order'] = nonUsedCarts + self.carts['cart_order']
-
-        # We also add the APOGEE carts
-        self.carts['cart_order'] = (config['apogeeCarts'][::-1] +
-                                    self.carts['cart_order'])
-
-        # We change the Totoro.Plate instances to plate_ids
-        for key in self.carts:
-            if key != 'cart_order' and self.carts[key] is not None:
-                self.carts[key] = self.carts[key].plate_id
-
-        return self.carts
-
-    def selectPlates(self, onlyIncomplete=True, onlyMarked=False, **kwargs):
-        """Selects plates to schedule, rejecting those which are invalid or
-        must not be scheduled."""
+        """
 
         from Totoro import dbclasses
-
-        onlyVisiblePlates = kwargs.pop('onlyVisiblePlates',
-                                       config['plugger']['onlyVisiblePlates'])
 
         assert isinstance(onlyVisiblePlates, int), \
             'onlyVisiblePlates must be a boolean'
 
-        log.info('getting plates at APO with onlyIncomplete={0}, '
-                 'onlyMarked={1}'.format(onlyIncomplete, onlyMarked))
+        log.info('PLUGGER: getting plates at APO with onlyMarked={0}'
+                 .format(onlyMarked))
 
+        # If we are only selecting plates observable that night, determines
+        # the RA range of the plates to accept.
         if onlyVisiblePlates:
             lstRange = site.localSiderealTime([self.startDate, self.endDate])
             window = config['plateVisibilityMaxHalfWindowHours']
             raRange = np.array([(lstRange[0] - window) * 15.,
                                 (lstRange[1] + window) * 15.])
 
-            log.info('selecting plates with RA in range {0}'
+            log.info('PLUGGER: selecting plates with RA in range {0}'
                      .format(str(raRange % 360)))
 
+            # If the RA range wraps around 0, we split it in two non-wrapping
+            # ranges
             raRange = intervals.splitInterval(raRange, 360.)
 
         else:
             raRange = None
 
-        plates = dbclasses.getAtAPO(onlyIncomplete=onlyIncomplete,
-                                    onlyMarked=onlyMarked,
-                                    rejectLowPriority=True,
-                                    fullCheck=False, updateSets=False,
-                                    raRange=raRange)
+        # Selects plates at APO with the appropriate parameters.
+        platesAtAPO = dbclasses.getAtAPO(onlyIncomplete=True,
+                                         onlyMarked=onlyMarked,
+                                         rejectLowPriority=True,
+                                         fullCheck=False,
+                                         updateSets=False,
+                                         raRange=raRange)
+        plugged = dbclasses.getPlugged()
 
-        log.info('plates found: {0}'.format(len(plates)))
+        platesToSchedule = platesAtAPO + [plate for plate in plugged
+                                          if plate not in platesAtAPO]
 
-        prioPlug = int(config['plugger']['forcePlugPriority'])
-
-        # Selects plates with priority 10 or plugged
-        platesToSchedule = []
-
-        for plate in plates:
-            if (plate.priority == prioPlug or plate.isPlugged):
-                platesToSchedule.append(plate)
-
-        # Adds the remainder of the plates
-        for plate in [plate for plate in plates
-                      if plate not in platesToSchedule]:
-
-            plate_id = plate.plate_id
-
-            if plate.priority <= config['plugger']['noPlugPriority']:
-                log.debug('Skipped plate_id={0} because of low priority'
-                          .format(plate_id))
-                continue
-
-            if plate.isComplete:
-                log.debug('Skipped plate_id={0} because is complete'
-                          .format(plate_id))
-                continue
-
-            # If the plate has been started but is not plugged and the cart
-            # that must be used is already plugged, skips the plate.
-            if plate.getPlateCompletion(includeIncompleteSets=True) > 0:
-                plate.isReplug = True
-
-                # Replacing this logic because now we allow a plate to be
-                # replugged in a different cart.
-                #
-                # cartToUse = getCartForReplug(plate)
-                # isCartFree = True
-                # for pp in platesToSchedule:
-                #     if (pp.isPlugged and
-                #             pp.getActiveCartNumber() == cartToUse):
-                #         isCartFree = False
-                #         break
-                # if not isCartFree:
-                #     log.info('Skipped plate_id={0} because is a replug and '
-                #              'its cart is in use.'.format(plate_id))
-                #     continue
-                # else:
-                #     # Marks the plate for future reference
-                #     plate.isReplug = True
-
-            platesToSchedule.append(plate)
+        log.info('PLUGGER: plates found: {0}'.format(len(platesToSchedule)))
 
         return platesToSchedule
 
-    def _scheduleForced(self, **kwargs):
-        """Schedules plates that have priority=forcePlugPriority."""
+    def schedule(self, **kwargs):
+        """Schedules the selected plates and gets the list of plates to plug.
 
-        from Totoro.dbclasses import Plate
-
-        db = getConnection()
-        session = db.Session()
+        Schedules the plates selected during the initialisation of the instance
+        and determines the list of of plates to plug and the cart allocation.
+        """
 
         forcePlugPriority = int(config['plugger']['forcePlugPriority'])
 
-        # Does a query and gets all the plates with force plug priority
-        with session.begin():
-            forcePlugPlates = session.query(db.plateDB.Plate).join(
-                db.plateDB.PlateToSurvey, db.plateDB.Survey,
-                db.plateDB.SurveyMode, db.plateDB.PlatePointing
-            ).filter(db.plateDB.Survey.label == 'MaNGA',
-                     db.plateDB.SurveyMode.label.ilike('%MaNGA%'),
-                     db.plateDB.PlatePointing.priority >= forcePlugPriority
-                     ).order_by(db.plateDB.Plate.plate_id).all()
+        # Removes force-plug plates from the list of plates to schedule.
+        # We'll add them back at the end, but we don't use them to cover the
+        # scheduled time.
+        self._platesToSchedule = [plate for plate in self._platesToSchedule
+                                  if plate.priority < forcePlugPriority]
 
-        if len(forcePlugPlates) == 0:
-            return
+        # Gets a list of force-plug plates
+        forcePlugPlates = getForcePlugPlates()
 
-        forcePlugPlates = [Plate(plate) for plate in forcePlugPlates]
+        # If there are more force plug plates than carts, there is no point in
+        # scheduling the rest.
+        if len(forcePlugPlates) < len(self.carts):
+            self.timeline.schedule(self._platesToSchedule, mode='plugger',
+                                   **kwargs)
 
-        # Manually adds all the forced plates to the timeline.
-        self.timeline.scheduled += [plate for plate in forcePlugPlates
-                                    if plate not in self.timeline.scheduled]
+        # Now we add back the force plug plates
+        scheduledPlates = self.timeline.scheduled + forcePlugPlates
 
-    def _logCartAllocation(self, cartNumber, plate, messages=''):
-        """Convenience function to log the cart allocation."""
+        # We log the number of new exposures for the plates in the timeline.
+        # We'll use this later when we prioritise carts.
+        self._nNewExposures = {}
+        for plate in scheduledPlates:
+            nNewExposuresPlate = len(plate.getMockExposures())
+            self._nNewExposures[plate.plate_id] = nNewExposuresPlate
 
-        if plate is None:
-            if messages == '':
-                log.important('Cart #{0} -> empty'.format(cartNumber))
+        # Allocates carts
+        self.allocateCarts(scheduledPlates)
+
+        remainingTime = self.timeline.remainingTime
+        if remainingTime > 0:
+            log.important('PLUGGER: {0:.2f}h hours not allocated'
+                          .format(remainingTime))
+        else:
+            log.debug('PLUGGER: all the time has been allocated.')
+
+    def logCartAllocation(self, activePluggings):
+        """Logs the cart allocation."""
+
+        for cartNo, plate in self.carts.iteritems():
+
+            cartStatus = getCartStatus(activePluggings, cartNo)
+            pluggedPlate = cartStatus[1]
+            status = cartStatusCodes[cartStatus[2]]
+
+            if plate is None:
+
+                if status == 'noMaNGAplate':
+                    message = ('plate_id={0} (APOGEE-2 plate, not doing '
+                               'anything)'.format(pluggedPlate.plate_id))
+                elif cartNo in config['offlineCarts']:
+                    message = 'offline'
+                elif pluggedPlate is not None:
+                    message = ('plate_id={0} (unplug)'
+                               .format(pluggedPlate.plate_id))
+                else:
+                    message = 'empty'
+
+                log.important('PLUGGER: Cart #{0} -> {1}'
+                              .format(cartNo, message))
+
             else:
-                log.important('Cart #{0} -> {1}'
-                              .format(cartNumber, messages))
-            return
 
-        if not isinstance(messages, (list, tuple)):
-            messageList = [messages]
+                if (pluggedPlate is not None and
+                        pluggedPlate.plate_id == plate.plate_id):
+                    message = 'already plugged'
+                else:
+                    message = replaceMsgs[cartStatus[2]]
 
-        plateid = plate.plate_id
-        status = plate.statuses[0].label
+                    if getCartLastPlugging(plate) is not None:
+                        message += ', replug'
 
-        if status == 'Shipped' and plate.location.label == 'APO':
-            messageList.append('plate has not been marked')
+                    plateStatus = plate.statuses[0].label
 
-        if hasattr(plate, 'isReplug') and plate.isReplug:
-            messageList.append('replug')
+                    if (plateStatus == 'Shipped' and
+                            plate.location.label == 'APO'):
+                        message += ', plate has not been marked'
 
-        jointMessage = ', '.join(messageList)
-        msgStr = '({0})'.format(jointMessage) if jointMessage != '' else ''
+                log.important('PLUGGER: Cart #{0} -> plate_id={1} ({2})'
+                              .format(cartNo, plate.plate_id, message))
 
-        log.important('Cart #{0} -> plate_id={1} {2}'
-                      .format(cartNumber, plateid, msgStr))
+        # if not isinstance(messages, (list, tuple)):
+        #     messages = [messages]
+        #
+        # if plate is None:
+        #     if len(messages) == 0:
+        #         log.important('PLUGGER: Cart #{0} -> empty'.format(cartNumber))
+        #     else:
+        #         log.important('PLUGGER: Cart #{0} -> {1}'
+        #                       .format(cartNumber, ', '.join(messages)))
+        #     return
+        #
+        # plateid = plate.plate_id
+        # status = plate.statuses[0].label
+        #
+        # if status == 'Shipped' and plate.location.label == 'APO':
+        #     messages.append('plate has not been marked')
+        #
+        # if hasattr(plate, 'isReplug') and plate.isReplug:
+        #     messages.append('replug')
+        #
+        # message = ', '.join(messages)
+        # msgStr = '({0})'.format(message) if message != '' else ''
+        #
+        # log.important('PLUGGER: Cart #{0} -> plate_id={1} {2}'
+        #               .format(cartNumber, plateid, msgStr))
+        #
+        # return
+
+    def _getCart(self, sortedCarts):
+        """Given a list of sorted carts returns the first not allocated."""
+
+        for cart in sortedCarts:
+            if self.carts[cart[0]] is None:
+                return cart
 
     def allocateCarts(self, plates, **kwargs):
         """Allocates plates into carts in the most efficient way."""
 
+        offlineCarts = config['offlineCarts']
+        forcePlugPriority = int(config['plugger']['forcePlugPriority'])
+
         if len(plates) > len(self.carts):
-            warnings.warn('{0} plates to allocate but only {1} carts '
+            warnings.warn('PLUGGER: {0} plates to allocate but only {1} carts '
                           'available. Using the first {1} plates.'
                           .format(len(plates), len(self.carts)),
-                          exceptions.TotoroPluggerWarning)
+                          TotoroPluggerWarning)
             plates = plates[0:len(self.carts)]
 
-        mjd = int(self.timeline.endDate - 2400000.5)
-        log.important('Plugging allocation for MJD={0:d} follows:'
-                      .format(mjd))
+        # Gets the active pluggings
+        activePluggings = getActivePluggings()
 
-        # Dictionary to save the cart allocation
-        cartPlateMessage = {}
+        # Gets the status of the plates in each cart.
+        cartStatus = [getCartStatus(activePluggings, cartNumber)
+                      for cartNumber in self.carts
+                      if cartNumber not in offlineCarts]
 
-        db = getConnection()
-        session = db.Session()
+        # Sorts carts by priority.
+        sortedCarts = prioritiseCarts(cartStatus)
 
-        # Gets active pluggings
-        with session.begin():
-            activePluggings = session.query(
-                db.plateDB.ActivePlugging).order_by(
-                    db.plateDB.ActivePlugging.pk).all()
-
-        for activePlugging in activePluggings:
-            if activePlugging.pk in config['offlineCarts']:
-                self.carts[activePlugging.pk] = None
-
-        # Gets the status of the plates in each remaining cart.
-        cartStatus = OrderedDict(
-            [(cartNumber, getCartStatus(activePluggings, cartNumber))
-             for cartNumber in self.carts if self.carts[cartNumber] is None])
+        # Gets a list of plugged plates and the carts in which they are plugged
+        plugged = [plate for plate in plates if plate.isPlugged]
+        pluggedCarts = [plate.getActiveCartNumber() for plate in plugged]
 
         allocatedPlates = []
 
-        # Allocates plates that are already plugged
-        for plate in plates:
-            if plate.isPlugged:
-                cartNumber = plate.getActiveCartNumber()
-                self.carts[cartNumber] = plate
-                cartPlateMessage[cartNumber] = (plate, 'already plugged')
-                allocatedPlates.append(plate)
-                cartStatus.pop(cartNumber)
+        # Allocates force-plug plates. If the plate has been plugged before
+        # tries to use the same cart, unless that cart is offline or contains
+        # a plate that we want to keep plugged.
+        forcePlugPlates = [plate for plate in plates
+                           if plate.priority == forcePlugPriority]
 
-        # Allocates replugs
+        for plate in forcePlugPlates:
+            lastCart = getCartLastPlugging(plate)
+            if (lastCart is not None and lastCart not in offlineCarts and
+                    lastCart not in pluggedCarts):
+                self.carts[lastCart] = plate
+            else:
+                cartData = self._getCart(sortedCarts)
+                self.carts[cartData[0]] = plate
+            allocatedPlates.append(plate)
+
+        # Allocates plates that are already plugged.
+        for plate in plugged:
+            if plate in allocatedPlates:
+                continue
+            cartNumber = plate.getActiveCartNumber()
+            if self.carts[cartNumber] is None:
+                self.carts[cartNumber] = plate
+            else:
+                cartData = self._getCart(sortedCarts)
+                self.carts[cartData[0]] = plate
+            allocatedPlates.append(plate)
+
+        # Allocates replugs.
         for plate in plates:
             if plate in allocatedPlates:
                 continue
-            if hasattr(plate, 'isReplug') and plate.isReplug:
-                cartNumber = getCartForReplug(plate)
-                statusCode = cartStatus[cartNumber][2]
-                if (cartNumber is not None and
-                        cartNumber not in config['offlineCarts']):
-                    self.carts[cartNumber] = plate
-                    allocatedPlates.append(plate)
-                    cartPlateMessage[cartNumber] = (plate,
-                                                    replaceMsgs[statusCode])
-                    cartStatus.pop(cartNumber)
-                else:
-                    log.debug('not plugging plate {0} in its original cart {1}'
-                              ' because it is not available'
-                              .format(plate.plate_id, cartNumber))
-                    continue
 
-        # Sorts carts by priority. Note that sortedCarts is a list of tuples,
-        # while cartStatus was a dictionary.
-        sortedCarts = prioritiseCarts(cartStatus.values(), activePluggings)
+            lastCart = getCartLastPlugging(plate)
+            if lastCart is None or lastCart in offlineCarts:
+                continue
+
+            if self.carts[lastCart] is None:
+                self.carts[lastCart] = plate
+                allocatedPlates.append(plate)
+            else:
+                log.debug('PLUGGER: not plugging plate {0} in its '
+                          'original cart {1} because it is not available'
+                          .format(plate.plate_id, lastCart))
+                continue
 
         # Allocates the remaining plates
         for plate in plates:
             if plate in allocatedPlates:
                 continue
 
-            cart = sortedCarts[0]
-            sortedCarts.pop(0)
-
-            cartNumber, cartPlate, statusCode, statusLabel, completion = cart
-
+            cartData = self._getCart(sortedCarts)
+            cartNumber, pluggedPlate, statusCode, completion = cartData
             self.carts[cartNumber] = plate
             allocatedPlates.append(plate)
-            msg = replaceMsgs[statusCode]
-            if statusLabel == 'MaNGA_started':
-                msg += ', completion={0:.2f}'.format(completion)
-
-            cartPlateMessage[cartNumber] = (plate, msg)
 
         if len(plates) > len(allocatedPlates):
-            warnings.warn('{0} plates have not been allocated'.format(
-                          len(plates) - len(allocatedPlates)),
-                          exceptions.TotoroPluggerWarning)
+            warnings.warn('PLUGGER: {0} plates have not been allocated'
+                          .format(len(plates) - len(allocatedPlates)),
+                          TotoroPluggerWarning)
+
+        remainingCarts = [cart for cart in sortedCarts
+                          if self.carts[cart[0]] is None]
 
         # Checks unassigned carts
-        for cart in sortedCarts:
-            cartNumber, plate, statusCode, statusLabel, completion = cart
+        for cart in remainingCarts:
+            cartNumber, pluggedPlate, statusCode, completion = cart
             if completion >= 1:
-                # Unplugs complete plates
-                cartPlateMessage[cartNumber] = (plate, 'unplug')
                 continue
-            else:
-                if statusLabel != 'noMaNGAplate' and plate is not None:
-                    # If this is a MaNGA plate, keeps it.
-                    self.carts[cartNumber] = plate
-                    if plate.isPlugged:
-                        cartPlateMessage[cartNumber] = (plate,
-                                                        'already plugged')
-                    else:
-                        cartPlateMessage[cartNumber] = (plate, 'unchanged')
-                else:
-                    # Otherwise, does nothing.
-                    cartPlateMessage[cartNumber] = (plate,
-                                                    'not doing anything')
+            elif (cartStatusCodes[statusCode] != 'noMaNGAplate' and
+                    pluggedPlate is not None):
+                # If this is a MaNGA plate, keeps it.
+                self.carts[cartNumber] = pluggedPlate
 
         # Logs the allocation
-        for cartNumber in sorted(cartPlateMessage.keys()):
-            self._logCartAllocation(cartNumber,
-                                    cartPlateMessage[cartNumber][0],
-                                    cartPlateMessage[cartNumber][1])
+        mjd = int(self.timeline.endDate - 2400000.5)
+        log.important('PLUGGER: Plugging allocation for MJD={0:d} follows:'
+                      .format(mjd))
+
+        # Logs the allocation
+        self.logCartAllocation(activePluggings)
+
+    def getASOutput(self, **kwargs):
+        """Returns the plugging request in the autoscheduler format."""
+
+        if self.startDate is not None and self.endDate is not None:
+            mode = 'mangaLead'
+            self.schedule(**kwargs)
+        else:
+            mode = 'apogeeLead'
 
         # Now we add a list with the priority order of the allocated carts.
         # This is useful if APOGEE needs to take over some of our carts.
         # In this way, they'll first use our carts with lower priority.
-        self.addCartOrder(metric='scheduled')
+        cartOrder = self.getCartOrder(mode=mode)
 
-    def addCartOrder(self, metric='scheduled'):
-        """Adds a key `cart_order` to self.carts with the priority of the carts
+        # Removes cart without an allocated MaNGA plate
+        carts = OrderedDict([(key, value) for key, value in self.carts.items()
+                             if value is not None])
 
-        If ``metric='scheduled'``, priority (from low to high) goes as it
-        follows:
+        # First we add carts not used to cart_order, with lower priority
+        nonUsedCarts = [cartNo for cartNo in config['mangaCarts']
+                        if cartNo not in cartOrder]
+
+        cartOrder = nonUsedCarts + cartOrder
+
+        # We also add the APOGEE carts
+        cartOrder = config['apogeeCarts'][::-1] + cartOrder
+
+        # We change the Totoro.Plate instances to plate_ids
+        for key in carts:
+            if key != 'cart_order' and carts[key] is not None:
+                carts[key] = carts[key].plate_id
+
+        carts['cart_order'] = cartOrder
+
+        return carts
+
+    def getCartOrder(self, mode='mangaLead'):
+        """Returns a prioritised cart list.
+
+        If `mode='mangaLead'`, priority (from low to high) goes as it follows:
 
         (1) Completed plates. Note that there should be no completed plates
             in self.carts, but this is just to double-check.
@@ -539,25 +606,27 @@ class Plugger(object):
             the night.
         (3) Force plug plates (plates with priority 10)
 
-        If ``metric='completion'``, (2) is replaced with the number of
-        incomplete sets. Plates with incomplete sets are given the highest
-        priority. This is used when `addCartOrder` is called for a `Plugger`
-        object initialised without dates, and not scheduling is performed.
+        If `mode='apogeeLead'`, (2) is replaced with the number of incomplete
+        sets. Plates with incomplete sets are given the highest priority. This
+        is used when `addCartOrder` is called for a `Plugger` object
+        initialised without dates, and not scheduling is performed.
 
         Additionally, we give high priority to offline cart. This is to avoid
         APOGEE to plug co-designed plates in those carts if possible. If
-        ``metric='scheduled'``, offline carts are given the highest priority
-        after all scheduled carts. If ``metric='completion'`` offline carts are
-        given higher priority than any but carts with incomplete sets.
+        `mode='mangaLead'``, offline carts are given the highest priority after
+        all scheduled carts. If ``mode='apogeeLead'`` offline carts are given
+        higher priority than any but carts with incomplete sets.
 
         """
 
-        assert metric in ['scheduled', 'completion'], \
-            'metric must be \'scheduled\' or \'completion\''
-
         forcePlugPriority = int(config['plugger']['forcePlugPriority'])
 
-        # Splits plates in the three priority categories.
+        assert mode in ['apogeeLead', 'mangaLead'], \
+            'metric must be "apogeeLead" or "mangaLead"'
+
+        # Splits plates in the three priority categories. We use useMock=False
+        # because these plates contain mock exposures from the simulation.
+
         completed = []
         scheduled = []
         forcePlug = []
@@ -572,7 +641,7 @@ class Plugger(object):
             else:
                 scheduled.append((cart, plate))
 
-        if metric == 'scheduled':
+        if mode == 'mangaLead':
 
             # Retrieves how many scheduled (mock) exposures are in each plate.
             nExposures = [self._nNewExposures[plate.plate_id]
@@ -582,44 +651,36 @@ class Plugger(object):
             # Sorts scheduled exposures from few to many scheduled exposures.
             scheduledOrdered = [scheduled[ii] for ii in np.argsort(nExposures)]
 
-            # Sorts scheduled exposures from few to many scheduled exposures.
-            scheduledOrdered = [scheduled[ii] for ii in np.argsort(nExposures)]
-
-        elif metric == 'completion':
+        elif mode == 'apogeeLead':
 
             # Finds out what plates have incomplete sets.
-            platesWithIncompleteSets = []
-            platesWithoutIncompleteSets = []
+            incompleteSets = []
+            completeSets = []
 
             for ii in range(len(scheduled)):
                 if scheduled[ii][1].hasIncompleteSets():
-                    platesWithIncompleteSets.append(scheduled[ii])
+                    incompleteSets.append(scheduled[ii])
                 else:
-                    platesWithoutIncompleteSets.append(scheduled[ii])
+                    completeSets.append(scheduled[ii])
 
-            # Calculates completion for each plate. For plates with incomplete
-            # sets we take them into account.
-            completionWithIncompleteSets = [
-                plate.getPlateCompletion(includeIncompleteSets=True)
-                for cart, plate in platesWithIncompleteSets]
+            # Sorts the scheduled plates according to completion. For plates
+            # with incomplete sets we take them into account.
 
-            completionWithoutIncompleteSets = [
-                plate.getPlateCompletion()
-                for cart, plate in platesWithoutIncompleteSets]
+            sortedIncompleteSets = sorted(
+                incompleteSets, key=lambda xx: xx[1].getPlateCompletion(
+                    includeIncompleteSets=True))
 
-            # Sorts the scheduled plates according to completion, with plates
-            # without incomplete sets always first.
-            scheduledOrdered = [
-                platesWithoutIncompleteSets[ii]
-                for ii in np.argsort(completionWithoutIncompleteSets)] + \
-                [platesWithIncompleteSets[jj]
-                 for jj in np.argsort(completionWithIncompleteSets)]
+            sortedCompleteSets = sorted(
+                completeSets, key=lambda xx: xx[1].getPlateCompletion())
+
+            # We put plates with complete sets first
+            scheduledOrdered = sortedCompleteSets + sortedIncompleteSets
 
         usedCarts = [cart for cart, plate in
                      completed + scheduledOrdered + forcePlug]
 
         # Creates master ordered list
-        if metric == 'scheduled':
+        if mode == 'mangaLead':
             offline = [(cart, None) for cart in config['offlineCarts']
                        if cart not in usedCarts]
             orderedCarts = completed + offline + scheduledOrdered + forcePlug
@@ -640,20 +701,4 @@ class Plugger(object):
 
             orderedCarts = completed + scheduledOrdered + forcePlug
 
-        # Now it adds the list to self.carts
-        self.carts['cart_order'] = [cart for cart, plate in orderedCarts]
-
-        return
-
-    def _cleanUp(self):
-        """Removes keys in self.cart whose value is None."""
-
-        keysToRemove = []
-        for key in self.carts:
-            if self.carts[key] is None:
-                keysToRemove.append(key)
-            else:
-                pass
-
-        for key in keysToRemove:
-            self.carts.pop(key)
+        return [cart for cart, plate in orderedCarts]
