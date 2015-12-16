@@ -846,7 +846,7 @@ class Plate(object):
             else:
                 warnings.warn('plate={0}: skipping incomplete set '
                               'rearrangement because plate has > 5 exposures '
-                              'in incomplete sets',
+                              'in incomplete sets'.format(self.plate_id),
                               TotoroExceptions.TotoroUserWarning)
 
         return exposure
