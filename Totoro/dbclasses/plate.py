@@ -234,6 +234,14 @@ class Plates(list):
         """For backards compatibility."""
         return getAtAPO(**kwargs)
 
+    def plate_id(self):
+        """Returns a list of the plate_ids of the plates in the object."""
+        return [plate.plate_id for plate in self]
+
+    def manga_tileid(self):
+        """Returns a list of the manga_tileids of the plates in the object."""
+        return [plate.manga_tileid for plate in self]
+
 
 def fromPlateID(plateid, **kwargs):
     """Convenience function that returns a `Plate` instance from a plate_id."""
