@@ -59,15 +59,37 @@ def getPlugged(**kwargs):
     return Plates(plates, **kwargs)
 
 
-def getAtAPO(onlyIncomplete=False, onlyMarked=False,
-             rejectLowPriority=False, raRange=None,
-             rejectSpecial=True, **kwargs):
+def _getValidPlates(plates, rejectLowPriority=False,
+                    rejectSpecial=False, **kargs):
+    """Rejects low priority and special plates."""
+
+    minimumPriority = config['plugger']['noPlugPriority']
+
+    if rejectLowPriority:
+        plates = [plate for plate in plates
+                  if plate.plate_pointings[0].priority > minimumPriority]
+
+    validPlates = []
+    if rejectSpecial:
+        for plate in plates:
+            if plate.mangadbPlate is None:
+                continue
+            if (plate.mangadbPlate.all_sky_plate is True or
+                    plate.mangadbPlate.commissioning_plate is True or
+                    plate.mangadbPlate.neverobserve is True):
+                continue
+            validPlates.append(plate)
+    else:
+        validPlates = plates
+
+    return validPlates
+
+
+def getAtAPO(onlyIncomplete=False, onlyMarked=False, raRange=None, **kwargs):
     """Gets plates at APO with various conditions."""
 
     kwargs.setdefault('fullCheck', False)
     kwargs.setdefault('updateSets', False)
-
-    minimumPriority = config['plugger']['noPlugPriority']
 
     __, Session, plateDB, __ = getConnectionFull()
     session = Session()
@@ -105,24 +127,9 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False,
                 warnings.warn('unrecognised format for raRange',
                               TotoroExceptions.TotoroUserWarning)
 
-        if rejectLowPriority:
-            plates = plates.filter(
-                plateDB.PlatePointing.priority > minimumPriority)
-
         plates = plates.order_by(plateDB.Plate.plate_id).all()
 
-        validPlates = []
-        if rejectSpecial:
-            for plate in plates:
-                if plate.mangadbPlate is None:
-                    continue
-                if (plate.mangadbPlate.all_sky_plate is True or
-                        plate.mangadbPlate.commissioning_plate is True or
-                        plate.mangadbPlate.neverobserve is True):
-                    continue
-                validPlates.append(plate)
-        else:
-            validPlates = plates
+    validPlates = _getValidPlates(plates, **kwargs)
 
     if onlyIncomplete:
         return _getIncomplete(validPlates, **kwargs)
@@ -150,6 +157,8 @@ def getAll(onlyIncomplete=False, **kwargs):
     _checkNumberPlatesAtAPO(platesAtAPO)
 
     plates = plates.order_by(plateDB.Plate.plate_id).all()
+
+    plates = _getValidPlates(plates, **kwargs)
 
     if onlyIncomplete:
         return _getIncomplete(plates, **kwargs)
