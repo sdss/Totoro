@@ -522,6 +522,10 @@ class Plate(object):
 
     @property
     def isComplete(self):
+
+        if hasattr(self, '_useOnlyCompletion'):
+            return self.getPlateCompletion() > 1.
+
         if self._complete is not None:
             return self._complete
         else:
