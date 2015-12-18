@@ -86,10 +86,32 @@ def createExposure(row):
     return exp
 
 
+def removeExposures(plates, startDate):
+    """Removes all real exposures taking after startDate."""
+
+    for plate in plates:
+        for ss in plate.sets:
+            ss.isMock = True
+            validExps = [exp for exp in ss.totoroExposures
+                         if exp.getJD()[0] < startDate]
+            if len(validExps) != len(ss.totoroExposures):
+                plate._modified = True
+                plate._useOnlyCompletion = True
+            ss.totoroExposures = validExps
+        plate.sets = [ss for ss in plate.sets if len(ss.totoroExposures) > 0]
+
+    return plates
+
+
 def restoreExposures(exposureFile, plates=[]):
     """Restores exposures to a list of plates."""
 
     data = table.Table.read(exposureFile)
+
+    if 'STRTDATE' in data.meta:
+        startDate = data.meta['STRTDATE']
+        if startDate is not None and startDate > 0:
+            plates = removeExposures(plates, startDate)
 
     for plate in plates:
         plate_id = plate.plate_id
