@@ -522,7 +522,12 @@ class Plate(object):
 
     @property
     def isComplete(self):
+        """Returns True if the plate is complete."""
 
+        # This is a hidden option mostly to be used with
+        # Totoro.scheduler.io.restoreExposures. If _useOnlyCompletion
+        # is set, the plate is considered complete by just looking at
+        # getPlateCompletion() (i.e., skips checking the plugging status).
         if hasattr(self, '_useOnlyCompletion'):
             return self.getPlateCompletion() > 1.
 
