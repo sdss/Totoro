@@ -17,6 +17,7 @@ from __future__ import print_function
 from Totoro.db import getConnection
 from Totoro.dbclasses import fromPlateID
 from Totoro.dbclasses.plate_utils import removeOrphanedSets
+from Totoro.bin.rearrangeSets import rearrageSets
 import unittest
 
 
@@ -70,7 +71,7 @@ class TestSetArrangement(unittest.TestCase):
 
         plate = fromPlateID(8484, rearrangeIncomplete=False, force=True)
 
-        assert len(plate.sets) == 6
+        self.assertEqual(len(plate.sets), 6)
 
         setExposurePK = [exp._mangaExposure.pk
                          for exp in plate.sets[4].totoroExposures]
@@ -157,6 +158,21 @@ class TestSetArrangement(unittest.TestCase):
             setExposures = [exp._mangaExposure.pk
                             for exp in plate.sets[ii].totoroExposures]
             self.assertItemsEqual(setExposures, correctSetExposures[ii])
+
+    def testRearrangementScript(self):
+        """Tests the set rearrangement script."""
+
+        with session.begin():
+            exposure = session.query(db.mangaDB.Exposure).get(1348)
+            exposure.set_pk = None
+
+        rearrageSets(8484)
+
+        plate = fromPlateID(8484)
+
+        setExposurePK = [exp._mangaExposure.pk
+                         for exp in plate.sets[4].totoroExposures]
+        self.assertIn(1348, setExposurePK)
 
 if __name__ == '__main__':
     unittest.main()

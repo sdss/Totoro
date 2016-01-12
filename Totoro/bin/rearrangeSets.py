@@ -31,7 +31,7 @@ def rearrageSets(plateid, force=False, LST=None, **kwargs):
     from Totoro.dbclasses import plate
 
     pp = plate.fromPlateID(plateid)
-    pp.rearrangeSets(forceLimit=force, LST=LST)
+    pp.rearrangeSets(force=force, LST=LST)
 
 
 if __name__ == '__main__':

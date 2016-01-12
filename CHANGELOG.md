@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.5.1] - 2016-01-12
+### Fixed
+- Fixed a bad keyword in the set rearrangement script that made it fail.
+### Refactored
+- Improved get plates function.
+
+
 ## [1.5] - 2015-12-12
 ### Fixed
 - Plate.addMockExposure only rearranges exposures in complete sets if the
