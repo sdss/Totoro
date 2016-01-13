@@ -21,7 +21,7 @@ import numpy as np
 import os
 
 
-def saveExposures(plates, outfile):
+def saveExposures(plates, outfile, startDate=None):
     """Writes information about simulated plates to a FITS file."""
 
     template = table.Table(
@@ -63,10 +63,16 @@ def saveExposures(plates, outfile):
                      exp.exposure_time, exp.ditherPosition, ra, dec,
                      exp.getSN2Array()))
 
-        if os.path.exists(outfile):
-            os.remove(outfile)
+    # Records the start date
+    if startDate:
+        template.meta['STRTDATE'] = startDate
+    else:
+        template.meta['STRTDATE'] = np.min(template['start_jd'])
 
-        template.write(outfile, format='fits')
+    if os.path.exists(outfile):
+        os.remove(outfile)
+
+    template.write(outfile, format='fits')
 
 
 def createExposure(row):
@@ -80,10 +86,32 @@ def createExposure(row):
     return exp
 
 
+def removeExposures(plates, startDate):
+    """Removes all real exposures taking after startDate."""
+
+    for plate in plates:
+        for ss in plate.sets:
+            ss.isMock = True
+            validExps = [exp for exp in ss.totoroExposures
+                         if exp.getJD()[0] < startDate]
+            if len(validExps) != len(ss.totoroExposures):
+                plate._modified = True
+                plate._useOnlyCompletion = True
+            ss.totoroExposures = validExps
+        plate.sets = [ss for ss in plate.sets if len(ss.totoroExposures) > 0]
+
+    return plates
+
+
 def restoreExposures(exposureFile, plates=[]):
     """Restores exposures to a list of plates."""
 
     data = table.Table.read(exposureFile)
+
+    if 'STRTDATE' in data.meta:
+        startDate = data.meta['STRTDATE']
+        if startDate is not None and startDate > 0:
+            plates = removeExposures(plates, startDate)
 
     for plate in plates:
         plate_id = plate.plate_id

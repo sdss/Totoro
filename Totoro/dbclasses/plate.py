@@ -522,6 +522,15 @@ class Plate(object):
 
     @property
     def isComplete(self):
+        """Returns True if the plate is complete."""
+
+        # This is a hidden option mostly to be used with
+        # Totoro.scheduler.io.restoreExposures. If _useOnlyCompletion
+        # is set, the plate is considered complete by just looking at
+        # getPlateCompletion() (i.e., skips checking the plugging status).
+        if hasattr(self, '_useOnlyCompletion'):
+            return self.getPlateCompletion() > 1.
+
         if self._complete is not None:
             return self._complete
         else:
@@ -783,6 +792,25 @@ class Plate(object):
 
         return True if secIntersectionLength >= minLength else False
 
+    def isSpecial(self):
+        """Returns True if a plate is all_sky or commissioning."""
+
+        if self.mangadbPlate is None:
+            return False
+        if (self.mangadbPlate.all_sky_plate is True or
+                self.mangadbPlate.commissioning_plate is True):
+            return True
+        return False
+
+    def isNeverObserve(self):
+        """Returns True if the plate is marked as neverobserve."""
+
+        if self.mangadbPlate is None:
+            return False
+        if self.mangadbPlate.neverobserve is True:
+            return True
+        return False
+
     def addMockExposure(self, exposure=None, startTime=None, set=None,
                         expTime=None, silent=False, rearrange=True, **kwargs):
         """Creates a mock expusure in the best possible way."""
@@ -827,7 +855,7 @@ class Plate(object):
             else:
                 warnings.warn('plate={0}: skipping incomplete set '
                               'rearrangement because plate has > 5 exposures '
-                              'in incomplete sets',
+                              'in incomplete sets'.format(self.plate_id),
                               TotoroExceptions.TotoroUserWarning)
 
         return exposure

@@ -84,48 +84,86 @@ def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
     if len(observablePlates) == 0:
         observablePlates = incompletePlates
 
-    # If mode is plugger. We try using the plates that are plugged. If mode is
-    # planner we prioritise plates with signal.
     if mode == 'plugger':
-        priorityPlates = [plate for plate in observablePlates
-                          if plate.isPlugged]
+        # First we try using only plugged plates
+        pluggedPlates = [plate for plate in observablePlates
+                         if plate.isPlugged]
+
+        optimalPlate, newExposures = runSimulation(
+            pluggedPlates, jdRange, mode='plugger',
+            scope='plugged', normalise=False)
+
+        if optimalPlate is not None:
+            return optimalPlate, newExposures
+
+        # If no optimal plate is selected with only plugged plates, we try
+        # with plates that are incomplete but already have signal.
+        platesWithSignal = [
+            plate for plate in observablePlates
+            if plate.getPlateCompletion(includeIncompleteSets=True) > 0]
+
+        optimalPlate, newExposures = runSimulation(
+            platesWithSignal, jdRange, mode='plugger',
+            scope='plugged', normalise=True)
+
+        if optimalPlate is not None:
+            return optimalPlate, newExposures
+
+        # Finally, we try with all incomplete plates
+        optimalPlate, newExposures = runSimulation(
+            observablePlates, jdRange, mode='plugger',
+            scope='all', normalise=True)
+
+        return optimalPlate, newExposures
+
     else:
-        priorityPlates = [plate for plate in observablePlates
-                          if plate.drilled or
-                          len(plate.getTotoroExposures()) > 0]
+
+        # First we try using only plates with signal.
+        platesWithSignal = [
+            plate for plate in observablePlates
+            if plate.getPlateCompletion(includeIncompleteSets=True) > 0]
+
+        optimalPlate, newExposures = runSimulation(
+            platesWithSignal, jdRange, mode='planner',
+            scope='plugged', normalise=True)
+
+        if optimalPlate is not None:
+            return optimalPlate, newExposures
+
+        # Now we try with plates already drilled
+        drilledPlates = [plate for plate in observablePlates if plate.drilled]
+        optimalPlate, newExposures = runSimulation(
+            drilledPlates, jdRange, mode='planner',
+            scope='all', normalise=True)
+
+        if optimalPlate is not None:
+            return optimalPlate, newExposures
+
+        # Otherwise, we try using all plates and fields
+        optimalPlate, newExposures = runSimulation(
+            observablePlates, jdRange, mode='planner',
+            scope='all', normalise=True)
+
+        return optimalPlate, newExposures
+
+
+def runSimulation(plates, jdRange, mode='plugger', scope='all',
+                  normalise=True, **kwargs):
+    """Runs the simulation for a subset of plates."""
 
     # Adss bookkeeping information
-    _addBookkeepingAttrs(priorityPlates)
+    _addBookkeepingAttrs(plates)
 
-    # Tries finding an optimal plate among the priority plates. Note that
-    # we use normalise=True here because we want to take into account the
-    # observing windows of the plates already plugged/started.
-    if len(priorityPlates) > 0:
-        simulatePlates(priorityPlates, jdRange, mode, **kwargs)
-        optimalPlate = selectPlate(priorityPlates, jdRange, scope='plugged',
-                                   normalise=True)
+    simulatePlates(plates, jdRange, mode, **kwargs)
+    optimalPlate = selectPlate(plates, jdRange,
+                               scope=scope, normalise=normalise)
 
-        if optimalPlate:
-            newExps = cleanupPlates(priorityPlates, optimalPlate, jdRange)
-            return optimalPlate, newExps
-        else:
-            cleanupPlates(priorityPlates, None, jdRange)
-            observablePlates = [plate for plate in observablePlates]
-
-    # Stores some information about the plates before the simulation
-    _addBookkeepingAttrs(observablePlates)
-
-    # If that is not the case, we use all the observable plates. Note that in
-    # this case we use rearrange=False to speed up the simulation a bit. In
-    # this manner, exposures in incomplete sets are not rearranged after a new
-    # mock exposure is added.
-    simulatePlates(observablePlates, jdRange, mode, **kwargs)
-    optimalPlate = selectPlate(observablePlates, jdRange, normalise=True)
-
-    # Cleans up all plates
-    newExps = cleanupPlates(observablePlates, optimalPlate, jdRange)
-
-    return optimalPlate, newExps
+    if optimalPlate:
+        newExps = cleanupPlates(plates, optimalPlate, jdRange)
+        return optimalPlate, newExps
+    else:
+        cleanupPlates(plates, None, jdRange)
+        return None, []
 
 
 def _normaliseWindowLength(plates, jdRange, factor=1.0, apply=True):

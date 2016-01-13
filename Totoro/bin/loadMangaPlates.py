@@ -24,6 +24,7 @@ import os
 import sys
 
 db = getConnection()
+session = db.Session()
 
 
 def getMangaTileIDs():
@@ -72,19 +73,19 @@ def loadMangaPlates():
     specialPlates['comment'].fill_value = ''
     specialPlates = specialPlates.filled()
 
-    with db.session.begin():
-        allPlates = db.session.query(db.plateDB.Plate).join(
+    with session.begin():
+        allPlates = session.query(db.plateDB.Plate).join(
             db.plateDB.PlateToSurvey, db.plateDB.Survey,
             db.plateDB.SurveyMode).filter(
                 db.plateDB.Survey.label == 'MaNGA',
                 db.plateDB.SurveyMode.label.like('%MaNGA%')).all()
 
-    with db.session.begin():
+    with session.begin():
 
         for nn, plate in enumerate(allPlates):
 
             try:
-                newPlate = db.session.query(db.mangaDB.Plate).filter(
+                newPlate = session.query(db.mangaDB.Plate).filter(
                     db.mangaDB.Plate.platedb_plate_pk == plate.pk).one()
             except:
                 newPlate = db.mangaDB.Plate()
@@ -110,12 +111,15 @@ def loadMangaPlates():
 
             if plate.plate_id in neverobserve:
                 newPlate.neverobserve = bool(neverobserve[plate.plate_id])
+            # Some harcoded values that may not appear in neverobserve
+            elif plate.plate_id in [7566, 7567, 7568]:
+                newPlate.neverobserve = True
             else:
                 newPlate.neverobserve = False
 
             newPlate.platedb_plate_pk = plate.pk
 
-            db.session.add(newPlate)
+            session.add(newPlate)
 
             sys.stdout.write('\rLoading plates: {0:.0f}%'
                              .format(nn / float(len(allPlates)) * 100.))
