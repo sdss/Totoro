@@ -87,7 +87,7 @@ plugger:
     maxAltitude: 85
     minSchedulingTimeHours: 0.75
     onlyVisiblePlates: true
-    simulationFactor: 1.15
+    simulationFactor: 1.05
 
 simulation:
     blueSN2: 3.32
