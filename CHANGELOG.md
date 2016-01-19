@@ -1,7 +1,7 @@
 # Change Log
 
 
-## [1.5.3] - not yet tagged
+## [1.5.3] - 2016-01-19
 ### Changed
 - Modified simulation efficiencies to 0.755 (to avoid problems with three exps.
 not making the 1-hour window).
