@@ -237,6 +237,18 @@ class ObservingPlan(object):
         else:
             return None
 
+    def getPosition(self, jd):
+        """Returns the position of the block in which a certain JD falls."""
+
+        try:
+            pos = int(self.getClosest(jd)['Position'])
+        except:
+            warnings.warn('Cannot found block position for JD={0}'.format(jd),
+                          exceptions.TotoroUserWarning)
+            pos = None
+
+        return pos
+
     def __repr__(self):
         return self.plan.__repr__()
 

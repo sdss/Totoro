@@ -34,6 +34,8 @@ class TestPlugger(unittest.TestCase):
         cls._restoreActivePluggings()
 
         config['offlineCarts'] = [2]
+        config['mangaCarts'] = [1, 2, 3, 4, 5, 6]
+        config['plugger']['factor'] = 1.15
 
         with session.begin():
 
@@ -86,7 +88,8 @@ class TestPlugger(unittest.TestCase):
     def test57157(self):
         """Tests Plugger with MJD=57157."""
 
-        plugger = Plugger(startDate=2457157.76042, endDate=2457157.95)
+        plugger = Plugger(startDate=2457157.76042, endDate=2457157.95,
+                          useInitialBuffer=False)
 
         validResult = OrderedDict([(1, 8482), (3, 8486), (4, 8550),
                                    ('cart_order',
@@ -103,11 +106,12 @@ class TestPlugger(unittest.TestCase):
                 db.plateDB.Plate.plate_id == 8081).one()
             plate8081.plate_location_pk = 23
 
-        plugger = Plugger(startDate=2457307.806736, endDate=2457307.998611)
+        plugger = Plugger(startDate=2457307.806736, endDate=2457307.998611,
+                          useInitialBuffer=False)
 
-        validResult = OrderedDict([(1, 8081), (3, 8486), (4, 8570), (5, 8566),
-                                   ('cart_order', [9, 8, 7, 6, 2, 3, 1, 4, 5])
-                                   ])
+        validResult = OrderedDict(
+            [(1, 8570), (2, 8081), (4, 8566),
+             ('cart_order', [9, 8, 7, 5, 6, 3, 2, 1, 4])])
 
         self.assertEqual(validResult, plugger.getASOutput())
 
@@ -126,13 +130,14 @@ class TestPlugger(unittest.TestCase):
             plate7443.plate_pointings[0].priority = 10
 
         # Now we run the plugger
-        plugger = Plugger(startDate=2457185.64931, endDate=2457185.82347)
+        plugger = Plugger(startDate=2457185.64931, endDate=2457185.82347,
+                          useInitialBuffer=False)
 
         # We expect the same result as before but with 8550 and 7443 assigned
         # first.
         validResult = OrderedDict(
-            [(1, 7443), (3, 8486), (4, 8550), (5, 8482), (6, 8546),
-             ('cart_order', [9, 8, 7, 2, 3, 6, 5, 1, 4])])
+            [(1, 8550), (2, 7443), (3, 8486), (4, 8546), (5, 8482),
+             ('cart_order', [9, 8, 7, 6, 3, 4, 5, 1, 2])])
 
         self.assertEqual(validResult, plugger.getASOutput())
 
@@ -166,6 +171,7 @@ class TestPlugger(unittest.TestCase):
             session.delete(session.query(db.plateDB.ActivePlugging).get(2))
 
         config['offlineCarts'] = [2]
+        config['mangaCarts'] = [1, 2, 3, 4, 5, 6]
 
         # We run the plugger for a non-MaNGA night
         pluggerNoMaNGA = Plugger(startDate=None, endDate=None)
@@ -177,9 +183,11 @@ class TestPlugger(unittest.TestCase):
 
         # Makes cart 3 offline
         config['offlineCarts'] = [3]
+        config['mangaCarts'] = [1, 2, 3, 4, 5, 6]
 
         # Runs Plugger
-        plugger = Plugger(startDate=2457182.64792, endDate=2457182.79097)
+        plugger = Plugger(startDate=2457182.64792, endDate=2457182.79097,
+                          useInitialBuffer=False)
         output = plugger.getASOutput()
 
         self.assertEqual(output,

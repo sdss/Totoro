@@ -19,6 +19,7 @@ from __future__ import print_function
 from Totoro import log, config, site
 from Totoro.db import getConnection
 from Totoro.scheduler.timeline import Timeline
+from Totoro.scheduler import observingPlan
 from Totoro.exceptions import TotoroPluggerWarning, TotoroPluggerError
 from Totoro.utils import intervals
 from collections import OrderedDict
@@ -225,7 +226,7 @@ class Plugger(object):
             raise TotoroPluggerError('PLUGGER: either startDate = endDate = '
                                      'None or both need to be defined.')
         else:
-            self._initFromDates(startDate, endDate)
+            self._initFromDates(startDate, endDate, **kwargs)
 
     def _initNoManga(self):
         """Inits a Plugger instance when no MaNGA time is scheduled.
@@ -267,6 +268,29 @@ class Plugger(object):
 
         assert jd0 < jd1, 'JD1 cannot be lower than JD1'
 
+        initialBufferMin = config['plugger']['initialBufferMin']
+        if kwargs.get('useInitialBuffer', True) is False:
+            initialBufferMin = 0.
+
+        if initialBufferMin > 0.:
+            blockPosition = observingPlan.getPosition(jd0)
+            if blockPosition is None:
+                warnings.warn(
+                    'cannot find the position of the block. '
+                    'Not applying buffer at the beginning of the window.',
+                    TotoroPluggerWarning)
+            else:
+                if blockPosition == 1:
+                    warnings.warn(
+                        'observing window falls at the beginning of the night.'
+                        ' Not applying buffer.', TotoroPluggerWarning)
+                elif blockPosition == 2:
+                    jd0 -= initialBufferMin / 60. / 24.
+                    warnings.warn(
+                        'Applying buffer of {0} minutes at the beginning of '
+                        'the window'.format(initialBufferMin),
+                        TotoroPluggerWarning)
+
         self.startDate = jd0
         self.endDate = jd1
         scheduledTime = (self.endDate - self.startDate) * 24.
@@ -288,7 +312,8 @@ class Plugger(object):
 
     def getPlatesToSchedule(
             self, onlyMarked=False,
-            onlyVisiblePlates=config['plugger']['onlyVisiblePlates']):
+            onlyVisiblePlates=config['plugger']['onlyVisiblePlates'],
+            **kwargs):
         """Selects plates to schedule.
 
         Determines the list of plates to schedule by rejecting those which

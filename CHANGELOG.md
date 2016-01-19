@@ -1,5 +1,16 @@
 # Change Log
 
+
+## [1.5.2] - 2016-01-18
+### Added
+- Initial buffer for plugger. If the observing block is in the second part of
+the night, the scheduling starts defaults.plugger.initialBufferMin before the
+official schedule time. Issues a series of warnings. If Plugger is called with
+the keyword useInitialBuffer=False, the initial buffer is not applied. Right
+now all plugger tests use this option to avoid changing the results. This
+should be fixed eventually.
+
+
 ## [1.5.1] - 2016-01-12
 ### Fixed
 - Fixed a bad keyword in the set rearrangement script that made it fail.
