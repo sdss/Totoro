@@ -72,7 +72,7 @@ scheduling:
     nextNightFactor: 0.5
 
 planner:
-    efficiency: 0.8
+    efficiency: 0.755
     maxAltitude: 85
     noPlugPriority: 1
     forcePlugPriority: 10
@@ -81,7 +81,7 @@ planner:
     simulationFactor: 1.0
 
 plugger:
-    efficiency: 0.8
+    efficiency: 0.755
     noPlugPriority: 1
     forcePlugPriority: 10
     maxAltitude: 85

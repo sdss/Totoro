@@ -1,6 +1,12 @@
 # Change Log
 
 
+## [1.5.3] - not yet tagged
+### Changed
+- Modified simulation efficiencies to 0.755 (to avoid problems with three exps.
+not making the 1-hour window).
+
+
 ## [1.5.2] - 2016-01-18
 ### Added
 - Initial buffer for plugger. If the observing block is in the second part of
