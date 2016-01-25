@@ -76,7 +76,7 @@ planner:
     maxAltitude: 85
     noPlugPriority: 1
     forcePlugPriority: 10
-    goodWeatherFraction: 0.45
+    goodWeatherFraction: 0.5
     seed: 12345
     simulationFactor: 1.0
 
