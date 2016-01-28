@@ -476,7 +476,7 @@ class Plate(object):
         if (self.currentSurveyMode is None or
                 self.currentSurveyMode.label != 'MaNGA dither'):
             log.debug('plate_id={0} has surveyMode which is not MaNGA dither. '
-                      'Not updating sets.')
+                      'Not updating sets.'.format(self.plate_id))
             return False
 
         result = plateUtils.updatePlate(self, **kwargs)
