@@ -1,6 +1,11 @@
 # Change Log
 
 
+## [1.5.4] - not yet tagged
+### Changed
+- Updated default goodWeatherFraction to 0.5.
+
+
 ## [1.5.3] - 2016-01-19
 ### Changed
 - Modified simulation efficiencies to 0.755 (to avoid problems with three exps.
