@@ -205,8 +205,7 @@ class Timeline(object):
         nOrphanedPost = 0
         for ss in plate.sets:
             if ss.getStatus()[0] == 'Incomplete':
-                nOrphanedPost += len([exp for exp in ss.totoroExposures
-                                      if exp.isMock])
+                nOrphanedPost += len([exp for exp in ss.totoroExposures])
 
         # Logs the result of the simulation. Format changed depending
         # on whether this is plate or a field.
