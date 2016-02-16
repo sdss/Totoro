@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+# encoding: utf-8
+"""
+
+writeObservedPlates
+
+Created by José Sánchez-Gallego on 15 Feb 2016.
+Licensed under a 3-clause BSD license.
+
+Revision history:
+    15 Feb 2016 J. Sánchez-Gallego
+      Initial version
+
+"""
+
+from __future__ import division
+from __future__ import print_function
+from Totoro import getComplete
+
+
+def writeObservedPlates():
+    """Writes a list of completed plates."""
+
+    complete = getComplete(rejectSpecial=True)
+
+    unit = open('complete.dat', 'w')
+    unit.write('# plate_id\n')
+    for plate in complete:
+        unit.write('{0}\n'.format(plate.plate_id))
+    unit.close()
+
+
+if __name__ == '__main__':
+    writeObservedPlates()
