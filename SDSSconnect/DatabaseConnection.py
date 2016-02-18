@@ -249,10 +249,13 @@ class DatabaseConnection(object):
 
         # We are going to create our own relationships, so we remove these.
         for model in self.Base.classes:
-            for relationship in model.__mapper__.relationships.keys():
-                delattr(model, str(relationship))
+            if model in ['mangaDB', 'plateDB']:
+                for relationship in model.__mapper__.relationships.keys():
+                    delattr(model, str(relationship))
 
-        createRelationships(self.Base)
+        if models == __MODELS__:
+            createRelationships(self.Base)
+
         sqlalchemy.orm.configure_mappers()
 
         # Now that all classes have been added to the Base, we wrap them
@@ -265,3 +268,7 @@ class DatabaseConnection(object):
                 methods.addFunctionsPlateDB(self.plateDB)
             elif model.lower() == 'mangadb':
                 self.mangaDB = ModelWrapper(self.Base, 'Mangadb_')
+            else:
+                setattr(self, model,
+                        ModelWrapper(self.Base,
+                                     '{0}_'.format(model.capitalize())))
