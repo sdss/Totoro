@@ -249,7 +249,7 @@ class DatabaseConnection(object):
 
         # We are going to create our own relationships, so we remove these.
         for model in self.Base.classes:
-            if model in ['mangaDB', 'plateDB']:
+            if 'Platedb_' in model.__name__ or 'Mangadb_' in model.__name__:
                 for relationship in model.__mapper__.relationships.keys():
                     delattr(model, str(relationship))
 
