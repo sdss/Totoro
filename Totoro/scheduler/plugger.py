@@ -155,8 +155,8 @@ def prioritiseCarts(carts):
     -------
     result : list
         Returns `carts` sorted in the following order:
-        - Empty carts
         - Carts with complete plates
+        - Empty carts
         - Carts with plates of unknown status
         - Carts with non-MaNGA plates
         - Carts with MaNGA plates that have not been started
@@ -192,7 +192,7 @@ def prioritiseCarts(carts):
     started = sorted(started, key=lambda xx: xx[3])
 
     # Returns carts in the desired order.
-    return empty + complete + unknown + noMaNGA + noStarted + started
+    return complete + empty + unknown + noMaNGA + noStarted + started
 
 
 class Plugger(object):
