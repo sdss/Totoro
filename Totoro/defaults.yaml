@@ -91,10 +91,12 @@ plugger:
     simulationFactor: 1.05
 
 simulation:
-    blueSN2: 3.32
-    alphaBlue: 1.25
-    redSN2: 6.64
-    alphaRed: 0.65
+    blueSN2: 3.4
+    alphaBlue: 0.8
+    betaBlue: 0.83375
+    redSN2: 5.7
+    alphaRed: 0.5
+    betaRed: 0.89375
     seeing: 1.5
     factor: 1.0
 

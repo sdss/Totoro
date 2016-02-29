@@ -205,11 +205,13 @@ class Exposure(object):
         nominalBlue = config['simulation']['blueSN2'] * factor
         alphaRed = config['simulation']['alphaRed']
         alphaBlue = config['simulation']['alphaBlue']
+        betaRed = config['simulation']['betaRed']
+        betaBlue = config['simulation']['betaBlue']
 
         sn2Red = (nominalRed / self._airmass ** alphaRed /
-                  self._dust['iIncrease'][0])
+                  (self._dust['iIncrease'][0]) ** betaRed)
         sn2Blue = (nominalBlue / self._airmass ** alphaBlue /
-                   self._dust['gIncrease'][0])
+                   (self._dust['gIncrease'][0]) ** betaBlue)
 
         self._sn2Array = np.array([sn2Blue, sn2Blue, sn2Red, sn2Red])
 
