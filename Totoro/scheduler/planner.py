@@ -101,9 +101,8 @@ class Planner(object):
 
             txtDrilling = ''
             if len(drilling) > 0:
-                txtDrilling = _color_text(
-                    '({0} in process of being drilled)'
-                    .format(len(drilling)), 'red')
+                txtDrilling = _color_text('({0} in process of being drilled)'
+                                          .format(len(drilling)), 'red')
 
             log.info('PLANNER: Plates found: {0} {1}'.format(len(self.plates),
                                                              txtDrilling))
