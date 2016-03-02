@@ -22,6 +22,7 @@ from Totoro.scheduler import observingPlan
 from Totoro.dbclasses import Set as TotoroSet
 from Totoro.dbclasses import Exposure as TotoroExposure
 from Totoro.dbclasses import plate_utils as plateUtils
+from Totoro.scheduler.footprint import getPlatesInFootprint
 import warnings
 from astropy import time
 import numpy as np
@@ -302,6 +303,7 @@ class Plate(object):
         self._priority = None
         self.isMock = mock
         self._kwargs = kwargs
+        self._inFootprint = None
         self.mjd = mjd
         self._manga_tileid = manga_tileid
 
@@ -1088,6 +1090,36 @@ class Plate(object):
     @drilled.setter
     def drilled(self, value):
         self._drilled = value
+
+    @property
+    def inFootprint(self):
+        """Returns True if the plate is in the MaNGA footprint.
+
+        Caches the result.
+        """
+
+        if isinstance(self._inFootprint, bool):
+            return self._inFootprint
+        else:
+            if self == getPlatesInFootprint(self):
+                self._inFootprint = True
+                return True
+            else:
+                self._inFootprint = False
+                return False
+
+    @inFootprint.setter
+    def inFootprint(self, value):
+        """Manually sets if a plate is in the footprint."""
+
+        assert isinstance(value, bool)
+        self._inFootprint = value
+
+    @inFootprint.deleter
+    def inFootprint(self):
+        """Removes the caching for inFootprint."""
+
+        self._inFootprint = None
 
     @property
     def dateAtAPO(self):
