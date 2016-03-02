@@ -69,6 +69,10 @@ class Planner(object):
         self.endDate = (observingPlan.plan[-1]['JD1']
                         if endDate is None else endDate)
 
+        # Forces plates and fields to be both defined or None.
+        assert (not plates and not fields) or (plates and fields), \
+            'plates and fields must be both None or a list.'
+
         assert self.startDate < self.endDate, 'startDate > endDate'
 
         self.blocks = observingPlan.getObservingBlocks(self.startDate,
