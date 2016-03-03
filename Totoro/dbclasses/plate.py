@@ -265,7 +265,7 @@ class Plate(object):
     def __new__(cls, input=None, format='pk', **kwargs):
 
         # Checks if an open transaction already exists.
-        utils.checkOpenSession()
+        # utils.checkOpenSession()
 
         me = object.__new__(cls)
 
