@@ -181,20 +181,32 @@ class Timeline(object):
         # Defines some flags to be logged if plate is in Cosmic, being
         # drilled or not on the mountain.
 
-        flags = ''
+        flags = []
 
         if plate.drilled is False and not isinstance(plate, Field):
-            flags = _color_text('** not yet drilled **', 'white')
+            flags.append(_color_text('not yet drilled', 'white'))
         elif not isinstance(plate, Field):
             location = plate.getLocation()
             if not location and not isinstance(plate, Field):
-                flags = _color_text('** unknown location **', 'red')
+                flags.append(_color_text('unknown location', 'red'))
             elif location == 'Cosmic' or location == 'Storage':
-                flags = _color_text('** in {0} **'.format(location), 'red')
+                flags.append(_color_text('in {0}'.format(location), 'red'))
             elif location == 'APO':
                 pass
             else:
-                flags = _color_text('** not on the mountain **', 'red')
+                flags.append(_color_text('not on the mountain', 'red'))
+
+        # Checks if the plate is a backup
+        if (len(plate.statuses) > 0 and
+                plate.statuses[0].label.lower() == 'backup'):
+            flags.append(_color_text('backup plate', 'white'))
+
+        if not plate.inFootprint:
+            flags.append(_color_text('not in footprint', 'red'))
+
+        flagsStr = '** {0} **'.format('; '.join(flags)) \
+            if len(flags) > 0 else ''
+
         # Calculates completion before and after the simulation.
         completionPre = self.calculatePlateCompletion(
             plate, rejectExposures=newExposures, useMock=True)
@@ -213,7 +225,7 @@ class Timeline(object):
             log.info('...... plate_id={0}, ({1} new exps, '
                      '{2:.2f} -> {3:.2f} complete) {4}'
                      .format(plate.plate_id, nExps, completionPre,
-                             completionPost, flags))
+                             completionPost, flagsStr))
 
             if nOrphanedPost > 0 and mode == 'plugger':
                 warnings.warn('... plate_id={0} has {1} orphaned '
@@ -225,5 +237,6 @@ class Timeline(object):
             log.info(_color_text('...... manga_tiledid={0} ({1} new exps, '
                                  '{2:.2f} -> {3:.2f} complete) {4}'
                                  .format(plate.getMangaTileID(), nExps,
-                                         completionPre, completionPost, flags),
+                                         completionPre, completionPost,
+                                         flagsStr),
                                  'yellow'))

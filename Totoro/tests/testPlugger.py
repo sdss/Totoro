@@ -110,8 +110,8 @@ class TestPlugger(unittest.TestCase):
                           useInitialBuffer=False)
 
         validResult = OrderedDict(
-            [(1, 8570), (2, 8081), (3, 8486), (4, 8566),
-             ('cart_order', [9, 8, 7, 5, 6, 3, 2, 1, 4])])
+            [(1, 8570), (2, 8081), (3, 8486), (4, 8239),
+             ('cart_order', [9, 8, 7, 5, 6, 3, 1, 2, 4])])
 
         self.assertEqual(validResult, plugger.getASOutput())
 

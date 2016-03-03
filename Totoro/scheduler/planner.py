@@ -89,10 +89,10 @@ class Planner(object):
             self.plates = plates
         else:
             # Selects all valid plates, including complete ones.
-            allPlates = self.getPlates(**kwargs)
+            validPlates = self.getPlates(**kwargs)
 
             # Selects only plates that are incomplete and have enough priority
-            self.plates = [plate for plate in allPlates
+            self.plates = [plate for plate in validPlates
                            if len(plate.getTotoroExposures()) == 0 and
                            plate.priority > minimumPlugPriority]
 
@@ -111,17 +111,17 @@ class Planner(object):
         if fields is not None:
             self.fields = fields
         elif useFields:
-            self.getFields(allPlates)
+            self.getFields(self.plates)
 
-    def getFields(self, allPlates):
+    def getFields(self, plates):
         """Creates a field list from the tiling catalogue.
 
         Returns the list of tiles (as `Totoro.Field` instances) to be used
         when no drilled plates are available to cover the scheduled time.
 
-        Tiles with `manga_tileids` that have already been drilled are rejected.
-        Additionally, if a tile contains fewer than
-        `config.fields.minTargetsInTile` targets, we skip it.
+        Tiles with `manga_tileids` that have already been drilled are rejected,
+        unless the plate was priority == 1. Additionally, if a tile contains
+        fewer than `config.fields.minTargetsInTile` targets, we skip it.
 
         """
 
@@ -141,9 +141,8 @@ class Planner(object):
                           'Will not check for number of targets',
                           exceptions.TotoroPlannerWarning)
 
-        tmpFields = Fields(rejectDrilled=True)
-        tileIDPlates = [plate.manga_tileid for plate in allPlates]
-
+        tmpFields = Fields(rejectDrilled=True, acceptPriority1=True)
+        tileIDPlates = [plate.manga_tileid for plate in plates]
         self.fields = []
 
         for field in tmpFields:
@@ -239,8 +238,7 @@ class Planner(object):
             else:
                 try:
                     dateAtAPO = table.Table.read(readPath(config['dateAtAPO']),
-                                                 format='ascii.no_header',
-                                                 delimiter=',',
+                                                 format='ascii', delimiter=',',
                                                  names=['plateid', 'jd'])
 
                     for plate in validPlates:
@@ -252,7 +250,8 @@ class Planner(object):
 
                 except InconsistentTableError:
                     warnings.warn(
-                        'PLANNER: dateAtAPO file exists but could not be read',
+                        'PLANNER: dateAtAPO file exists but could not be read.'
+                        ' It is probably empty.',
                         exceptions.TotoroPlannerWarning)
 
         if useTilesBeingDrilled:
@@ -281,7 +280,7 @@ class Planner(object):
 
         try:
             tilesBeingDrilled = table.Table.read(
-                path, format='ascii.no_header', delimiter=',')
+                path, format='ascii', delimiter=',')
         except InconsistentTableError:
             warnings.warn(
                 'PLANNER: tilesBeingDrilled could not be read although it '

@@ -20,7 +20,10 @@ import numpy as np
 from Totoro import utils
 from Totoro import config, site
 from Totoro.scheduler import observingPlan
+from Totoro.exceptions import TotoroUserWarning
 from numbers import Number
+from collections import OrderedDict
+import warnings
 
 
 expTime = config['exposure']['exposureTime']
@@ -61,6 +64,73 @@ def _addBookkeepingAttrs(plates):
             plate.getTotoroExposures(onlySets=True))
 
 
+def getDictOfSchedulablePlates(plates, mode):
+    """Returns an OrderedDict with categories of schedulable plates.
+
+    This function creates an ordered dictionary in which the keys are the
+    categories of plates in the order in which they should be scheduled to
+    look for an optimal plate.
+
+    If `mode='plugger'` the categories are `'plugged'`, `'platesWithSignal'`,
+    `'incomplete'`, and `'backup'`.
+
+    For `mode='planner'`, categories are `'platesWithSignal'`,
+    `'drilled'`, `'fieldsInFootprint'`, `'backup'`, and
+    `'fieldsOutsideFootprint'`.
+
+    """
+
+    from Totoro.dbclasses.plate import Plate
+    from Totoro.dbclasses.field import Field
+
+    assert mode in ['planner', 'plugger']
+
+    if mode == 'plugger':
+        schPlates = OrderedDict([('plugged', []), ('platesWithSignal', []),
+                                 ('incomplete', []), ('backup', [])])
+        for plate in plates:
+            if plate.isPlugged:
+                schPlates['plugged'].append(plate)
+            elif plate.getPlateCompletion(includeIncompleteSets=True) > 0:
+                schPlates['platesWithSignal'].append(plate)
+            elif plate.statuses[0].label.lower() != 'backup':
+                schPlates['incomplete'].append(plate)
+            else:
+                schPlates['backup'].append(plate)
+
+    elif mode == 'planner':
+        schPlates = OrderedDict([('platesWithSignal', []), ('drilled', []),
+                                 ('fieldsInFootprint', []),
+                                 ('backup', []),
+                                 ('fieldsOutsideFootprint', [])])
+        for plate in plates:
+            isPlate = isinstance(plate, Plate) and not isinstance(plate, Field)
+            isBackup = (hasattr(plate, 'statuses') and
+                        len(plate.statuses) > 0 and
+                        plate.statuses[0].label.lower() == 'backup')
+            isInFootPrint = plate.inFootprint
+            if plate.getPlateCompletion(includeIncompleteSets=True) > 0:
+                schPlates['platesWithSignal'].append(plate)
+            elif isPlate and not isBackup:
+                schPlates['drilled'].append(plate)
+            elif not isPlate and isInFootPrint:
+                schPlates['fieldsInFootprint'].append(plate)
+            elif isPlate and isBackup:
+                schPlates['backup'].append(plate)
+            elif not isPlate and not isInFootPrint:
+                schPlates['fieldsOutsideFootprint'].append(plate)
+
+    # Performs a couple sanity checks. Makes sure each plate is in one and
+    # and only one category.
+    allPlatesFromDict = [plate for cc in schPlates for plate in schPlates[cc]]
+    assert len(allPlatesFromDict) == len(set(allPlatesFromDict)), \
+        'there are plates in more than one scheduling category.'
+    assert set(allPlatesFromDict) == set(plates), \
+        'some plates are not being assigned a scheduling category.'
+
+    return schPlates
+
+
 def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
     """Gets the optimal plate to observe in a range of JDs."""
 
@@ -68,10 +138,7 @@ def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
 
     optimalPlate = None
 
-    # Makes sure we are not dealing with completed plates. Instead of using
-    # plate.isComplete uses the plate completion so that it can account for
-    # mock exposures (useful when the function is called with plates already)
-    # simulated.
+    # Makes sure we are not dealing with any completed plates.
     incompletePlates = [plate for plate in plates if not plate.isComplete]
 
     # Selects plates that overlap with the beginning of the JD range
@@ -82,69 +149,41 @@ def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
     # If there are no plates that meet those requirements, uses all the
     # incomplete plates
     if len(observablePlates) == 0:
+        warnings.warn('no plates found that intersect with the beginning of '
+                      'the observing window. Scheduling all available plates.',
+                      TotoroUserWarning)
         observablePlates = incompletePlates
 
-    if mode == 'plugger':
-        # First we try using only plugged plates
-        pluggedPlates = [plate for plate in observablePlates
-                         if plate.isPlugged]
+    # Creates the dictionary of scheduling categories
+    schPlatesDict = getDictOfSchedulablePlates(observablePlates, mode)
+
+    # Loops over the list of categories, scheduling each list of plates
+    # and trying to find an optimal plate. If it gets it, returns the
+    # plate. Otherwise, jumps to the next category.
+    for plateCat in schPlatesDict:
+        platesToSchedule = schPlatesDict[plateCat]
+
+        # Defines the normalise and scope modes to use depending on the
+        # category and mode.
+        if mode == 'plugger' and plateCat == 'plugged':
+            normalise = False
+            scope = 'plugged'
+        elif plateCat == 'platesWithSignal':
+            scope = 'plugged'
+            normalise = True
+        else:
+            normalise = True
+            scope = 'all'
 
         optimalPlate, newExposures = runSimulation(
-            pluggedPlates, jdRange, mode='plugger',
-            scope='plugged', normalise=False)
+            platesToSchedule, jdRange, mode=mode,
+            scope=scope, normalise=normalise)
 
         if optimalPlate is not None:
             return optimalPlate, newExposures
 
-        # If no optimal plate is selected with only plugged plates, we try
-        # with plates that are incomplete but already have signal.
-        platesWithSignal = [
-            plate for plate in observablePlates
-            if plate.getPlateCompletion(includeIncompleteSets=True) > 0]
-
-        optimalPlate, newExposures = runSimulation(
-            platesWithSignal, jdRange, mode='plugger',
-            scope='plugged', normalise=True)
-
-        if optimalPlate is not None:
-            return optimalPlate, newExposures
-
-        # Finally, we try with all incomplete plates
-        optimalPlate, newExposures = runSimulation(
-            observablePlates, jdRange, mode='plugger',
-            scope='all', normalise=True)
-
-        return optimalPlate, newExposures
-
-    else:
-
-        # First we try using only plates with signal.
-        platesWithSignal = [
-            plate for plate in observablePlates
-            if plate.getPlateCompletion(includeIncompleteSets=True) > 0]
-
-        optimalPlate, newExposures = runSimulation(
-            platesWithSignal, jdRange, mode='planner',
-            scope='plugged', normalise=True)
-
-        if optimalPlate is not None:
-            return optimalPlate, newExposures
-
-        # Now we try with plates already drilled
-        drilledPlates = [plate for plate in observablePlates if plate.drilled]
-        optimalPlate, newExposures = runSimulation(
-            drilledPlates, jdRange, mode='planner',
-            scope='all', normalise=True)
-
-        if optimalPlate is not None:
-            return optimalPlate, newExposures
-
-        # Otherwise, we try using all plates and fields
-        optimalPlate, newExposures = runSimulation(
-            observablePlates, jdRange, mode='planner',
-            scope='all', normalise=True)
-
-        return optimalPlate, newExposures
+    # No optimal plate found.
+    return None, []
 
 
 def runSimulation(plates, jdRange, mode='plugger', scope='all',

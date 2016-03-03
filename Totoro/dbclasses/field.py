@@ -26,6 +26,8 @@ from numbers import Integral
 
 __all__ = ['Fields', 'Field', 'getTilingCatalogue']
 
+noPlugPriority = Totoro.config['planner']['noPlugPriority']
+
 
 def getTilingCatalogue(tilingCatalogue=None):
     """Returns the tiling catalogue"""
@@ -87,8 +89,13 @@ class Fields(list):
         if rejectDrilled:
             self._rejectDrilled(silent=silent, **kwargs)
 
-    def _rejectDrilled(self, silent=False):
-        """Rejects plates in self that have been drilled."""
+    def _rejectDrilled(self, silent=False, acceptPriority1=False):
+        """Rejects plates in self that have been drilled.
+
+        If `acceptPriority1=True`, tiles that have been drilled but whose plate
+        has priority `config['planner']['noPlugPriority']` are accepted.
+
+        """
 
         __, Session, plateDB, __ = getConnectionFull()
         session = Session()
@@ -97,8 +104,13 @@ class Fields(list):
             plates = session.query(plateDB.Plate).join(
                 plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
             ).filter(plateDB.Survey.label == 'MaNGA',
-                     plateDB.SurveyMode.label == 'MaNGA dither').order_by(
-                         plateDB.Plate.plate_id).all()
+                     plateDB.SurveyMode.label == 'MaNGA dither')
+
+            if acceptPriority1:
+                plates.join(plateDB.PlatePointing).filter(
+                    plateDB.PlatePointing.priority > noPlugPriority)
+
+            plates.order_by(plateDB.Plate.plate_id).all()
 
         plateMangaTileIds = np.unique(
             [plate.mangadbPlate.manga_tileid
