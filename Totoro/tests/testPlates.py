@@ -65,13 +65,13 @@ class plateTestCase(unittest.TestCase):
         self.assertEqual(len(plate.getMangadbExposures()),
                          len(plate.getScienceExposures()))
 
-    def testSubtransactions(self):
-        """Fails if trying to load a plate from within a subtransaction."""
-
-        session = db.Session()
-        with self.assertRaises(exceptions.TotoroSubtransactionError):
-            with session.begin():
-                fromPlateID(7815)
+    # def testSubtransactions(self):
+    #     """Fails if trying to load a plate from within a subtransaction."""
+    #
+    #     session = db.Session()
+    #     with self.assertRaises(exceptions.TotoroSubtransactionError):
+    #         with session.begin():
+    #             fromPlateID(7815)
 
 
 if __name__ == '__main__':
