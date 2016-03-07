@@ -68,6 +68,7 @@ class Planner(object):
         self.startDate = time.Time.now().jd if startDate is None else startDate
         self.endDate = (observingPlan.plan[-1]['JD1']
                         if endDate is None else endDate)
+        self._useFields = useFields
 
         # Forces plates and fields to be both defined or None.
         assert (not plates and not fields) or (plates and fields), \
@@ -374,8 +375,11 @@ class Planner(object):
 
             timeline.observed = True
 
-            timeline.schedule(self.plates + self.fields, mode='planner',
-                              **kwargs)
+            platesToSchedule = self.plates
+            if self._useFields:
+                platesToSchedule += self.fields
+
+            timeline.schedule(platesToSchedule, mode='planner', **kwargs)
 
             remainingTime = timeline.remainingTime
             colour = 'red' if remainingTime > 0.1 else 'default'
