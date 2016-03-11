@@ -105,8 +105,10 @@ HSC_4 = getRectangle((8.5 * 15, 15 * 15, -2, 5))
 HSC_5 = getRectangle((13.3 * 15, 16.6666 * 15, 42.5, 44))
 HSC = [HSC_1, HSC_2, HSC_3, HSC_4, HSC_5]
 
+HSC_S_offset = getRectangle((8.5 * 15, 15 * 15, 0, 7))
+
 # A special region which is the HSC-N regions a bit wider
-HSC_N_Wide = getRectangle((13.3 * 15, 16.6666 * 15, 41.5, 45))
+HSC_N_Wide = getRectangle((15. * 15, 16.6666 * 15, 41.5, 45))
 
 Stripe82 = getRectangle((0, 360, -1, 1))
 
@@ -282,17 +284,23 @@ def getPlatesInFootprint(plates):
 
     footprintPlates = []
     for plate in plates:
+
+        # Excludes the two most eastern GAMA fields
+        if (GAMA_2.get_path().contains_points([plate.coords])[0] or
+                GAMA_3.get_path().contains_points([plate.coords])[0]):
+            continue
+
         if ((UKIDSS_120.get_path().contains_points([plate.coords])[0] and
             ALFALFA_NGC.get_path().contains_points([plate.coords])[0]) or
            (UKIDSS_240.get_path().contains_points([plate.coords])[0] and
             ALFALFA_NGC.get_path().contains_points([plate.coords])[0]) or
            ATLAS.get_path().contains_points([plate.coords])[0] or
-           UKIDSS_ATLAS.get_path().contains_points([plate.coords])[0] or
            SGC[0].get_path().contains_points([plate.coords])[0] or
            SGC[1].get_path().contains_points([plate.coords])[0] or
            HETDEX.get_path().contains_points([plate.coords])[0] or
            PerseusPisces.get_path().contains_points([plate.coords])[0] or
            CVn.get_path().contains_points([plate.coords])[0] or
+           HSC_S_offset.get_path().contains_points([plate.coords])[0] or
            HSC_N_Wide.get_path().contains_points([plate.coords])[0]):
 
             footprintPlates.append(plate)
