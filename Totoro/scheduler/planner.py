@@ -375,11 +375,11 @@ class Planner(object):
 
             timeline.observed = True
 
-            platesToSchedule = self.plates
-            if self._useFields:
-                platesToSchedule += self.fields
-
-            timeline.schedule(platesToSchedule, mode='planner', **kwargs)
+            if not self._useFields:
+                timeline.schedule(self.plates, mode='planner', **kwargs)
+            else:
+                timeline.schedule(self.plates + self.fields,
+                                  mode='planner', **kwargs)
 
             remainingTime = timeline.remainingTime
             colour = 'red' if remainingTime > 0.1 else 'default'
