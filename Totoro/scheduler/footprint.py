@@ -26,6 +26,18 @@ __all__ = ['HSC', 'UKIDSS', 'ATLAS', 'ALFALFA', 'ApertifMedDeep', 'GAMA',
            'CVn', 'HETDEX', 'PerseusPisces', 'getPlatesInFootprint']
 
 
+defaultColours = {
+    'GAMA': 'DarkOrchid',
+    'HSC': 'k',
+    'UKIDSS': 'SaddleBrown',
+    'Apertif': 'OliveDrab',
+    'ALFALFA': 'b',
+    'ATLAS': 'MediumVioletRed'
+}
+
+defaultLW = 1.5
+
+
 def etalambda2radec(eta, lambd):
 
     racen = 185.0
@@ -97,6 +109,160 @@ def getRectangle(vertices, angle=0.0):
 
     return recPatch
 
+
+def plotPatch(ax, regPatch, zorder=10, projection='rect',
+              useRadians=False, org=0, **kwargs):
+
+    vertices = regPatch.get_path().vertices
+
+    if projection != 'rect':
+        RA = vertices[:, 0]
+        RA = np.remainder(RA + 360 - org, 360)  # shift RA values
+        ind = RA > 180.
+        RA[ind] -= 360  # scale conversion to [-180, 180]
+        RA = -RA  # reverse the scale: East to the left
+
+        vertices[:, 0] = RA
+
+    if useRadians:
+        vertices = vertices * np.pi / 180.
+
+    transformedPath = path.Path(vertices)
+
+    lw = kwargs.get('lw', defaultLW)
+
+    pathPatch = PathPatch(transformedPath, edgecolor=kwargs['color'],
+                          lw=lw, facecolor='None', alpha=1., zorder=50)
+
+    ax.add_patch(pathPatch)
+
+    return
+
+
+def addText(ax, xx, yy, text, projection='rect',
+            useRadians=False, org=0, **kwargs):
+
+    if projection != 'rect':
+        xx = np.remainder(xx + 360 - org, 360)  # shift RA values
+        if xx > 180.:
+            xx -= 360  # scale conversion to [-180, 180]
+        xx = -xx  # reverse the scale: East to the left
+
+    if useRadians:
+        xx = xx * np.pi / 180.
+        yy = yy * np.pi / 180.
+
+    ax.text(xx, yy, text, size=8, color=kwargs['color'],
+            fontdict={'family': 'sans-serif'}, alpha=1.0, zorder=100,
+            weight='heavy')
+    mpl.rc(mpl.rcParamsOrig)
+
+    return
+
+
+def plotRectangle(ax, regPatch, angle=0.0, zorder=10, projection='rect',
+                  useRadians=False, org=0, **kwargs):
+
+    verts = regPatch.get_verts()
+
+    if projection != 'rect':
+        RA = verts[:, 0]
+        RA = np.remainder(RA + 360 - org, 360)  # shift RA values
+        ind = RA > 180.
+        RA[ind] -= 360  # scale conversion to [-180, 180]
+        RA = -RA  # reverse the scale: East to the left
+
+        verts[:, 0] = RA
+
+    if useRadians:
+        verts = verts * np.pi / 180.
+
+    ax.plot(verts[:, 0], verts[:, 1], ls='-',
+            c=kwargs['color'], alpha=1, zorder=zorder)
+
+    return regPatch
+
+
+def plotHSC(ax, **kwargs):
+
+    color = kwargs.get('color', defaultColours['HSC'])
+
+    for region in HSC:
+        plotPatch(ax, region, color=color, **kwargs)
+
+    addText(ax, 145, -7, 'HSC', color=color, **kwargs)
+
+
+def plotUKIDSS(ax, **kwargs):
+
+    color = kwargs.get('color', defaultColours['UKIDSS'])
+    projection = kwargs.get('projection', 'rect')
+
+    if projection == 'rect':
+        regsToPlot = UKIDSS
+    else:
+        regsToPlot = [UKIDSS_SGC_Mollweide, UKIDSS[2], UKIDSS[3], UKIDSS[4],
+                      UKIDSS[5]]
+
+    for region in regsToPlot:
+        plotPatch(ax, region, color=color, **kwargs)
+
+    addText(ax, 108, 20, 'UKIDSS', color=color, **kwargs)
+
+    return
+
+
+def plotApertifMedDeep(ax, **kwargs):
+
+    color = kwargs.get('color', defaultColours['Apertif'])
+
+    # plotRectangle(ax, PerseusPisces, **kwargs)
+    plotPatch(ax, CVn, color=color, **kwargs)
+    plotPatch(ax, HETDEX, color=color, **kwargs)
+
+    addText(ax, 220, 59, 'Apertif Med-Deep', color=color, **kwargs)
+
+    return
+
+
+def plotALFALFA(ax, **kwargs):
+
+    color = kwargs.get('color', defaultColours['ALFALFA'])
+    projection = kwargs.get('projection', 'rect')
+    print(projection)
+    if projection == 'rect':
+        regsToPlot = ALFALFA
+    else:
+        regsToPlot = [ALFALFA_1, ALFALFA_Mollweide]
+
+    for region in regsToPlot:
+        plotPatch(ax, region, color=color, **kwargs)
+
+    addText(ax, 110, 31, 'ALFALFA', color=color, **kwargs)
+
+    return
+
+
+def plotATLAS(ax, **kwargs):
+
+    color = kwargs.get('color', defaultColours['ATLAS'])
+
+    plotRectangle(ax, ATLAS, color=color, **kwargs)
+    addText(ax, 235, 20, 'H-ATLAS', color=color, **kwargs)
+
+    return
+
+
+def plotGAMA(ax, **kwargs):
+
+    color = kwargs.get('color', defaultColours['GAMA'])
+
+    for region in GAMA:
+        plotPatch(ax, region, color=color, **kwargs)
+
+    addText(ax, 200, -7, 'GAMA (SAMI)', color=color, **kwargs)
+
+
 # HSC regions
 HSC_1 = getRectangle((22 * 15, 360, -1, 7))
 HSC_2 = getRectangle((0, 2.6666 * 15, -1, 7))
@@ -128,6 +294,8 @@ ALFALFA_1 = getRectangle((7.5 * 15, 16.5 * 15, 0, 36))
 ALFALFA_2 = getRectangle((0, 3. * 15, 0, 36))
 ALFALFA_3 = getRectangle((22 * 15, 24 * 15, 0, 36))
 ALFALFA = [ALFALFA_1, ALFALFA_2, ALFALFA_3]
+
+ALFALFA_Mollweide = getRectangle((22 * 15, 3 * 15, 0, 36))
 
 # HETDEX field
 HETDEX_vertices = np.array(
@@ -269,6 +437,36 @@ UKIDSS = [getPolygon(UKIDSS_Region1),
           getPolygon(UKIDSS_Region5),
           getPolygon(UKIDSS_Region6)]
 
+# Joined regs 1 and 2 for Mollweide projection
+UKIDSS_SGC_Mollweide_vertices = np.array([
+    [0.0000000, -02.32808],
+    [027.91088, -02.19216],
+    [047.03013, -02.55489],
+    [059.19465, -02.59425],
+    [062.08225, -00.05170],
+    [061.95838, +00.87955],
+    [054.13354, +06.28934],
+    [48.88450, +06.95682],
+    [046.32311, +08.43322],
+    [039.96898, +08.81795],
+    [035.20637, +13.01168],
+    [035.12406, +14.31154],
+    [030.93135, +17.09270],
+    [360.00000, +17.00000],
+    [351.87501, +16.96904],
+    [349.93036, +17.04856],
+    [345.16645, +15.03193],
+    [339.41813, +11.29414],
+    [332.81999, +05.71610],
+    [326.77426, +02.16565],
+    [308.18905, +02.31217],
+    [308.04936, -02.10125],
+    [333.13159, -02.30051],
+    [359.89682, -02.32808],
+    [360.00000, -02.32808]])
+
+UKIDSS_SGC_Mollweide = getPolygon(UKIDSS_SGC_Mollweide_vertices)
+
 
 # Some renaming, for convenience
 UKIDSS_240 = UKIDSS[4]
@@ -309,3 +507,95 @@ def getPlatesInFootprint(plates):
         return footprintPlates[0]
     else:
         return footprintPlates
+
+
+def plotFootprint(ax, regions='all', projection='rect', org=0):
+    """Overplots the footprint on a Matplotlib axes instance.
+
+    Parameters
+    ----------
+    ax : matplotlib axes
+        The axes on which to overplot the regions.
+
+    regions : string, None, list of strings
+        The list of footprint regions to overplot. If `'all'` or `None`, all
+        the regions are plotted. A list of regions can also be provided.
+
+    proj : string
+        The projection to use, either `'rect'` or `'mollweide'`
+
+    org : float
+        The origin of the projection.
+
+    Returns
+    -------
+    ax : matplotlib axes
+        The same input axes, `ax`, after the regions have been overplot.
+
+    """
+
+    if not regions or regions == 'all':
+        plots = [plotGAMA, plotApertifMedDeep, plotATLAS, plotHSC, plotUKIDSS,
+                 plotALFALFA]
+    else:
+        if isinstance(regions, str):
+            regions = [regions]
+        plots = []
+        for reg in regions:
+            assert 'plot{0}'.format(reg) in globals(), \
+                '{0} is not defined'.format(reg)
+            plots.append(eval('plot{0}'.format(reg)))
+
+    useRadians = True if projection != 'rect' else False
+
+    for plot in plots:
+        plot(ax, projection=projection, useRadians=useRadians, org=org)
+
+    return ax
+
+
+# def plotEBHIS(ax, **kwargs):
+#
+#     ax.axhline(-6, color=kwargs['color'], lw=kwargs['lw'], ls='dashed',
+#                zorder=10)
+#     ax.annotate('', xy=(260, -5.5), xytext=(260, 6), textcoords='data',
+#                 arrowprops=dict(facecolor=kwargs['color'],
+#                                 edgecolor=kwargs['color'],
+#                                 linewidth=kwargs['lw'],
+#                                 arrowstyle='<-'), zorder=20)
+#     ax.text(262, -2, 'EBHIS', color=kwargs['color'],
+#             fontsize=12, zorder=20, weight='heavy',
+#             fontdict={'family': 'sans-serif'})
+#
+#     return
+#
+#
+# def plotApertifShallow(ax, **kwargs):
+#
+#     ax.axhline(27, color=kwargs['color'], lw=kwargs['lw'], ls='dashed',
+#                zorder=10)
+#     ax.annotate('', xy=(300, 27.5), xytext=(300, 37.5), textcoords='data',
+#                 arrowprops=dict(facecolor=kwargs['color'],
+#                                 edgecolor=kwargs['color'],
+#                                 linewidth=kwargs['lw'],
+#                                 arrowstyle='<-'), zorder=20)
+#     ax.text(260, 39.5, 'Apertif (shallow)', color=kwargs['color'],
+#             fontsize=12, ha='left', zorder=20, weight='heavy',
+#             fontdict={'family': 'sans-serif'})
+#
+#     return
+#
+#
+# def plotASKAP(ax, **kwargs):
+#
+#     ax.axhline(30, color=kwargs['color'], lw=kwargs['lw'], ls='dashed',
+#                zorder=10)
+#     ax.annotate('', xy=(80, 29.5), xytext=(80, 14.5), textcoords='data',
+#                 arrowprops=dict(facecolor=kwargs['color'],
+#                                 edgecolor=kwargs['color'],
+#                                 linewidth=kwargs['lw'],
+#                                 arrowstyle='<-'), zorder=20)
+#     ax.text(99, 11, 'ASKAP', color=kwargs['color'], fontsize=12, ha='right',
+#             zorder=20, weight='heavy', fontdict={'family': 'sans-serif'})
+#
+#     return
