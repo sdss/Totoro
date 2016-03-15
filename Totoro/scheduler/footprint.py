@@ -229,7 +229,7 @@ def plotALFALFA(ax, **kwargs):
 
     color = kwargs.get('color', defaultColours['ALFALFA'])
     projection = kwargs.get('projection', 'rect')
-    print(projection)
+
     if projection == 'rect':
         regsToPlot = ALFALFA
     else:
