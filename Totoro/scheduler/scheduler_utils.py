@@ -131,10 +131,14 @@ def getDictOfSchedulablePlates(plates, mode):
     return schPlates
 
 
-def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
+def getOptimalPlate(plates, jdRange, mode='plugger', prioritiseAPO=None,
+                    **kwargs):
     """Gets the optimal plate to observe in a range of JDs."""
 
     assert len(jdRange) == 2
+
+    if prioritiseAPO is None:
+        prioritiseAPO = True if mode == 'plugger' else False
 
     optimalPlate = None
 
@@ -175,15 +179,42 @@ def getOptimalPlate(plates, jdRange, mode='plugger', **kwargs):
             normalise = True
             scope = 'all'
 
-        optimalPlate, newExposures = runSimulation(
-            platesToSchedule, jdRange, mode=mode,
-            scope=scope, normalise=normalise)
+        if not prioritiseAPO:
 
-        if optimalPlate is not None:
-            return optimalPlate, newExposures
+            optimalPlate, newExposures = runSimulation(
+                platesToSchedule, jdRange, mode=mode,
+                scope=scope, normalise=normalise)
+
+            if optimalPlate is not None:
+                return optimalPlate, newExposures
+
+        else:
+
+            for locPlates in _getPlatesAtAPO(platesToSchedule):
+                optimalPlate, newExposures = runSimulation(
+                    locPlates, jdRange, mode=mode,
+                    scope=scope, normalise=normalise)
+
+                if optimalPlate is not None:
+                    return optimalPlate, newExposures
 
     # No optimal plate found.
     return None, []
+
+
+def _getPlatesAtAPO(plates):
+    """Returns lists of plates at APO and outside it."""
+
+    atAPO = []
+    notAtAPO = []
+
+    for plate in plates:
+        if plate.getLocation() == 'APO':
+            atAPO.append(plate)
+        else:
+            notAtAPO.append(plate)
+
+    return atAPO, notAtAPO
 
 
 def runSimulation(plates, jdRange, mode='plugger', scope='all',

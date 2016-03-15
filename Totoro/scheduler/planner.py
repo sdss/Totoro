@@ -323,7 +323,8 @@ class Planner(object):
 
     def schedule(self,
                  goodWeatherFraction=config['planner']['goodWeatherFraction'],
-                 efficiency=config['planner']['efficiency'], **kwargs):
+                 efficiency=config['planner']['efficiency'],
+                 prioritiseAPO=False, **kwargs):
         """Runs the scheduling simulation.
 
         Parameters
@@ -334,6 +335,8 @@ class Planner(object):
         efficiency : float
             The efficiency to use to account for the overheads.Defaults to
             `config.planner.efficiency`.
+        prioritiseAPO : bool
+            If True, tries to find valid plates at APO first.
         kwargs : dict
             Additional arguments to be passed to `getOptimalPlate`.
 
@@ -349,8 +352,9 @@ class Planner(object):
         log.info('PLANNER: Good weather fraction: {0:.2f}'
                  .format(goodWeatherFraction))
         log.info('PLANNER: Efficiency: {0:.2f}'.format(efficiency))
-        log.info('PLANNER SN2 red={0:.1f}, blue={1:.1f}'
+        log.info('PLANNER: SN2 red={0:.1f}, blue={1:.1f}'
                  .format(SN2_red, SN2_blue))
+        log.info('PLANNER: prioritise APO={0}'.format(prioritiseAPO))
 
         # Gets the indices of the timelines with good weather.
         goodWeatherIdx = self.getGoodWeatherIndices(goodWeatherFraction)
@@ -376,10 +380,12 @@ class Planner(object):
             timeline.observed = True
 
             if not self._useFields:
-                timeline.schedule(self.plates, mode='planner', **kwargs)
+                timeline.schedule(self.plates, mode='planner',
+                                  prioritiseAPO=prioritiseAPO, **kwargs)
             else:
                 timeline.schedule(self.plates + self.fields,
-                                  mode='planner', **kwargs)
+                                  mode='planner', prioritiseAPO=prioritiseAPO,
+                                  **kwargs)
 
             remainingTime = timeline.remainingTime
             colour = 'red' if remainingTime > 0.1 else 'default'
