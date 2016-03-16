@@ -110,7 +110,7 @@ def getRectangle(vertices, angle=0.0):
     return recPatch
 
 
-def plotPatch(ax, regPatch, zorder=10, projection='rect',
+def plotPatch(ax, regPatch, zorder=100, projection='rect',
               useRadians=False, org=0, **kwargs):
 
     vertices = regPatch.get_path().vertices
@@ -132,7 +132,7 @@ def plotPatch(ax, regPatch, zorder=10, projection='rect',
     lw = kwargs.get('lw', defaultLW)
 
     pathPatch = PathPatch(transformedPath, edgecolor=kwargs['color'],
-                          lw=lw, facecolor='None', alpha=1., zorder=50)
+                          lw=lw, facecolor='None', alpha=1., zorder=zorder)
 
     ax.add_patch(pathPatch)
 
@@ -162,14 +162,14 @@ def addText(ax, xx, yy, text, ha='left', size=None, projection='rect',
         yy = yy * np.pi / 180.
 
     ax.text(xx, yy, text, size=size, color=kwargs['color'],
-            fontdict={'family': 'sans-serif'}, alpha=1.0, zorder=100,
+            fontdict={'family': 'sans-serif'}, alpha=1.0, zorder=200,
             weight='heavy', ha=ha)
     mpl.rc(mpl.rcParamsOrig)
 
     return
 
 
-def plotRectangle(ax, regPatch, angle=0.0, zorder=10, projection='rect',
+def plotRectangle(ax, regPatch, angle=0.0, zorder=100, projection='rect',
                   useRadians=False, org=0, **kwargs):
 
     verts = regPatch.get_verts()
@@ -235,7 +235,7 @@ def plotApertifMedDeep(ax, **kwargs):
     plotPatch(ax, CVn, color=color, **kwargs)
     plotPatch(ax, HETDEX, color=color, **kwargs)
 
-    addText(ax, 220, 59, 'Apertif Med-Deep', color=color, **kwargs)
+    addText(ax, 210, 59, 'Apertif', color=color, **kwargs)
 
     return
 
