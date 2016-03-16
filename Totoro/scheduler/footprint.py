@@ -139,22 +139,31 @@ def plotPatch(ax, regPatch, zorder=10, projection='rect',
     return
 
 
-def addText(ax, xx, yy, text, projection='rect',
+def addText(ax, xx, yy, text, ha='left', size=None, projection='rect',
             useRadians=False, org=0, **kwargs):
 
     if projection != 'rect':
+
+        if not size:
+            size = 10
+
         xx = np.remainder(xx + 360 - org, 360)  # shift RA values
         if xx > 180.:
             xx -= 360  # scale conversion to [-180, 180]
         xx = -xx  # reverse the scale: East to the left
 
+    else:
+
+        if not size:
+            size = 12
+
     if useRadians:
         xx = xx * np.pi / 180.
         yy = yy * np.pi / 180.
 
-    ax.text(xx, yy, text, size=8, color=kwargs['color'],
+    ax.text(xx, yy, text, size=size, color=kwargs['color'],
             fontdict={'family': 'sans-serif'}, alpha=1.0, zorder=100,
-            weight='heavy')
+            weight='heavy', ha=ha)
     mpl.rc(mpl.rcParamsOrig)
 
     return
@@ -186,11 +195,17 @@ def plotRectangle(ax, regPatch, angle=0.0, zorder=10, projection='rect',
 def plotHSC(ax, **kwargs):
 
     color = kwargs.get('color', defaultColours['HSC'])
+    projection = kwargs.get('projection', 'rect')
 
-    for region in HSC:
+    if projection == 'rect':
+        regsToPlot = HSC
+    else:
+        regsToPlot = [HSC_SGC_Mollweide, HSC_3, HSC_4]
+
+    for region in regsToPlot:
         plotPatch(ax, region, color=color, **kwargs)
 
-    addText(ax, 145, -7, 'HSC', color=color, **kwargs)
+    addText(ax, 145, -8, 'HSC', color=color, **kwargs)
 
 
 def plotUKIDSS(ax, **kwargs):
@@ -248,7 +263,7 @@ def plotATLAS(ax, **kwargs):
     color = kwargs.get('color', defaultColours['ATLAS'])
 
     plotRectangle(ax, ATLAS, color=color, **kwargs)
-    addText(ax, 235, 20, 'H-ATLAS', color=color, **kwargs)
+    addText(ax, 235, 18, 'H-ATLAS', he='right', color=color, **kwargs)
 
     return
 
@@ -260,16 +275,30 @@ def plotGAMA(ax, **kwargs):
     for region in GAMA:
         plotPatch(ax, region, color=color, **kwargs)
 
-    addText(ax, 200, -7, 'GAMA (SAMI)', color=color, **kwargs)
+    addText(ax, 200, -9, 'GAMA (SAMI)', ha='center', color=color, **kwargs)
 
 
 # HSC regions
 HSC_1 = getRectangle((22 * 15, 360, -1, 7))
-HSC_2 = getRectangle((0, 2.6666 * 15, -1, 7))
-HSC_3 = getRectangle((1.83333 * 15, 2.66666 * 15, -7, -1))
-HSC_4 = getRectangle((8.5 * 15, 15 * 15, -2, 5))
-HSC_5 = getRectangle((13.3 * 15, 16.6666 * 15, 42.5, 44))
-HSC = [HSC_1, HSC_2, HSC_3, HSC_4, HSC_5]
+HSC_2 = getPolygon(np.array([[0, -1],
+                             [1.83333 * 15, -1],
+                             [1.83333 * 15, -7],
+                             [2.66666 * 15, -7],
+                             [2.66666 * 15, 7],
+                             [0, 7],
+                             [0, -1]]))
+
+HSC_SGC_Mollweide = getPolygon(np.array([[22 * 15, -1],
+                                         [1.83333 * 15, -1],
+                                         [1.83333 * 15, -7],
+                                         [2.66666 * 15, -7],
+                                         [2.66666 * 15, 7],
+                                         [22 * 15, 7],
+                                         [22 * 15, -1]]))
+
+HSC_3 = getRectangle((8.5 * 15, 15 * 15, -2, 5))
+HSC_4 = getRectangle((13.3 * 15, 16.6666 * 15, 42.5, 44))
+HSC = [HSC_1, HSC_2, HSC_3, HSC_4]
 
 HSC_S_offset = getRectangle((8.5 * 15, 15 * 15, 0, 7))
 
