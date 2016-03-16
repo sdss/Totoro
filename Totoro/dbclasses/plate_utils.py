@@ -63,7 +63,7 @@ def updatePlate(plate, rearrangeIncomplete=False, **kwargs):
 
 
 def getUnassignedExposures(plate):
-    """Returns exposures in `plate` that are not assigned to a plate."""
+    """Returns exposures in `plate` that are not assigned to a set."""
 
     from Totoro.dbclasses import Exposure as TotoroExposure
 
