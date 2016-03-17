@@ -18,6 +18,9 @@ from __future__ import print_function
 
 import numpy as np
 import matplotlib as mpl
+from matplotlib import pyplot as plt
+from matplotlib.patches import Ellipse
+from matplotlib.legend_handler import HandlerPatch
 from matplotlib import path
 from matplotlib.patches import PathPatch
 
@@ -36,6 +39,83 @@ defaultColours = {
 }
 
 defaultLW = 1.5
+
+
+def getAxes(projection='rect'):
+    """Returns axes for a particular projection."""
+
+    if projection == 'rect':
+        fig = plt.figure(figsize=(10, 6))
+        ax = fig.add_subplot(111)
+
+        ax.set_xlabel(r'$\alpha_{2000}$')
+        ax.set_ylabel(r'$\delta_{2000}$')
+
+        ax.set_xlim(360, 0)
+        ax.set_ylim(-20, 80)
+
+    elif projection == 'mollweide':
+        fig = plt.figure(figsize=(10, 5))
+        ax = fig.add_subplot(111, projection='mollweide')
+        org = 120
+
+        tick_labels = np.array([150., 120, 90, 60, 30, 0,
+                                330, 300, 270, 240, 210])
+        tick_labels = np.remainder(tick_labels + 360 + org, 360)
+        tick_labels = np.array(tick_labels / 15., int)
+
+        tickStr = []
+        for tick_label in tick_labels[1::2]:
+            tickStr.append('')
+            tickStr.append('${0:d}^h$'.format(tick_label))
+
+        ax.set_xticklabels(tickStr)  # we add the scale on the x axis
+        ax.grid(True)
+
+        ax.set_xlabel(r'$\alpha_{2000}$')
+        ax.set_ylabel(r'$\delta_{2000}$')
+
+    return fig, ax
+
+
+def addLegend(ax, handles, labels, **kwargs):
+    """Add a legend using ellipses for the scatter plots."""
+
+    ax.legend(handles=handles, labels=labels,
+              handler_map={Ellipse: HandlerPatch(
+                           patch_func=make_legend_ellipse)}, **kwargs)
+
+    return ax
+
+
+def make_legend_ellipse(legend, orig_handle, xdescent, ydescent,
+                        width, height, fontsize):
+
+    pp = Ellipse(xy=(0.5 * width - 0.5 * xdescent,
+                     0.5 * height - 0.5 * ydescent),
+                 width=(height + ydescent),
+                 height=(height + ydescent), edgecolor='None', lw=0.0)
+
+    return pp
+
+
+def plotEllipse(ax, RA, Dec, org=None, size=3.0, bgcolor='b',
+                zorder=0, alpha=0.8):
+
+    if org:
+        RA = np.remainder(RA + 360 - org, 360)  # shift RA values
+        ind = RA > 180.
+        RA[ind] -= 360  # scale conversion to [-180, 180]
+        RA = -RA  # reverse the scale: East to the left
+
+    for ii in range(len(RA)):
+        ell = Ellipse(xy=(RA[ii], Dec[ii]),
+                      width=size / np.cos(np.radians(Dec[ii])),
+                      height=size, edgecolor='None', facecolor=bgcolor,
+                      zorder=zorder, alpha=alpha, lw=0.0)
+        ax.add_patch(ell)
+
+    return ell
 
 
 def etalambda2radec(eta, lambd):
@@ -504,10 +584,17 @@ UKIDSS_ATLAS = UKIDSS[3]
 ALFALFA_NGC = ALFALFA[0]
 
 
-def getPlatesInFootprint(plates):
+def getPlatesInFootprint(plates, coords=False):
     """Returns the list of plates that are within MaNGA footprint."""
 
+    from Totoro.dbclasses.plate import Plate
+
     plates = np.atleast_1d(plates)
+
+    if coords:
+        tmpPlates = [Plate.createMockPlate(ra=plate[0], dec=plate[1])
+                     for plate in plates]
+        plates = tmpPlates
 
     footprintPlates = []
     for plate in plates:
