@@ -380,7 +380,16 @@ HSC_3 = getRectangle((8.5 * 15, 15 * 15, -2, 5))
 HSC_4 = getRectangle((13.3 * 15, 16.6666 * 15, 42.5, 44))
 HSC = [HSC_1, HSC_2, HSC_3, HSC_4]
 
-HSC_S_Wide = getRectangle((8.5 * 15, 15 * 15, -2.5, 5.5))
+HSC_S_Wide_vertices = np.array(
+    [[127.5, -2.5],
+     [127.5, 5.5],
+     [170., 5.5],
+     [170., 4.0],
+     [225., 4.0],
+     [225., -2.5],
+     [127.5, -2.5]])
+
+HSC_S_Wide = getPolygon(HSC_S_Wide_vertices)
 
 # A special region which is the HSC-N regions a bit wider
 HSC_N_Wide = getRectangle((15. * 15, 16.6666 * 15, 41.5, 45))
