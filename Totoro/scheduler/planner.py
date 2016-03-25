@@ -82,6 +82,7 @@ class Planner(object):
         assert len(self.blocks) >= 1, 'no observing blocks selected'
 
         self.timelines = Timelines(self.blocks)
+        self.unallocatedJDs = []
         log.debug('PLANNER: created Planner instance with {0} timelines'
                   .format(len(self.timelines)))
 
@@ -394,12 +395,20 @@ class Planner(object):
                     '... plates observed: {0} (Unused time {1:.2f}h)'
                     .format(len(timeline.scheduled), remainingTime), colour))
 
+            if remainingTime > 0:
+                unallocatedThisTimeline = np.atleast_2d(
+                    timeline.unallocatedRange)
+                for j0, j1 in unallocatedThisTimeline:
+                    self.unallocatedJDs.append([j0, j1])
+
             nCarts = len(config['mangaCarts']) - len(config['offlineCarts'])
             if len(timeline.scheduled) > nCarts:
                 warnings.warn(
                     'more plates ({0}) scheduled than carts available ({1})'
                     .format(len(timeline.scheduled), nCarts),
                     exceptions.TotoroPlannerWarning)
+
+        self.unallocatedJDs = np.array(self.unallocatedJDs)
 
     def getGoodWeatherIndices(self, goodWeatherFraction, seed=None):
         """Returns random indices with good weather."""
