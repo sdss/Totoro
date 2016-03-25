@@ -715,7 +715,7 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     red = exposureSN2[2:]
 
     # If the exposure is partially reduced
-    if not np.all(exposureSN2 >= 0):
+    if not np.all(exposureSN2 > 0):
         # If at least one camera in each spectrograph is reduced, does not flag
         # the exposure but returs True
         if np.any(blue >= 0) and np.any(red >= 0):
