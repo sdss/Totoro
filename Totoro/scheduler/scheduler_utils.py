@@ -320,8 +320,7 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
     # We check if any of the plate is complete after the simulation.
     # If so, we return the one with fewer new exposures.
     completePlates = [plate for plate in plates
-                      if plate._after['completion'] > 1 and
-                      plate._before['completion'] == 0]
+                      if plate._after['completion'] > 1]
     nNewExposures = [plate._after['nNewExposures'] for plate in completePlates]
     if len(completePlates) > 0:
         return completePlates[np.argmin(nNewExposures)]

@@ -1,7 +1,23 @@
 # Change Log
 
 
-## [1.5.4] - not yet tagged
+## [1.6.2] - 2016-04-07
+### Fixed
+- A bug that gives higher priority to not started vs started plates when they
+both are completed during the plugging/planning simulation
+
+
+## [1.6.1] - ???
+### Changed
+- ???
+
+
+## [1.6] - ???
+### Changed
+- ???
+
+
+## [1.5.4] - ???
 ### Changed
 - Updated default goodWeatherFraction to 0.5.
 
