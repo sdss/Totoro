@@ -147,6 +147,9 @@ class Planner(object):
         tileIDPlates = [plate.manga_tileid for plate in plates]
         self.fields = []
 
+        weights = table.Table.read(readPath('+data/tile_weight.dat'),
+                                   format='ascii.commented_header')
+
         for field in tmpFields:
 
             # Even if we have already rejected drilled fields, we double check.
@@ -155,6 +158,11 @@ class Planner(object):
             # use those tiles again here.
             if field.manga_tileid in tileIDPlates:
                 continue
+
+            field.ancillary_weight = 0.0 \
+                if field.manga_tileid not in weights['manga_tileid'] else \
+                weights[weights['manga_tileid'] ==
+                        field.manga_tileid]['ancillary_weight'][0]
 
             if scienceCatalogue is not None:
 

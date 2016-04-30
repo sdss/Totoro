@@ -384,6 +384,14 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
     platePriorities = np.array([plate.priority for plate in plates]) - 5.
     _completionFactor(plates, 1 + platePriorityFactor * platePriorities)
 
+    ancillaryPriorities = []
+    for plate in plates:
+        if hasattr(plate, 'ancillary_weight'):
+            ancillaryPriorities.append(plate.ancillary_weight)
+        else:
+            ancillaryPriorities.append(1)
+    _completionFactor(plates, np.array(ancillaryPriorities))
+
     # Selects the plates that have the largest increase in completion
     completionIncrease = np.array(
         [plate._after['completion'] - plate._before['completion']
