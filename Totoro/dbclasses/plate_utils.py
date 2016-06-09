@@ -36,7 +36,7 @@ def updatePlate(plate, rearrangeIncomplete=False, **kwargs):
 
     # updatePlate will likely fail if the code is being run within an open,
     # external session. So, we check to make sure that's not the case
-    checkOpenSession()
+   #  checkOpenSession()
 
     unassignedExposures = getUnassignedExposures(plate)
 

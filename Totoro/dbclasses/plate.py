@@ -418,7 +418,7 @@ class Plate(object):
         This can be disabled to save time during plate bulk load."""
 
         # Checks that we are not inside an open session
-        utils.checkOpenSession()
+        # utils.checkOpenSession()
 
         if not hasattr(self, 'pk') or not hasattr(self, 'plate_id'):
             raise AttributeError('Plate instance has no pk or plate_id.')
