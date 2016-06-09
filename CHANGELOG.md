@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.7.0] - 2016-06-09
+### Changed
+- Improved efficiency in loading many plates by optimising queries and
+lazy loading all information during the initialisation of Plate and Exposure.
+
 
 ## [1.6.2] - 2016-04-07
 ### Fixed
