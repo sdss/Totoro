@@ -306,6 +306,7 @@ class Plate(object):
         self._inFootprint = None
         self.mjd = mjd
         self._manga_tileid = manga_tileid
+        self._mlhalimit = None
 
         # Date (JD) at which the plate will arrive at APO. Used for field
         # selection. If None, it assumes the plate is already at APO.
@@ -314,9 +315,7 @@ class Plate(object):
         if 'dust' in kwargs:
             self.dust = kwargs['dust']
         else:
-            self.dust = None if dustMap is None else dustMap(self.ra, self.dec)
-
-        self.mlhalimit = utils.mlhalimit(self.dec)
+            self._dust = None
 
         if not self.isMock:
             self.sets = [TotoroSet(set, **kwargs)
@@ -1129,3 +1128,25 @@ class Plate(object):
     def dateAtAPO(self, value):
         assert value >= 0, 'value must be a JD.'
         self._dateAtAPO = value
+
+    @property
+    def dust(self):
+        """Returns the dust value."""
+
+        if self._dust is not None:
+            return self._dust
+
+        if dustMap is None:
+            return None
+        else:
+            self._dust = dustMap(self.ra, self.dec)
+            return self._dust
+
+    @property
+    def mlhalimit(self):
+        """Returns the HA limit."""
+
+        if self._mlhalimit is None:
+            self._mlhalimit = utils.mlhalimit(self.dec)
+
+        return self._mlhalimit
