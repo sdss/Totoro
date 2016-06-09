@@ -76,13 +76,7 @@ class Exposure(object):
         self.isMock = mock
         self.kwargs = kwargs
 
-        self._mangaExposure = (self.mangadbExposure[0]
-                               if len(self.mangadbExposure) > 0 else
-                               self.db.mangaDB.Exposure())
-
-        if self._mangaExposure.pk is None and not self.isMock:
-            warnings.warn('plateDB.Exposure.pk={0} has no mangaDB.Exposure '
-                          'counterpart.'.format(self.pk), NoMangaExposure)
+        self.__mangaExposure = None
 
     def __repr__(self):
         return ('<Totoro Exposure (mangaDB.Exposure.pk={0}, exposure_no={1}, '
@@ -105,6 +99,22 @@ class Exposure(object):
             setattr(self._dbObject, name, value)
         else:
             super(Exposure, self).__setattr__(name, value)
+
+    @property
+    def _mangaExposure(self):
+        """The mangaDB exposure associated to this exposure."""
+
+        if self.__mangaExposure is None:
+
+            self.__mangaExposure = (self.mangadbExposure[0]
+                                    if len(self.mangadbExposure) > 0 else
+                                    self.db.mangaDB.Exposure())
+
+            if self.__mangaExposure.pk is None and not self.isMock:
+                warnings.warn('plateDB.Exposure.pk={0} has no mangaDB.Exposure '
+                              'counterpart.'.format(self.pk), NoMangaExposure)
+
+        return self.__mangaExposure
 
     def _initFromData(self, input, format, parent='platedb'):
         """Init a new Set instance from a DB query."""
