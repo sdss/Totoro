@@ -402,12 +402,12 @@ class Plate(object):
         mangaDB = self.db.mangaDB
 
         # Finds the sets for this plate
-        sets = self.session.query(mangaDB.Set).join(
+        sets = self.session.query(mangaDB.Set).distinct(mangaDB.Set.pk).join(
             mangaDB.Exposure, plateDB.Exposure, plateDB.Observation,
             plateDB.PlatePointing, plateDB.Plate).filter(
                 plateDB.Plate.pk == self.pk).all()
 
-        sets = sorted(sets, key=lambda set: set.pk)
+        # sets = sorted(sets, key=lambda set: set.pk)
 
         return sets
 
