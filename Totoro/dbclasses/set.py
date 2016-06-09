@@ -155,7 +155,11 @@ class Set(object):
 
     def loadExposures(self):
 
-        return [Exposure(mangaExp) for mangaExp in self.exposures]
+        exposures = self.session.query(self.db.plateDB.Exposure).join(
+            self.db.mangaDB.Exposure, self.db.mangaDB.Set).filter(
+                self.db.mangaDB.Set.pk == self.pk).all()
+
+        return [Exposure(exp) for exp in exposures]
 
     def _checkHasExposures(self):
         if len(self.totoroExposures) == 0:
