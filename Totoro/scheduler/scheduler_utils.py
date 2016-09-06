@@ -145,17 +145,17 @@ def getOptimalPlate(plates, jdRange, mode='plugger', prioritiseAPO=None,
     # Makes sure we are not dealing with any completed plates.
     incompletePlates = [plate for plate in plates if not plate.isComplete]
 
-    # Selects plates that overlap with the beginning of the JD range
-    # and intersect with the observing window for at least one exposure.
+    # Selects plates that intersect with the observing window for at least
+    # one exposure.
     observablePlates = [plate for plate in incompletePlates
                         if isObservable(plate, jdRange)]
 
     # If there are no plates that meet those requirements, uses all the
     # incomplete plates
     if len(observablePlates) == 0:
-        warnings.warn('no plates found that intersect with the beginning of '
-                      'the observing window. Scheduling all available plates.',
-                      TotoroUserWarning)
+        # warnings.warn('no plates found that intersect with the beginning of '
+        #               'the observing window. Scheduling all available plates.',
+        #               TotoroUserWarning)
         observablePlates = incompletePlates
 
     # Creates the dictionary of scheduling categories
