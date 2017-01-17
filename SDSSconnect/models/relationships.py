@@ -49,6 +49,8 @@ def createRelationships(Base):
         backref='plates')
     Base.classes.Platedb_Plate.completionStatus = relationship(
         Base.classes.Platedb_PlateCompletionStatus, backref='plates')
+    Base.classes.Platedb_Plate.cmmMeasurements = relationship(
+        Base.classes.Platedb_CmmMeas, backref='plate')
 
     Base.classes.Platedb_PlatePointing.plate = relationship(
         Base.classes.Platedb_Plate, backref='plate_pointings')
