@@ -176,8 +176,9 @@ def get_mastar():
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
         ).filter(plateDB.Survey.label == 'MaNGA',
-                 plateDB.SurveyMode.label == 'APOGEE lead').order_by(
-                     plateDB.Plate.plate_id)
+                 or_(plateDB.SurveyMode.label == 'APOGEE lead',
+                     plateDB.SurveyMode.label == 'MaStar')).order_by(
+                         plateDB.Plate.plate_id)
 
     plates = plates.order_by(plateDB.Plate.plate_id).all()
 
