@@ -167,6 +167,23 @@ def getAll(onlyIncomplete=False, **kwargs):
         return Plates(plates, **kwargs)
 
 
+def get_mastar():
+
+    __, Session, plateDB, __ = getConnectionFull()
+    session = Session()
+
+    with session.begin():
+        plates = session.query(plateDB.Plate).join(
+            plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
+        ).filter(plateDB.Survey.label == 'MaNGA',
+                 plateDB.SurveyMode.label == 'APOGEE lead').order_by(
+                     plateDB.Plate.plate_id)
+
+    plates = plates.order_by(plateDB.Plate.plate_id).all()
+
+    return Plates(plates, fullCheck=False, updateSets=False)
+
+
 def _getIncomplete(plates, **kwargs):
 
     totoroPlates = Plates(plates, **kwargs)
@@ -238,6 +255,11 @@ class Plates(list):
     def getAll(**kwargs):
         """For backards compatibility."""
         return getAll(**kwargs)
+
+    @staticmethod
+    def get_mastar(**kwargs):
+        """For backards compatibility."""
+        return get_mastar()
 
     @staticmethod
     def getAtAPO(**kwargs):

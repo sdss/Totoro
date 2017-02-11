@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.7.1] - not yet tagged
+### Added
+- `Plate.get_mastar()` method that returns MaStar plates (i.e., plates that are APOGEE2-MaNGA
+with APOGEE as the lead survey).
+
+
 ## [1.7.0] - 2016-06-09
 ### Changed
 - Improved efficiency in loading many plates by optimising queries and
