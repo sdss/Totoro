@@ -20,10 +20,8 @@ import numpy as np
 from Totoro import utils
 from Totoro import config, site
 from Totoro.scheduler import observingPlan
-from Totoro.exceptions import TotoroUserWarning
 from numbers import Number
 from collections import OrderedDict
-import warnings
 
 
 expTime = config['exposure']['exposureTime']
