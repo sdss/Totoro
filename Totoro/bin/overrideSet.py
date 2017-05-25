@@ -332,12 +332,12 @@ def main(argv=None):
                             'overridden as a new good set.')
     parserGood.set_defaults(func=override, mode='good')
 
-    parserBad = subparsers.add_parser('bad', help='overrides set as bad.',
-                                      description='Overrides set as bad.')
-    parserBad.add_argument('EXPOSURE_NO', metavar='EXPOSURE_NO', type=int,
-                           nargs='*', help='The list of exposure_no(s) to be '
-                           'overridden as a new bad set.')
-    parserBad.set_defaults(func=override, mode='bad')
+    # parserBad = subparsers.add_parser('bad', help='overrides set as bad.',
+    #                                   description='Overrides set as bad.')
+    # parserBad.add_argument('EXPOSURE_NO', metavar='EXPOSURE_NO', type=int,
+    #                        nargs='*', help='The list of exposure_no(s) to be '
+    #                        'overridden as a new bad set.')
+    # parserBad.set_defaults(func=override, mode='bad')
 
     parserInfo = subparsers.add_parser(
         'info', help='gets information about a set.',
