@@ -19,7 +19,7 @@ from __future__ import print_function
 from Totoro import log, config, site
 from Totoro.db import getConnection
 from Totoro import exceptions
-from Totoro.utils import intervals, checkOpenSession
+from Totoro.utils import intervals
 from scipy.misc import factorial
 import numpy as np
 import collections
@@ -36,7 +36,7 @@ def updatePlate(plate, rearrangeIncomplete=False, **kwargs):
 
     # updatePlate will likely fail if the code is being run within an open,
     # external session. So, we check to make sure that's not the case
-   #  checkOpenSession()
+    #  checkOpenSession()
 
     unassignedExposures = getUnassignedExposures(plate)
 
