@@ -434,7 +434,8 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
     if scope == 'incomplete':
         optimalArrangement = list(optimalArrangement)
         for ss in plate.sets:
-            if ss.getStatus(silent=True)[0] in ['Good', 'Excellent']:
+            if (ss.getStatus(silent=True)[0] in ['Good', 'Excellent'] and
+                    ss not in optimalArrangement):
                 optimalArrangement.append(ss)
 
     # Applies the new arrangement and modifies the plate info accordingly.
@@ -502,13 +503,15 @@ def applyArrangement(plate, arrangement):
     db = plate.db
     session = plate.session
 
-    arrangement = [ss for ss in arrangement
-                   if ss.status is None or 'Override' not in ss.status.label]
-
     # If all exposures are real, saves data to the DB.
     expMock = [exp.isMock for ss in arrangement for exp in ss.totoroExposures]
 
     if not any(expMock):
+
+        # Selects only new sets and skips overridden sets
+        arrangement = [ss for ss in arrangement if ss.status is None or
+                       'Override' not in ss.status.label]
+
         # Removes sets and exposure-set assignment from the DB
         with session.begin():
             for ss in plate.sets:
