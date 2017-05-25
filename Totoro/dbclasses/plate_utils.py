@@ -203,7 +203,7 @@ def _getSetStatusLabel(exposure):
     """Returns the set status for an exposure or None."""
 
     try:
-        return exposure.mangadbExposure[0].set.status.label
+        return exposure._mangaExposure.set.status.label
     except (AttributeError, IndexError):
         return None
 
