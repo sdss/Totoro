@@ -14,17 +14,24 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+
+from collections import OrderedDict
+from itertools import combinations
+
+from sqlalchemy.exc import InvalidRequestError, ResourceClosedError
+from scipy.spatial.distance import pdist
+
+import numpy as np
+import warnings
+import os
+
 from Totoro import log
 from Totoro import config
 from Totoro import exceptions
 from Totoro.db import getConnection
+
 from sdss.manga.mlhalimit import mlhalimit as mlhalimitHours
-from sqlalchemy.exc import InvalidRequestError, ResourceClosedError
-from collections import OrderedDict
-from itertools import combinations
-import numpy as np
-import warnings
-import os
+from sdss.utilities.yanny import yanny
 
 
 def mlhalimit(dec):
@@ -346,3 +353,50 @@ def checkOpenSession():
         raise exceptions.TotoroSubtransactionError(
             'Failed while checking session status. Error message is: {0}'
             .format(str(ee)))
+
+def get_closest_holes(plateid):
+    """Calculates the minimum distance between holes in the plateHoles.
+
+    Returns a tuple containing the distance between the closest pair
+    (in mm), the xFocal and yFocal of the two closest holes, and their
+    hole types.
+
+    It checks MANGA, MANGA_SINGLE, OBJECT, and GUIDE holes.
+    We ignore the separation between two OBJECT holes since those
+    correspond always APOGEE or eBOSS fibres.
+
+    """
+
+    # The holeType to take into account when finding the closest pair`
+    valid_holes = ['MANGA_SINGLE', 'GUIDE', 'MANGA', 'OBJECT']
+
+    if 'PLATELIST_DIR' not in os.environ:
+        raise ValueError('cannot access the platelist product')
+
+    plate6 = '{0:06d}'.format(plateid)
+    short_platedir = plate6[0:4] + 'XX'
+    plateHoles_path = os.path.join(
+        os.environ['PLATELIST_DIR'], 'plates', short_platedir,
+        plate6, 'plateHoles-{0}.par'.format(plate6))
+
+    if not os.path.exists(plateHoles_path):
+        raise ValueError('cannot find plateHoles for plate {0}'.format(plateid))
+    plateHoles = yanny(plateHoles_path, np=True)['STRUCT1']
+
+    mask = np.in1d(plateHoles['holetype'], valid_holes)
+    holes = plateHoles[mask]
+
+    focal = np.zeros((len(holes['xfocal']), 2), dtype=np.float64)
+    focal[:, 0] = holes['xfocal']
+    focal[:, 1] = holes['yfocal']
+
+    distances = pdist(focal)
+    pdist_indices = list(combinations(range(focal.shape[0]), 2))
+
+    for kk in np.argsort(distances):
+        ii, jj = pdist_indices[kk]
+        hole1_type = holes['holetype'][ii]
+        hole2_type = holes['holetype'][jj]
+        if hole1_type != 'OBJECT' or hole2_type != 'OBJECT':
+            return (distances[kk], focal[ii], focal[jj],
+                    hole1_type, hole2_type)
