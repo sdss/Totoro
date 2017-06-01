@@ -130,6 +130,12 @@ setArrangement:
     forceRearrangementMinExposures: 3
     factor: 0.9
 
+ferruleSizes:
+    MANGA: 8.5
+    MANGA_SINGLE: 8.5
+    OBJECT: 4.4
+    GUIDE: 7.6
+
 mangaCarts: [1, 2, 3, 4, 5, 6]
 offlineCarts: []
 apogeeCarts: [7, 8, 9]
