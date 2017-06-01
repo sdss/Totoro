@@ -34,6 +34,9 @@ from sdss.manga.mlhalimit import mlhalimit as mlhalimitHours
 from sdss.utilities.yanny import yanny
 
 
+_avoid_cart2_cahche = {}
+
+
 def mlhalimit(dec):
     """Returns HA limits in degrees."""
 
@@ -400,3 +403,32 @@ def get_closest_holes(plateid):
         if hole1_type != 'OBJECT' or hole2_type != 'OBJECT':
             return (distances[kk], focal[ii], focal[jj],
                     hole1_type, hole2_type)
+
+
+def avoid_cart_2(plate):
+    """Finds closest pair of holes and decides whether to use cart 2.
+
+    This is beacuse cart 2 has heat shrinks around some of the fibres,
+    which effectively increases their ferrule size. If the distance between
+    holes is smaller than the enlarged ferrule sizes, we should avoid
+    cart 2, if possible.
+
+    The results are cached to avoid having to reopen the yanny file.
+
+    """
+
+    if plate in _avoid_cart2_cahche:
+        return _avoid_cart2_cahche[plate]
+
+    distance, hole1_focal, hole2_focal, \
+        hole1_type, hole2_type = get_closest_holes(plate)
+
+    min_distance = 0.5 * (config['ferruleSizes'][hole1_type] +
+                          config['ferruleSizes'][hole2_type])
+
+    if distance <= min_distance:
+        _avoid_cart2_cahche[plate] = True
+        return True
+    else:
+        _avoid_cart2_cahche[plate] = False
+        return False
