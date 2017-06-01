@@ -364,14 +364,14 @@ def get_closest_holes(plateid):
     (in mm), the xFocal and yFocal of the two closest holes, and their
     hole types.
 
-    It checks MANGA, MANGA_SINGLE, OBJECT, and GUIDE holes.
+    It checks MANGA, OBJECT, and GUIDE holes.
     We ignore the separation between two OBJECT holes since those
     correspond always APOGEE or eBOSS fibres.
 
     """
 
     # The holeType to take into account when finding the closest pair`
-    valid_holes = ['MANGA_SINGLE', 'GUIDE', 'MANGA', 'OBJECT']
+    valid_holes = ['GUIDE', 'MANGA', 'OBJECT']
 
     if 'PLATELIST_DIR' not in os.environ:
         raise ValueError('cannot access the platelist product')
