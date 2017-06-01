@@ -357,6 +357,7 @@ def checkOpenSession():
             'Failed while checking session status. Error message is: {0}'
             .format(str(ee)))
 
+
 def get_closest_holes(plateid):
     """Calculates the minimum distance between holes in the plateHoles.
 
@@ -383,7 +384,12 @@ def get_closest_holes(plateid):
         plate6, 'plateHoles-{0}.par'.format(plate6))
 
     if not os.path.exists(plateHoles_path):
-        raise ValueError('cannot find plateHoles for plate {0}'.format(plateid))
+        plateHoles_path = plateHoles_path.replace('plateHoles',
+                                                  'plateHolesSorted')
+        if not os.path.exists(plateHoles_path):
+            raise ValueError('cannot find plateHoles for plate {0}'
+                             .format(plateid))
+
     plateHoles = yanny(plateHoles_path, np=True)['STRUCT1']
 
     mask = np.in1d(plateHoles['holetype'], valid_holes)
