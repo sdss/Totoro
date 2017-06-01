@@ -22,6 +22,7 @@ from Totoro.scheduler.timeline import Timeline
 from Totoro.scheduler import observingPlan
 from Totoro.exceptions import TotoroPluggerWarning, TotoroPluggerError
 from Totoro.utils import intervals
+from Totoro.utils.utils import avoid_cart_2
 from collections import OrderedDict
 import warnings
 import numpy as np
@@ -457,12 +458,33 @@ class Plugger(object):
                 log.important('Cart #{0} -> plate_id={1} ({2})'
                               .format(cartNo, plate.plate_id, message))
 
-    def _getCart(self, sortedCarts):
+    def _getCart(self, sortedCarts, plate):
         """Given a list of sorted carts returns the first not allocated."""
 
         for cart in sortedCarts:
             if self.carts[cart[0]] is None:
-                return cart
+                if cart[0] != 2 or not avoid_cart_2(plate.plate_id):
+                    return cart
+                else:
+                    if cart[0] == sortedCarts[-1][0]:
+                        # If 2 is the last cartridge available, we use it
+                        # but issue a warning indicating that we may want
+                        # to manually redo the plugging request.
+                        warnings.warn('Assigning plate {0} to cart {1} but '
+                                      'the plate may not be pluggable. '
+                                      'Probably you want to temporarily '
+                                      'disable plate {0} in Petunia (give it '
+                                      'priority 1) and rerun the plugging '
+                                      'request.'.format(plate.plate_id,
+                                                        cart[0]),
+                                      TotoroPluggerWarning)
+                        return cart
+                    else:
+                        warnings.warn('Plate {0} holes are too close for '
+                                      'cart 2. Using another cart.'
+                                      .format(plate.plate_id),
+                                      TotoroPluggerWarning)
+                        continue
 
     def allocateCarts(self, plates):
         """Allocates plates into carts in the most efficient way."""
@@ -502,12 +524,19 @@ class Plugger(object):
 
         for plate in forcePlugPlates:
             lastCart = getCartLastPlugging(plate)
+
+            # If the last cart was 2 but we should avoid it because holes are
+            # too close, we make lastCart=None.
+            if lastCart == 2 and self.avoid_cart_2(plate):
+                lastCart = None
+
             if (lastCart is not None and lastCart not in offlineCarts and
                     lastCart not in pluggedCarts):
                 self.carts[lastCart] = plate
             else:
-                cartData = self._getCart(sortedCarts)
+                cartData = self._getCart(sortedCarts, plate)
                 self.carts[cartData[0]] = plate
+
             allocatedPlates.append(plate)
 
         # Allocates plates that are already plugged.
@@ -518,7 +547,7 @@ class Plugger(object):
             if self.carts[cartNumber] is None:
                 self.carts[cartNumber] = plate
             else:
-                cartData = self._getCart(sortedCarts)
+                cartData = self._getCart(sortedCarts, plate)
                 self.carts[cartData[0]] = plate
             allocatedPlates.append(plate)
 
@@ -545,7 +574,7 @@ class Plugger(object):
             if plate in allocatedPlates:
                 continue
 
-            cartData = self._getCart(sortedCarts)
+            cartData = self._getCart(sortedCarts, plate)
             cartNumber, pluggedPlate, statusCode, completion = cartData
             self.carts[cartNumber] = plate
             allocatedPlates.append(plate)
