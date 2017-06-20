@@ -126,7 +126,7 @@ set:
 
 setArrangement:
     permutationLimitPlate: 600000
-    permutationLimitIncomplete: 14400
+    permutationLimitIncomplete: 10000
     forceRearrangementMinExposures: 3
     factor: 0.9
 
