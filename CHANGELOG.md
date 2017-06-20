@@ -1,9 +1,13 @@
 # Change Log
 
-## [1.7.1] - not yet tagged
+## [1.7.1] - 2017-06-29
 ### Added
 - `Plate.get_mastar()` method that returns MaStar plates (i.e., plates that are APOGEE2-MaNGA
 with APOGEE as the lead survey).
+- Plugger avoids cart 2 for plates for which the holes are too close.
+
+### Changed
+- Reduced number of permutationLimitIncomplete sin it was causing timeout problems with Petunia.
 
 
 ## [1.7.0] - 2016-06-09
