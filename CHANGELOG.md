@@ -2,7 +2,9 @@
 
 ## [1.7.2] - unreleased
 ## Added
-- A new section, `config['specialPrograms']` that allows to override completion and
+- A new section, `config['specialPrograms']` that allows to override SN2 completion thresholds for special plates. Implemented initially for IC342.
+- Special program plates can be completed after a number of good sets.
+- Added columns `ha_min`, `ha_max`, and `field_name` to `mangadb.Plate`. `Plate.getHA()` will use `ha_min, ha_max` from the database, if they are set. The `field_name` column allows to identify a plate as part of a special program.
 
 ## [1.7.1] - 2017-06-29
 ### Added
