@@ -747,7 +747,7 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     # First checks if this is a special field
     if not exposure.isMock:
         plate = exposure.observation.plate_pointing.plate
-        field_name = plate.field_name
+        field_name = plate.mangadbPlate.field_name
     else:
         if exposure._plate is not None:
             field_name = exposure._plate.field_name
