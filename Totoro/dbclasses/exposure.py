@@ -191,7 +191,7 @@ class Exposure(object):
             newExposure._sn2Array = sn2values
 
         if not silent:
-            log.debug('Created mock exposure with ra={0:.3f} and dec={0:.3f}'
+            log.debug('Created mock exposure with ra={0:.3f} and dec={1:.3f}'
                       .format(newExposure.ra, newExposure.dec))
 
         return newExposure
