@@ -51,7 +51,7 @@ fields:
     tilingCatalogue: $MANGA_TILING_CATALOGUE
     mangacore: $MANGACORE_DIR
     tilesBeingDrilled: ~/.totoro/tiles_drilling.dat
-    scienceCatalogue: $MANGASAMPLE_SCIENCE_CATALOGUE
+    scienceCatalogue: $MANGAWORK_DIR/manga/target/current/MaNGA_targets_extNSA_tiled.fits
     minTargetsInTile: 12
 
 observatory:
@@ -105,6 +105,7 @@ SN2thresholds:
     plateBlue: 20
     exposureRed: 0.5
     exposureBlue: 0.5
+    nSetsComplete: null
 
 exposure:
     exposureTime: 900
@@ -135,6 +136,14 @@ ferruleSizes:
     MANGA_SINGLE: 8.5
     OBJECT: 4.4
     GUIDE: 7.6
+
+specialPrograms:
+    IC342:
+        plateRed: null
+        plateBlue: null
+        exposureRed: 0.0
+        exposureBlue: 0.0
+        complete_with_n_sets: 2
 
 mangaCarts: [1, 2, 3, 4, 5, 6]
 offlineCarts: []
