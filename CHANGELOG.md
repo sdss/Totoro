@@ -1,9 +1,12 @@
 # Change Log
 
+## [1.7.2] - unreleased
+## Added
+- A new section, `config['specialPrograms']` that allows to override completion and
+
 ## [1.7.1] - 2017-06-29
 ### Added
-- `Plate.get_mastar()` method that returns MaStar plates (i.e., plates that are APOGEE2-MaNGA
-with APOGEE as the lead survey).
+- `Plate.get_mastar()` method that returns MaStar plates (i.e., plates that are APOGEE2-MaNGA with APOGEE as the lead survey).
 - Plugger avoids cart 2 for plates for which the holes are too close.
 
 ### Changed
