@@ -88,6 +88,7 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
         plate = Plate(plate, format=format.lower(), **kwargs)
 
     plugStatus = [plugging.status.label for plugging in plate.pluggings]
+    field_name = plate.field_name
 
     if 'Good' in plugStatus or 'Overridden Good' in plugStatus:
         plugComplete = True
@@ -103,6 +104,16 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
         plateComplete = True
     else:
         plateComplete = False
+
+    # Special plates can be completed in a number of sets, even if the
+    # SN2 level are lower than the threshold.
+    if not plateComplete:
+        if field_name is not None and field_name in config['specialPrograms']:
+            field_config = config['specialPrograms'][field_name]
+            if 'complete_with_n_sets' in field_config:
+                n_sets = len([ss for ss in plate.sets if ss.complete is True])
+                if n_sets >= field_config['complete_with_n_sets']:
+                    plateComplete = True
 
     if (plateComplete is True and
             np.isnan(plate.getCumulatedSN2(includeIncomplete=False)).any()):
