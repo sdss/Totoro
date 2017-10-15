@@ -177,10 +177,10 @@ class Planner(object):
 
             self.fields.append(field)
 
-        nFieldsDrilled = len(tmpFields) - len(self.fields)
-        if nFieldsDrilled > 0:
-            log.info('PLANNER: rejected {0} fields because they have already '
-                     'been drilled or have no targets.'.format(nFieldsDrilled))
+        nFieldsNoTargets = len(tmpFields) - len(self.fields)
+        if nFieldsNoTargets > 0:
+            log.info('PLANNER: rejected {0} fields because '
+                     'they have not enough targets.'.format(nFieldsNoTargets))
 
     @staticmethod
     def getPlates(usePlatesNotAtAPO=True, useTilesBeingDrilled=True):
