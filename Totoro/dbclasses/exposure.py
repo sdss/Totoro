@@ -743,8 +743,22 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
             return flagExposure(exposure, False, 6, flag=flag, message=message)
 
     # Checks SN2
-    minSN2red = config['SN2thresholds']['exposureRed']
-    minSN2blue = config['SN2thresholds']['exposureBlue']
+
+    # First checks if this is a special field
+    if not exposure.isMock:
+        plate = exposure.observation.plate_pointing.plate
+        field_name = plate.field_name
+    else:
+        if exposure._plate is not None:
+            field_name = exposure._plate.field_name
+
+    if (field_name is None or field_name not in config['specialPrograms'] or
+            'exposureRed' not in config['specialPrograms'][field_name]):
+        minSN2red = config['SN2thresholds']['exposureRed']
+        minSN2blue = config['SN2thresholds']['exposureBlue']
+    else:
+        minSN2red = config['specialPrograms'][field_name]['exposureRed']
+        minSN2blue = config['specialPrograms'][field_name]['exposureBlue']
 
     blueSN2comp = blue < minSN2blue
     redSN2comp = red < minSN2red
