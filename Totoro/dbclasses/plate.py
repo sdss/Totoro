@@ -733,11 +733,28 @@ class Plate(object):
         return validExposures
 
     def getHARange(self, intersect=False, mjd=None, **kwargs):
+        """Returns the HA range.
 
-        ha0 = -self.mlhalimit
-        ha1 = self.mlhalimit
+        Uses mangadb.Plate fields ha_min and ha_max if they are set. Otherwise,
+        uses an HA estimation from the declination.
 
-        haRange = np.array([ha0, ha1]) % 360.
+        """
+
+        if (self.mangadbPlate is not None and
+                self.mangadbPlate.ha_min is not None and
+                self.mangadbPlate.ha_max is not None):
+
+            haRange = np.array([self.mangadbPlate.ha_min,
+                                self.mangadbPlate.ha_max])
+
+        else:
+
+            ha0 = -self.mlhalimit
+            ha1 = self.mlhalimit
+
+            haRange = np.array([ha0, ha1])
+
+        haRange = haRange % 360.
         haRange[haRange > 180.] -= 360.
 
         if intersect is False:
