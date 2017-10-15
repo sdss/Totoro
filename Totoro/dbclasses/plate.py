@@ -1173,3 +1173,12 @@ class Plate(object):
             self._mlhalimit = utils.mlhalimit(self.dec)
 
         return self._mlhalimit
+
+    @property
+    def field_name(self):
+        """Returns the field name."""
+
+        if self.mangadbPlate is None:
+            return None
+
+        return self.mangadbPlate.field_name
