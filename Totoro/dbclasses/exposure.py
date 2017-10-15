@@ -154,7 +154,8 @@ class Exposure(object):
     @classmethod
     def createMockExposure(cls, startTime=None, expTime=None, plugging=None,
                            ditherPosition=None, ra=None, dec=None,
-                           silent=False, sn2values=None, **kwargs):
+                           silent=False, sn2values=None, plate=None,
+                           **kwargs):
         """Creates a mock exposure instance."""
 
         if ra is None or dec is None:
@@ -184,6 +185,9 @@ class Exposure(object):
         haRange = newExposure.getHA()
         ha = utils.calculateMean(haRange)
         newExposure._airmass = utils.computeAirmass(newExposure.dec, ha)
+
+        # Sets the parent plate
+        newExposure._plate = plate
 
         if sn2values is None:
             newExposure.simulateObservedParamters(**kwargs)

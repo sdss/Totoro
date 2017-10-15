@@ -861,7 +861,7 @@ class Plate(object):
         if exposure is None:
             exposure = TotoroExposure.createMockExposure(
                 startTime=startTime, expTime=expTime, ra=ra, dec=dec,
-                dust=self.dust, **kwargs)
+                dust=self.dust, plate=self, **kwargs)
 
         validSet = plateUtils.getOptimalSet(self, exposure)
 
