@@ -416,7 +416,7 @@ class Exposure(object):
         return self.mjd()
 
     def mjd(self):
-    	"""Returns the *SDSS* MJD. See line ~140 (the mjd4Gang function) here
+        """Returns the *SDSS* MJD. See line ~140 (the mjd4Gang function) here
         for notes on this value.
         https://svn.sdss.org/deprecated/operations/iop/trunk/etc/iopUtils.tcl
         """
