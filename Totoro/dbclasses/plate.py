@@ -99,7 +99,7 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False, raRange=None, **kwargs):
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode).filter(
                 plateDB.Survey.label == 'MaNGA',
-                plateDB.SurveyMode.label == 'MaNGA dither'
+                plateDB.SurveyMode.label.in_(['MaNGA dither', 'MaNGA 10min'])
         ).join(plateDB.PlateLocation).filter(
             plateDB.PlateLocation.label == 'APO').join(
                 plateDB.PlatePointing, plateDB.Pointing)
@@ -213,7 +213,7 @@ def getComplete(**kwargs):
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode,
             plateDB.Plugging, plateDB.PluggingStatus).filter(
                 plateDB.Survey.label == 'MaNGA',
-                plateDB.SurveyMode.label == 'MaNGA dither',
+                plateDB.SurveyMode.label.in_(['MaNGA dither', 'MaNGA 10min']),
                 plateDB.PluggingStatus.label.in_(['Good', 'Overridden Good'])
         ).order_by(plateDB.Plate.plate_id).all()
 
@@ -499,9 +499,10 @@ class Plate(object):
         #                  .format(self.plate_id))
 
         if (self.currentSurveyMode is None or
-                self.currentSurveyMode.label != 'MaNGA dither'):
-            log.debug('plate_id={0} has surveyMode which is not MaNGA dither. '
-                      'Not updating sets.'.format(self.plate_id))
+                self.currentSurveyMode.label not in ['MaNGA dither',
+                                                     'MaNGA 10min']):
+            log.debug('plate_id={0} has surveyMode which is not MaNGA '
+                      'dither/10min. Not updating sets.'.format(self.plate_id))
             return False
 
         result = plateUtils.updatePlate(self, **kwargs)

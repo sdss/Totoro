@@ -337,7 +337,8 @@ def isMaNGA_Led(plate):
 
     for survey in plate.surveys:
         if (survey.label == 'MaNGA' and plate.currentSurveyMode is not None and
-                plate.currentSurveyMode.label == 'MaNGA dither'):
+                plate.currentSurveyMode.label in ['MaNGA dither',
+                                                  'MaNGA 10min']):
             return True
 
     return False

@@ -104,7 +104,8 @@ class Fields(list):
             plates = session.query(plateDB.Plate).join(
                 plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
             ).filter(plateDB.Survey.label == 'MaNGA',
-                     plateDB.SurveyMode.label == 'MaNGA dither')
+                     plateDB.SurveyMode.label.in_(['MaNGA dither',
+                                                   'MaNGA 10min']))
 
             if acceptPriority1:
                 plates.join(plateDB.PlatePointing).filter(

@@ -56,7 +56,7 @@ def getForcePlugPlates():
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode,
             plateDB.PlatePointing, plateDB.PlateLocation).filter(
                 plateDB.Survey.label == 'MaNGA',
-                plateDB.SurveyMode.label == 'MaNGA dither',
+                plateDB.SurveyMode.label.in_(['MaNGA dither', 'MaNGA 10min']),
                 plateDB.PlateLocation.label == 'APO',
                 plateDB.PlatePointing.priority == forcePlugPriority).order_by(
                     plateDB.Plate.plate_id).all()
