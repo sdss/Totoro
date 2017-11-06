@@ -150,8 +150,9 @@ def getAll(onlyIncomplete=False, **kwargs):
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
         ).filter(plateDB.Survey.label == 'MaNGA',
-                 plateDB.SurveyMode.label == 'MaNGA dither').order_by(
-                     plateDB.Plate.plate_id)
+                 plateDB.SurveyMode.label.in_(['MaNGA dither',
+                                               'MaNGA 10min'])).order_by(
+            plateDB.Plate.plate_id)
 
     platesAtAPO = plates.join(plateDB.PlateLocation).filter(
         plateDB.PlateLocation.label == 'APO')
