@@ -14,7 +14,7 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from Totoro import log, config
+from Totoro import log, config, site
 from Totoro import utils
 from Totoro.scheduler import scheduler_utils as logic
 from Totoro.core.colourPrint import _color_text
@@ -169,8 +169,9 @@ class Timeline(object):
         if self.remainingTime <= expTimeJD:
             return True
         else:
-            log.info('... unobserved times: {0}'.format(
-                     str(self.unallocatedRange)))
+            lst_range = site.localSiderealTime(self.unallocatedRange)
+            log.info('... unobserved times: {0}'.format(str(self.unallocatedRange)))
+            log.info('... unobserved LSTs: {!r}'.format(lst_range.tolist()))
             return False
 
     def log(self, plate, newExposures, mode):
