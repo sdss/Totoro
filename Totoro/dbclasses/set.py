@@ -402,7 +402,7 @@ class Set(object):
 
     @property
     def complete(self):
-        if self.getQuality()[0] not in ['Incomplete', 'Bad']:
+        if self.getQuality()[0] not in ['Incomplete', 'Bad', 'Unplugged']:
             return True
         else:
             return False
