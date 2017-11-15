@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.7.3] - Unreleased
+## Fixed
+- Fixed a bug that would mark Unplugged sets as complete.
+
+
 ## [1.7.2] - 2017-11-06
 ## Added
 - A new section, `config['specialPrograms']` that allows to override SN2 completion thresholds for special plates. Implemented initially for IC342.
