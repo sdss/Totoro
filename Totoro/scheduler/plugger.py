@@ -575,6 +575,13 @@ class Plugger(object):
                 continue
 
             cartData = self._getCart(sortedCarts, plate)
+
+            if cartData is None:
+                warnings.warn('cannot allocate a cart for plate {}. '
+                              'There may be unallocated time as a result.'
+                              .format(plate.plate_id), TotoroPluggerWarning)
+                continue
+
             cartNumber, pluggedPlate, statusCode, completion = cartData
             self.carts[cartNumber] = plate
             allocatedPlates.append(plate)
