@@ -554,8 +554,10 @@ class Plate(object):
         # Totoro.scheduler.io.restoreExposures. If _useOnlyCompletion
         # is set, the plate is considered complete by just looking at
         # getPlateCompletion() (i.e., skips checking the plugging status).
+
+        completion_threshold = config['SN2thresholds']['completionThreshold']
         if hasattr(self, '_useOnlyCompletion'):
-            return self.getPlateCompletion() > 1.
+            return self.getPlateCompletion() > completion_threshold
 
         if self._complete is not None:
             return self._complete
