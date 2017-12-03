@@ -751,6 +751,8 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     else:
         if exposure._plate is not None:
             field_name = exposure._plate.field_name
+        else:
+            field_name = None
 
     if (field_name is None or field_name not in config['specialPrograms'] or
             'exposureRed' not in config['specialPrograms'][field_name]):
