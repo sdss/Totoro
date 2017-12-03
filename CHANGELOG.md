@@ -1,9 +1,12 @@
 # Change Log
 
 ## [1.7.3] - Unreleased
+## Added
+- Option `completionThreshold` in configuration to define the minimum completion needed to mark a plate as complete.
 ## Fixed
 - Fixed a bug that would mark Unplugged sets as complete.
 - Quick fix for the case when a plate cannot be allocated to a cart. This causes `Plugger._getCart` to return `None`. The current fix just ignores the plate, which can lead to unallocated time.
+- A bug when defining the `field_name` in `checkExposure` that prevented exposure files from being restored.
 
 
 ## [1.7.2] - 2017-11-06
