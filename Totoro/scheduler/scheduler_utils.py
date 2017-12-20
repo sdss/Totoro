@@ -109,7 +109,8 @@ def getDictOfSchedulablePlates(plates, mode):
             isInFootPrint = plate.inFootprint
             if plate.getPlateCompletion(includeIncompleteSets=True) > 0:
                 schPlates['platesWithSignal'].append(plate)
-            elif isPlate and not isBackup:
+            elif ((isPlate and not isBackup) or
+                  (plate.dateAtAPO is not None and plate.dateAtAPO > 0)):
                 schPlates['drilled'].append(plate)
             elif not isPlate and isInFootPrint:
                 schPlates['fieldsInFootprint'].append(plate)
