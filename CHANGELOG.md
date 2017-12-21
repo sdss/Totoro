@@ -5,6 +5,7 @@
 ## Added
 - Option `completionThreshold` in configuration to define the minimum completion needed to mark a plate as complete. Set to 0.985 by default
 - `utils.isPlateComplete` now accepts a `write_apocomplete` option that, if the plate is complete, write the APOcomplete file to the corresponding directory in mangacore.
+- `utils.isPlateComplete` now accepts a `mark_complete` option that, if the plate is complete, sets the plugging status to ``Complete``.
 
 ## Fixed
 - Fixed a bug that would mark Unplugged sets as complete.

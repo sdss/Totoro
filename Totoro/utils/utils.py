@@ -71,15 +71,40 @@ def computeAirmass(dec, ha, lat=config['observatory']['latitude'],
         return airmass
 
 
+def mark_plate_complete(plate):
+    """Sets the plugging status of ``plate`` to ``Complete``."""
+
+    totoroDB = getConnection()
+    plateDB = totoroDB.plateDB
+    session = totoroDB.Session()
+
+    plugging_status = [plugging.status.label for plugging in plate.pluggings]
+    if 'Good' in plugging_status or len(plugging_status) == 0:
+        return
+
+    sorted_plugging = sorted(plate.pluggings, key=lambda plug: (plug.fscan_mjd,
+                                                                plug.fscan_id))
+
+    last_plugging = sorted_plugging[-1]
+
+    with session.begin():
+        good_pk = session.query(plateDB.PluggingStatus.pk).filter(
+            plateDB.PluggingStatus.label == 'Good').scalar()
+        last_plugging.plugging_status_pk = good_pk
+
+    return True
+
+
 def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
                     write_apocomplete=True, overwrite=False,
-                    **kwargs):
+                    mark_complete=True, **kwargs):
     """Returns True if a plate is complete using the MaNGA logic.
 
-    If `forceCheckCompletion` is False and the plugging is marked as complete,
-    no plateCompletion check is performed (this saves some time). If
+    If ``forceCheckCompletion`` is False and the plugging is marked as
+    complete, no plateCompletion check is performed (this saves some time). If
     ``write_apocomplete=True`` and the plate is complte, the apocomplete file
-    will be written.
+    will be written. If ``mark_complete=True``, changes the plugging status to
+    ``Complete``.
 
     """
 
@@ -101,9 +126,11 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
         plugComplete = None
 
     if plugComplete is not None and forceCheckCompletion is False:
-        if (write_apocomplete and plugComplete is True and
-                len(plate.getMockExposures()) == 0):
-            getAPOcomplete([plate], createFile=True, overwrite=overwrite)
+        if plugComplete is True and len(plate.getMockExposures()) == 0:
+            if write_apocomplete:
+                getAPOcomplete([plate], createFile=True, overwrite=overwrite)
+            if mark_complete:
+                mark_plate_complete(plate)
         return plugComplete
 
     completion_threshold = config['SN2thresholds']['completionThreshold']
@@ -139,9 +166,11 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
 
     completion_status = plugComplete or plateComplete
 
-    if (write_apocomplete and completion_status is True and
-            len(plate.getMockExposures()) == 0):
-        getAPOcomplete([plate], createFile=True, overwrite=overwrite)
+    if completion_status is True and len(plate.getMockExposures()) == 0:
+        if write_apocomplete:
+            getAPOcomplete([plate], createFile=True, overwrite=overwrite)
+        if mark_complete:
+            mark_plate_complete(plate)
 
     return completion_status
 
