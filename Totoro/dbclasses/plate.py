@@ -192,7 +192,8 @@ def _getIncomplete(plates, **kwargs):
 
     incompletePlates = []
     for totoroPlate in totoroPlates:
-        if not totoroPlate.isComplete:
+        if not utils.isPlateComplete(totoroPlate, write_apocomplete=False,
+                                     mark_complete=False):
             incompletePlates.append(totoroPlate)
 
     return incompletePlates
