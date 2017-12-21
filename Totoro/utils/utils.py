@@ -101,7 +101,8 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
         plugComplete = None
 
     if plugComplete is not None and forceCheckCompletion is False:
-        if write_apocomplete and plugComplete is True:
+        if (write_apocomplete and plugComplete is True and
+                len(plate.getMockExposures()) == 0):
             getAPOcomplete([plate], createFile=True, overwrite=overwrite)
         return plugComplete
 
@@ -138,7 +139,8 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
 
     completion_status = plugComplete or plateComplete
 
-    if write_apocomplete and completion_status is True:
+    if (write_apocomplete and completion_status is True and
+            len(plate.getMockExposures()) == 0):
         getAPOcomplete([plate], createFile=True, overwrite=overwrite)
 
     return completion_status
