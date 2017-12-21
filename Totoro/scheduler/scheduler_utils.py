@@ -142,7 +142,10 @@ def getOptimalPlate(plates, jdRange, mode='plugger', prioritiseAPO=None,
     optimalPlate = None
 
     # Makes sure we are not dealing with any completed plates.
-    incompletePlates = [plate for plate in plates if not plate.isComplete]
+    incompletePlates = [plate for plate in plates
+                        if not utils.isPlateComplete(plate,
+                                                     write_apocomplete=False,
+                                                     mark_complete=False)]
 
     # Selects plates that intersect with the observing window for at least
     # one exposure.
