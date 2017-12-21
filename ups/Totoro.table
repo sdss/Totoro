@@ -1,6 +1,7 @@
 setupOptional(sqlalchemy)
 setupOptional(psycopg2)
 setupOptional(dust)
+setupOptional(mangacore)
 
 envPrepend(PATH, ${PRODUCT_DIR}/Totoro/bin)
 envPrepend(PYTHONPATH, ${PRODUCT_DIR})
