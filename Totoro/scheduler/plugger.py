@@ -22,7 +22,7 @@ from Totoro.scheduler.timeline import Timeline
 from Totoro.scheduler import observingPlan
 from Totoro.exceptions import TotoroPluggerWarning, TotoroPluggerError
 from Totoro.utils import intervals
-from Totoro.utils.utils import avoid_cart_2
+from Totoro.utils.utils import avoid_cart_2, isPlateComplete
 from collections import OrderedDict
 import warnings
 import numpy as np
@@ -109,7 +109,8 @@ def getCartStatus(activePluggings, cartNumber):
 
     totoroPlate = Plate(plate)
 
-    if totoroPlate.isComplete:
+    if isPlateComplete(totoroPlate, write_apocomplete=False,
+                       mark_complete=False):
         return (cartNumber, totoroPlate, 2, 1.)  # Complete MaNGA plate
 
     plateCompletion = totoroPlate.getPlateCompletion()
@@ -252,7 +253,8 @@ class Plugger(object):
         self._nNewExposures = dict()
 
         for plate in pluggedPlates:
-            if not plate.isComplete:
+            if not isPlateComplete(plate, write_apocomplete=False,
+                                   mark_complete=False):
                 cart = plate.getActiveCartNumber()
                 self.carts[cart] = plate
 
