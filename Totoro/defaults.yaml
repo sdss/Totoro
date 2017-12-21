@@ -106,7 +106,7 @@ SN2thresholds:
     exposureRed: 0.5
     exposureBlue: 0.5
     nSetsComplete: null
-    completionThreshold: 0.98
+    completionThreshold: 0.985
 
 exposure:
     exposureTime: 900
