@@ -72,11 +72,14 @@ def computeAirmass(dec, ha, lat=config['observatory']['latitude'],
 
 
 def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
+                    write_apocomplete=True, overwrite=False,
                     **kwargs):
     """Returns True if a plate is complete using the MaNGA logic.
 
     If `forceCheckCompletion` is False and the plugging is marked as complete,
-    no plateCompletion check is performed (this saves some time).
+    no plateCompletion check is performed (this saves some time). If
+    ``write_apocomplete=True`` and the plate is complte, the apocomplete file
+    will be written.
 
     """
 
@@ -98,6 +101,8 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
         plugComplete = None
 
     if plugComplete is not None and forceCheckCompletion is False:
+        if write_apocomplete and plugComplete is True:
+            getAPOcomplete([plate], createFile=True, overwrite=overwrite)
         return plugComplete
 
     completion_threshold = config['SN2thresholds']['completionThreshold']
@@ -130,16 +135,19 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
                               'complete' if plugComplete else 'incomplete',
                               'complete' if plateComplete else 'incomplete'),
                           exceptions.TotoroUserWarning)
-            return plugComplete
-        else:
-            return plugComplete
-    else:
-        return plateComplete
+
+    completion_status = plugComplete or plateComplete
+
+    if write_apocomplete and completion_status is True:
+        getAPOcomplete([plate], createFile=True, overwrite=overwrite)
+
+    return completion_status
 
 
 def getAPOcomplete(plates, format='plate_id',
                    SN2_blue=None, SN2_red=None, limitSN=False,
-                   func=np.max, createFile=False, **kwargs):
+                   func=np.max, createFile=False, reindex_sets=True,
+                   **kwargs):
     """Returns a dictionary with the APOcomplete output.
 
     Parameters
@@ -170,6 +178,8 @@ def getAPOcomplete(plates, format='plate_id',
         thresholds (but still above them).
     createFile : bool
         If True, `createAPOcompleteFile` is called for each of the plates.
+    reindex_sets : bool
+        If ``True``, reindexes the ``set_pk`` to ``1, 2, ...``.
     kwargs : dict
         Additional parameters to be passed to `Totoro.Plates` and to
         `createAPOcompleteFile`.
@@ -198,7 +208,7 @@ def getAPOcomplete(plates, format='plate_id',
         if not isinstance(plate, Plate):
             plate = Plate(plate, format=format.lower(), **kwargs)
 
-        if isPlateComplete(plate) is False:
+        if isPlateComplete(plate, write_apocomplete=False) is False:
             warnings.warn('plate_id={0} is not complete. APOcomplete output '
                           'must not be used.'.format(plate.plate_id),
                           exceptions.TotoroUserWarning)
@@ -232,11 +242,11 @@ def getAPOcomplete(plates, format='plate_id',
         if setsToAPOcomplete is None:
             setsToAPOcomplete = validSets
 
-        for ss in setsToAPOcomplete:
+        for set_ii, ss in enumerate(setsToAPOcomplete):
             for exp in ss.totoroExposures:
 
                 mjd = exp.getMJD()
-                pk = ss.pk
+                pk = ss.pk if reindex_sets is False else (set_ii + 1)
                 dPos = exp.ditherPosition.upper()
                 nExp = exp.exposure_no
 
@@ -249,13 +259,12 @@ def getAPOcomplete(plates, format='plate_id',
             apoCompleteSN2 = np.array([0., 0.])
 
         if apoCompleteSN2[0] >= SN2_blue and apoCompleteSN2[1] >= SN2_red:
-            log.info('APOcomplete for plate_id={0} generated with '
+            log.info('APOcomplete for plate_id={0} returned with '
                      'SN2_blue={1:.1f}, SN2_red={2:.1f}.'.format(
                          plate.plate_id, apoCompleteSN2[0], apoCompleteSN2[1]))
         else:
-            warnings.warn('APOcomplete for plate_id={0} generated with '
-                          'SN2_blue={1:.1f}, SN2_red={2:.1f}, which is lower '
-                          'than the thresholds.'.format(
+            warnings.warn('plate_id={0} has SN2_blue={1:.1f}, SN2_red={2:.1f},'
+                          ' which is lower than the thresholds.'.format(
                               plate.plate_id, apoCompleteSN2[0],
                               apoCompleteSN2[1]), exceptions.TotoroUserWarning)
 
@@ -265,16 +274,33 @@ def getAPOcomplete(plates, format='plate_id',
     return APOcomplete
 
 
-def createAPOcompleteFile(APOcomplete, path=None):
+def createAPOcompleteFile(APOcomplete, path=None, overwrite=False):
     """Writes the APOcomplete file in Yanny format."""
 
-    path = './' if path is None else path
+    for plate in APOcomplete:
 
-    for key in APOcomplete:
+        plateXX = '{:06d}'.format(plate)[0:4] + 'XX'
+        default_path = os.path.join(os.environ['MANGACORE_DIR'], 'apocomplete',
+                                    plateXX)
 
-        apocompPath = os.path.join(path, 'apocomp-{0:04d}.par'.format(key))
+        path = default_path if path is None else path
 
-        data = APOcomplete[key]
+        apocompPath = os.path.join(path, 'apocomp-{0:04d}.par'.format(plate))
+
+        if os.path.exists(apocompPath):
+            if overwrite:
+                warnings.warn('apocomplete path {} exists but '
+                              'overwriting it.'.format(path),
+                              exceptions.TotoroUserWarning)
+            else:
+                log.debug('apocomplete path {} exists; not '
+                          'overwriting it.'.format(path))
+                return
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        data = APOcomplete[plate]
 
         plateid = [dd[0] for dd in data]
         mjd = [dd[1] for dd in data]
@@ -296,7 +322,7 @@ def createAPOcompleteFile(APOcomplete, path=None):
 
         ff.close()
 
-    return
+    return path
 
 
 def _cumulatedSN2(sets):

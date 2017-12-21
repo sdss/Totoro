@@ -562,7 +562,8 @@ class Plate(object):
         if self._complete is not None:
             return self._complete
         else:
-            status = utils.isPlateComplete(self)
+            status = utils.isPlateComplete(self, write_apocomplete=True,
+                                           overwrite=False)
             # If the plate is mock, caches the status.
             if status is True and self.isMock:
                 self._complete = status
