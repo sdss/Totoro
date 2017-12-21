@@ -24,6 +24,7 @@ from scipy.spatial.distance import pdist
 import numpy as np
 import warnings
 import os
+import subprocess
 
 from Totoro import log
 from Totoro import config
@@ -305,7 +306,8 @@ def getAPOcomplete(plates, format='plate_id',
     return APOcomplete
 
 
-def createAPOcompleteFile(APOcomplete, path=None, overwrite=False):
+def createAPOcompleteFile(APOcomplete, path=None, overwrite=False,
+                          svn_add=True):
     """Writes the APOcomplete file in Yanny format."""
 
     for plate in APOcomplete:
@@ -352,6 +354,21 @@ def createAPOcompleteFile(APOcomplete, path=None, overwrite=False):
             ff.write(expstr)
 
         ff.close()
+
+        if svn_add:
+            try:
+                os.chdir(path)
+                result = subprocess.call('svn add {}'.format(apocompPath))
+                if result > 0:
+                    warnings.warn('svn add {} failed with error {}'
+                                  .format(apocompPath, result),
+                                  exceptions.TotoroUserWarning)
+                    return
+            except Exception:
+                warnings.warn('svn add {} failed with unknown error'
+                              .format(apocompPath),
+                              exceptions.TotoroUserWarning)
+                return
 
     return path
 
