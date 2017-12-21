@@ -358,7 +358,8 @@ def createAPOcompleteFile(APOcomplete, path=None, overwrite=False,
         if svn_add:
             try:
                 os.chdir(path)
-                result = subprocess.call('svn add {}'.format(apocompPath))
+                result = subprocess.call('svn add {}'.format(apocompPath),
+                                         shell=True)
                 if result > 0:
                     warnings.warn('svn add {} failed with error {}'
                                   .format(apocompPath, result),
