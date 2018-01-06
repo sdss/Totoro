@@ -1,3 +1,10 @@
+IMPORTANT
+---------
+
+This repository for Totoro is now inactive. New versions and active development will happen at https://github.com/sdss/Totoro.
+
+-------
+
 # Totoro
 
 This directory contains the MaNGA autoscheduler logic (codename Totoro) as well as classes
