@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.8.1] - Not yet released
+
+## Added
+- Option `rejectBackup` in `Planner` to remove backup plates from the list of plates to schedule. Default is `False`.
+- Option `excludeStarted` in `Planner` to remove plates that have been started (have valid exposures). Default is `False`.
+
+
 ## [1.8.0] - 2017-12-20
 
 ## Added
