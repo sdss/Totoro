@@ -60,13 +60,16 @@ class Planner(object):
     rejectBackup : bool
         If True, plates marked as Backup will be rejected and their fields will
         not be reselected.
+    excludeStarted : bool
+        If True, rejects plates that have been started (have valid exposures).
     kwargs : dict
         Additional arguments to be passed to `Planner.getPlates`.
 
     """
 
     def __init__(self, startDate=None, endDate=None, useFields=True,
-                 plates=None, fields=None, rejectBackup=False, **kwargs):
+                 plates=None, fields=None, rejectBackup=False,
+                 excludeStarted=False, **kwargs):
 
         self.startDate = time.Time.now().jd if startDate is None else startDate
         self.endDate = (observingPlan.plan[-1]['JD1']
@@ -98,8 +101,11 @@ class Planner(object):
 
             # Selects only plates that are incomplete and have enough priority
             self.plates = [plate for plate in validPlates
-                           if len(plate.getTotoroExposures()) == 0 and
-                           plate.priority > minimumPlugPriority]
+                           if plate.priority > minimumPlugPriority]
+
+            if excludeStarted:
+                self.plates = [plate for plate in self.plates
+                               if len(plate.getTotoroExposures()) == 0]
 
             # Outputs the number of plates.
             drilling = [plate for plate in self.plates if not plate.drilled]
