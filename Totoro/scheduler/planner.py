@@ -57,13 +57,16 @@ class Planner(object):
     fields : list or None
         Either a list of `Totoro.Field` to use or `None`, in which case the
         list of fields is determined by `Planner.getFields`.
+    rejectBackup : bool
+        If True, plates marked as Backup will be rejected and their fields will
+        not be reselected.
     kwargs : dict
         Additional arguments to be passed to `Planner.getPlates`.
 
     """
 
     def __init__(self, startDate=None, endDate=None, useFields=True,
-                 plates=None, fields=None, **kwargs):
+                 plates=None, fields=None, rejectBackup=False, **kwargs):
 
         self.startDate = time.Time.now().jd if startDate is None else startDate
         self.endDate = (observingPlan.plan[-1]['JD1']
@@ -115,6 +118,12 @@ class Planner(object):
         elif useFields:
             self.getFields(self.plates)
 
+        if rejectBackup:
+            n_pre = len(self.plates)
+            self.plates = [plate for plate in self.plates
+                           if 'Backup' not in [status.label for status in plate.statuses]]
+            log.info('PLANNER: rejected {} backup plates'.format(n_pre - len(self.plates)))
+
     def getFields(self, plates):
         """Creates a field list from the tiling catalogue.
 
@@ -137,7 +146,7 @@ class Planner(object):
                               'MANGA_TILEID. Will not check for number of '
                               'targets', exceptions.TotoroPlannerWarning)
                 scienceCatalogue = None
-        except:
+        except Exception:
             scienceCatalogue = None
             warnings.warn('PLANNER: science catalogue cannot be found. '
                           'Will not check for number of targets',

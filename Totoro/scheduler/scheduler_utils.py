@@ -98,8 +98,8 @@ def getDictOfSchedulablePlates(plates, mode):
 
     elif mode == 'planner':
         schPlates = OrderedDict([('platesWithSignal', []), ('drilled', []),
-                                 ('fieldsInFootprint', []),
                                  ('backup', []),
+                                 ('fieldsInFootprint', []),
                                  ('fieldsOutsideFootprint', [])])
         for plate in plates:
             isPlate = isinstance(plate, Plate) and not isinstance(plate, Field)
