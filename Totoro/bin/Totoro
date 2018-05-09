@@ -1,0 +1,50 @@
+#!/usr/bin/env python2
+# -*- coding:utf-8 -*-
+
+# @Author: José Sánchez-Gallego (gallegoj@uw.edu)
+# @Date: 2018-05-07
+# @Filename: Totoro
+# @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
+# @Copyright: José Sánchez-Gallego
+
+
+import click
+
+from Totoro.scheduler.io import saveExposures
+from Totoro.scheduler.planner import Planner
+
+
+@click.group()
+@click.pass_context
+def totoro(ctx):
+    return
+
+
+@totoro.command()
+@click.option('--start-date', type=float,
+              help='The start date for the simulation. '
+                   'If not set, defaults to the current time.')
+@click.option('-b', '--no-backup', is_flag=True,
+              default=False, help='Do not use backup plates.')
+@click.option('-s', '--save', type=click.Path(),
+              help='Saves the simulation exposures to a file.')
+@click.option('-b', '--no-backup', is_flag=True,
+              default=False, help='Do not use backup plates.')
+@click.option('-w', '--weather-fraction', type=float, default=1.0,
+              help='The good weather fraction to use.')
+@click.option('-e', '--efficiency', type=float, default=0.755,
+              help='The observing efficiency.')
+@click.argument('end-date', type=float)
+@click.pass_context
+def simulate(ctx, end_date, start_date=None, no_backup=False, save=False,
+             weather_fraction=1.0, efficiency=0.755):
+
+    planner = Planner(startDate=start_date, endDate=end_date, rejectBackup=no_backup)
+    planner.schedule(goodWeatherFraction=weather_fraction, efficiency=efficiency, useFields=True)
+
+    if save:
+        saveExposures(planner.plates + planner.fields, str(save), startDate=planner.startDate)
+
+
+if __name__ == "__main__":
+    totoro(obj={})
