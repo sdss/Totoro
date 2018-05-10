@@ -1,6 +1,6 @@
 # Change Log
 
-## [1.8.1] - Not yet released
+## [1.8.1] - 2018-05-10
 
 ## Added
 - Option `rejectBackup` in `Planner` to remove backup plates from the list of plates to schedule. Default is `False`.
