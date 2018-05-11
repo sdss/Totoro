@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.8.3] - 2018-05-11
+
+## Added
+- Added a `plugging` command to `Totoro` that replicates the `mangaPluggingRequest` script.
+
+
 ## [1.8.2] - 2018-05-11
 
 ## Added

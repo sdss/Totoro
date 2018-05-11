@@ -11,9 +11,11 @@
 import warnings
 
 import click
+from astropy import time
 
 import Totoro
 from Totoro.exceptions import TotoroUserWarning
+from Totoro.scheduler import Plugger, observingPlan
 from Totoro.scheduler.io import saveExposures
 from Totoro.scheduler.planner import Planner
 
@@ -43,6 +45,7 @@ def totoro(ctx, version=False):
 @click.pass_context
 def simulate(ctx, end_date, start_date=None, no_backup=False, save=False,
              weather_fraction=1.0, efficiency=0.755):
+    """Simulates a range of MJDs."""
 
     if no_backup:
         warnings.warn('Rejecting all backup plates.', TotoroUserWarning)
@@ -52,6 +55,41 @@ def simulate(ctx, end_date, start_date=None, no_backup=False, save=False,
 
     if save:
         saveExposures(planner.plates + planner.fields, str(save), startDate=planner.startDate)
+
+
+@totoro.command()
+@click.option('-k', '--marked', is_flag=True,
+              help='If set, only marked plates will be considered.')
+@click.option('-v', '--verbose', is_flag=True,
+              help='Print lots of extra output.')
+@click.argument('mjd', type=int, nargs=-1)
+@click.pass_context
+def plugging(ctx, mjd=None, marked=False, verbose=False):
+    """Creates a plugging request for a certain MJD."""
+
+    if len(mjd) == 0:
+        mjd = None
+    elif len(mjd) == 1:
+        mjd = mjd[0]
+    elif len(mjd) > 1:
+        raise ValueError('too many arguments')
+
+    if mjd is None:
+        warnings.warn('Using current MJD.', TotoroUserWarning)
+        tt = time.Time.now()
+    else:
+        tt = time.Time(int(mjd), format='mjd')
+
+    print_MJD = int(tt.jd) - 2400000
+
+    if verbose is True:
+        Totoro.log.sh.setLevel('DEBUG')
+
+    Totoro.log.info('creating plugging request for MJD={0:d}'.format(print_MJD))
+    jd0, jd1 = observingPlan.getJD(jd=int(tt.jd))
+
+    plugger = Plugger(jd0, jd1, onlyMarked=marked)
+    Totoro.log.info('returned dictionary: {0}'.format(plugger.getASOutput()))
 
 
 if __name__ == "__main__":
