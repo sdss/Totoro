@@ -4,6 +4,7 @@
 
 ## Added
 - Added warning when `--no-backup` is passed to `Totoro simulate`.
+- Added `--version` option to `Totoro`.
 
 
 ## [1.8.1] - 2018-05-10
