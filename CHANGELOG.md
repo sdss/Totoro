@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.8.2] - unreleased
+
+## Added
+- Added warning when `--no-backup` is passed to `Totoro simulate`.
+
+
 ## [1.8.1] - 2018-05-10
 
 ## Added

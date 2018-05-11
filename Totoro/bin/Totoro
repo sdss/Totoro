@@ -8,8 +8,11 @@
 # @Copyright: José Sánchez-Gallego
 
 
+import warnings
+
 import click
 
+from Totoro.exceptions import TotoroUserWarning
 from Totoro.scheduler.io import saveExposures
 from Totoro.scheduler.planner import Planner
 
@@ -38,6 +41,9 @@ def totoro(ctx):
 @click.pass_context
 def simulate(ctx, end_date, start_date=None, no_backup=False, save=False,
              weather_fraction=1.0, efficiency=0.755):
+
+    if no_backup:
+        warnings.warn('Rejecting all backup plates.', TotoroUserWarning)
 
     planner = Planner(startDate=start_date, endDate=end_date, rejectBackup=no_backup)
     planner.schedule(goodWeatherFraction=weather_fraction, efficiency=efficiency, useFields=True)
