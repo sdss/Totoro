@@ -22,8 +22,7 @@ from Totoro.scheduler.planner import Planner
 
 @click.group()
 @click.version_option(version=Totoro.__version__, prog_name='Totoro')
-@click.pass_context
-def totoro(ctx, version=False):
+def totoro():
     return
 
 
@@ -42,8 +41,7 @@ def totoro(ctx, version=False):
 @click.option('-e', '--efficiency', type=float, default=0.755,
               help='The observing efficiency.')
 @click.argument('end-date', type=float)
-@click.pass_context
-def simulate(ctx, end_date, start_date=None, no_backup=False, save=False,
+def simulate(end_date, start_date=None, no_backup=False, save=False,
              weather_fraction=1.0, efficiency=0.755):
     """Simulates a range of MJDs."""
 
@@ -73,8 +71,7 @@ def simulate(ctx, end_date, start_date=None, no_backup=False, save=False,
 @click.option('-v', '--verbose', is_flag=True,
               help='Print lots of extra output.')
 @click.argument('mjd', type=int, nargs=-1)
-@click.pass_context
-def plugging(ctx, mjd=None, marked=False, verbose=False):
+def plugging(mjd=None, marked=False, verbose=False):
     """Creates a plugging request for a certain MJD."""
 
     if len(mjd) == 0:
@@ -104,4 +101,4 @@ def plugging(ctx, mjd=None, marked=False, verbose=False):
 
 
 if __name__ == "__main__":
-    totoro(obj={})
+    totoro()
