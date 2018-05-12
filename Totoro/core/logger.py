@@ -133,6 +133,7 @@ class TotoroLogger(Logger):
 
     def _stream_formatter(self, record):
         """The formatter for standard output."""
+
         if record.levelno < logging.DEBUG:
             print(record.levelname, end='')
         elif(record.levelno < logging.INFO):
@@ -149,7 +150,7 @@ class TotoroLogger(Logger):
         if record.levelno == logging.WARN:
             message = '{0}'.format(record.msg[record.msg.find(':')+2:])
         else:
-            message = '{0}'.format(record.msg)
+            message = record.getMessage()
 
         if len(message) > self.wrapperLength:
             tw = TextWrapper()
