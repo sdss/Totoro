@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.8.4] - unreleased
+
+## Modified
+- Renamed `Totoro` CLI to `totoro`.
+
+
 ## [1.8.3] - 2018-05-11
 
 ## Added
