@@ -100,5 +100,5 @@ def plugging(mjd=None, marked=False, verbose=False):
     Totoro.log.info('returned dictionary: {0}'.format(plugger.getASOutput()))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     totoro()
