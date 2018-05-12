@@ -6,17 +6,19 @@ The module is heavily based on the astropy logging system.
 
 from __future__ import print_function
 
-import os
-import sys
 import logging
+import os
+import re
+import shutil
+import sys
+import warnings
 from logging import FileHandler
 from logging.handlers import TimedRotatingFileHandler
-import warnings
-from colourPrint import colourPrint
-import shutil
-import re
 from textwrap import TextWrapper
+
 from Totoro.exceptions import TotoroError
+
+from .colourPrint import colourPrint
 
 
 # Initialize by calling initLog()
@@ -31,6 +33,7 @@ ansi_escape = re.compile(r'\x1b[^m]*m')
 
 def important(self, message, *args, **kws):
     self._log(IMPORTANT, message, args, **kws)
+
 
 logging.Logger.important = important
 
@@ -104,23 +107,32 @@ class TotoroLogger(Logger):
     The main functionality added by this class over the built-in
     logging.Logger class is the ability to keep track of the origin of the
     messages, the ability to enable logging of warnings.warn calls and
-    exceptions, and the addition of colorized output and context managers to
+    exceptions, and the addition of colourised output and context managers to
     easily capture messages to a file or list.
 
     """
 
+    def __init__(self, *args, **kwargs):
+
+        self.fh = None
+        self.sh = None
+        self.wrapperLength = 99
+        self.logFilename = None
+
+        super(TotoroLogger, self).__init__(*args, **kwargs)
+
     def saveLog(self, path):
         shutil.copyfile(self.logFilename, os.path.expanduser(path))
 
-    def _showwarning(self, *args, **kwargs):
+    def _showwarning(self, *args):
 
         warning = args[0]
         message = '{0}: {1}'.format(warning.__class__.__name__, args[0])
         mod_path = args[2]
 
         mod_name = None
-        mod_path, ext = os.path.splitext(mod_path)
-        for name, mod in sys.modules.items():
+        mod_path, __ = os.path.splitext(mod_path)
+        for __, mod in sys.modules.items():
             path = os.path.splitext(getattr(mod, '__file__', ''))[0]
             if path == mod_path:
                 mod_name = mod.__name__
