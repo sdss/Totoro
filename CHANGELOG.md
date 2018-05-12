@@ -4,6 +4,10 @@
 
 ## Modified
 - Renamed `Totoro` CLI to `totoro`.
+- Improved logger formatting in `totoro` CLI.
+
+## Fixed
+- A problem with the logger not parsing attributes passed to the record.
 
 
 ## [1.8.3] - 2018-05-11
