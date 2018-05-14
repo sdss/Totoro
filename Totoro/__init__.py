@@ -38,4 +38,4 @@ from Totoro.dbclasses import *
 from Totoro.scheduler import Planner, Plugger
 
 
-__version__ = '1.8.4'
+__version__ = '1.8.5dev'
