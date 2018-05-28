@@ -200,7 +200,7 @@ class Timeline(object):
         # Checks if the plate is a backup
         if (len(plate.statuses) > 0 and
                 plate.statuses[0].label.lower() == 'backup'):
-            flags.append(_color_text('backup plate', 'white'))
+            flags.append(_color_text('backup plate', 'green'))
 
         if not plate.inFootprint:
             flags.append(_color_text('not in footprint', 'red'))

@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.8.5] - unreleased
+
+## Modified
+- Changed colour of backup plates in log.
+
+
 ## [1.8.4] - 2018-05-13
 
 ## Modified
