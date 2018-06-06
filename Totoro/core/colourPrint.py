@@ -11,17 +11,17 @@ This module includes astropy-based functions for colour printing.
 
 """
 
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-from builtins import range
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-__ALL__ = ['colourPrint']
-
-import sys
-import multiprocessing
-import threading
 import codecs
 import locale
+import multiprocessing
+import sys
+import threading
+from builtins import range
+
+
+__ALL__ = ['colourPrint']
 
 
 try:
@@ -37,7 +37,6 @@ else:
     except ImportError:
         OutStream = None
         stdio = sys
-
 
 IS_PY3 = sys.version_info[0] == 3
 _DEFAULT_ENCODING = 'utf-8'
@@ -88,12 +87,10 @@ def isatty(file):
     ttys.
     """
     if (multiprocessing.current_process().name != 'MainProcess' or
-        threading.current_thread().getName() != 'MainThread'):
+            threading.current_thread().getName() != 'MainThread'):
         return False
 
-    if (OutStream is not None and
-        isinstance(file, OutStream) and
-        file.name == 'stdout'):
+    if (OutStream is not None and isinstance(file, OutStream) and file.name == 'stdout'):
         return True
     elif hasattr(file, 'isatty'):
         return file.isatty()
@@ -137,7 +134,8 @@ def _color_text(text, color):
         'lightblue': '1;34',
         'lightmagenta': '1;35',
         'lightcyan': '1;36',
-        'white': '1;37'}
+        'white': '1;37'
+    }
 
     if sys.platform == 'win32' and OutStream is None:
         # On Windows do not colorize text unless in IPython

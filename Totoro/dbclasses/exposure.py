@@ -12,17 +12,19 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
+
+import warnings
 from builtins import object
-from Totoro.exceptions import TotoroError, NoMangaExposure
-from Totoro.db import getConnectionFull
-from Totoro import log, config, site, dustMap
-from Totoro import utils
+
 import numpy as np
 from astropy import time
 from sqlalchemy.orm.exc import NoResultFound
-import warnings
+
+from Totoro import config, dustMap, log, site, utils
+from Totoro.db import getConnectionFull
+from Totoro.exceptions import NoMangaExposure, TotoroError
+
 
 __all__ = ['Exposure', 'checkExposure']
 
@@ -48,8 +50,7 @@ class Exposure(object):
             elif isinstance(input, mangaDB.Exposure):
                 me._dbObject = input.platedbExposure
             else:
-                me._dbObject = me._initFromData(input, format=format,
-                                                parent=parent)
+                me._dbObject = me._initFromData(input, format=format, parent=parent)
 
         # If the DB object already exists in the library of Totoro.Exposure
         # instances, returns it. Otherwise, records it and returns the new
@@ -60,8 +61,7 @@ class Exposure(object):
             cls._instances[me._dbObject] = me
             return me
 
-    def __init__(self, input=None, format='pk', parent='platedb',
-                 mock=False, *args, **kwargs):
+    def __init__(self, input=None, format='pk', parent='platedb', mock=False, *args, **kwargs):
         """A custom class based on plateDB.Exposure."""
 
         self.__dbAttributes__ = self._dbObject.__mapper__.attrs
@@ -81,9 +81,8 @@ class Exposure(object):
 
     def __repr__(self):
         return ('<Totoro Exposure (mangaDB.Exposure.pk={0}, exposure_no={1}, '
-                'ditherPos={2}, valid={3})>'
-                .format(self._mangaExposure.pk, self.exposure_no,
-                        self.ditherPosition, self.valid))
+                'ditherPos={2}, valid={3})>'.format(self._mangaExposure.pk, self.exposure_no,
+                                                    self.ditherPosition, self.valid))
 
     def __getattr__(self, name):
         """Custom getattr method that first looks into the DB object."""
@@ -107,13 +106,13 @@ class Exposure(object):
 
         if self.__mangaExposure is None:
 
-            self.__mangaExposure = (self.mangadbExposure[0]
-                                    if len(self.mangadbExposure) > 0 else
+            self.__mangaExposure = (self.mangadbExposure[0] if len(self.mangadbExposure) > 0 else
                                     self.db.mangaDB.Exposure())
 
             if self.__mangaExposure.pk is None and not self.isMock:
-                warnings.warn('plateDB.Exposure.pk={0} has no mangaDB.Exposure '
-                              'counterpart.'.format(self.pk), NoMangaExposure)
+                warnings.warn(
+                    'plateDB.Exposure.pk={0} has no mangaDB.Exposure '
+                    'counterpart.'.format(self.pk), NoMangaExposure)
 
         return self.__mangaExposure
 
@@ -123,39 +122,40 @@ class Exposure(object):
         with self.session.begin():
             try:
                 if parent.lower() == 'platedb':
-                    exposure = self.session.query(
-                        self.db.plateDB.Exposure).filter(
-                            eval('self.db.plateDB.Exposure.{0} == {1}'
-                                 .format(format, input))).one()
+                    exposure = self.session.query(self.db.plateDB.Exposure).filter(
+                        eval('self.db.plateDB.Exposure.{0} == {1}'.format(format, input))).one()
                 elif parent.lower() == 'mangadb':
-                    exposure = self.session.query(
-                        self.db.plateDB.Exposure).join(
-                            self.db.mangaDB.Exposure).filter(
-                                eval('self.db.mangaDB.Exposure.{0} == {1}'
-                                     .format(format, input))).one()
+                    exposure = self.session.query(self.db.plateDB.Exposure).join(
+                        self.db.mangaDB.Exposure).filter(
+                            eval('self.db.mangaDB.Exposure.{0} == {1}'.format(format,
+                                                                              input))).one()
                 else:
                     raise ValueError('parent {0} not allowed'.format(parent))
             except NoResultFound:
-                raise TotoroError(
-                    'no exposure found for parent={0} and {1}={2}'
-                    .format(parent, format, input))
+                raise TotoroError('no exposure found for parent={0} and {1}={2}'.format(
+                    parent, format, input))
 
         return exposure
 
     def update(self, **kwargs):
         """Reloads the exposure."""
 
-        newSelf = Exposure(self.pk, fromat='pk', mock=self.isMock,
-                           **self.kwargs)
+        newSelf = Exposure(self.pk, fromat='pk', mock=self.isMock, **self.kwargs)
         self = newSelf
 
-        log.debug('Exposure pk={0} has been reloaded'.format(
-                  self.pk))
+        log.debug('Exposure pk={0} has been reloaded'.format(self.pk))
 
     @classmethod
-    def createMockExposure(cls, startTime=None, expTime=None, plugging=None,
-                           ditherPosition=None, ra=None, dec=None,
-                           silent=False, sn2values=None, plate=None,
+    def createMockExposure(cls,
+                           startTime=None,
+                           expTime=None,
+                           plugging=None,
+                           ditherPosition=None,
+                           ra=None,
+                           dec=None,
+                           silent=False,
+                           sn2values=None,
+                           plate=None,
                            **kwargs):
         """Creates a mock exposure instance."""
 
@@ -196,8 +196,8 @@ class Exposure(object):
             newExposure._sn2Array = sn2values
 
         if not silent:
-            log.debug('Created mock exposure with ra={0:.3f} and dec={1:.3f}'
-                      .format(newExposure.ra, newExposure.dec))
+            log.debug('Created mock exposure with ra={0:.3f} and dec={1:.3f}'.format(
+                newExposure.ra, newExposure.dec))
 
         return newExposure
 
@@ -223,10 +223,8 @@ class Exposure(object):
         betaRed = config['simulation']['betaRed']
         betaBlue = config['simulation']['betaBlue']
 
-        sn2Red = (nominalRed / self._airmass ** alphaRed /
-                  (self._dust['iIncrease'][0]) ** betaRed)
-        sn2Blue = (nominalBlue / self._airmass ** alphaBlue /
-                   (self._dust['gIncrease'][0]) ** betaBlue)
+        sn2Red = (nominalRed / self._airmass**alphaRed / (self._dust['iIncrease'][0])**betaRed)
+        sn2Blue = (nominalBlue / self._airmass**alphaBlue / (self._dust['gIncrease'][0])**betaBlue)
 
         self._sn2Array = np.array([sn2Blue, sn2Blue, sn2Red, sn2Red])
 
@@ -249,14 +247,11 @@ class Exposure(object):
         """Returns an array with the coordinates of the plate centre."""
 
         if 'ra' in self.kwargs and 'dec' in self.kwargs:
-            if (self.kwargs['ra'] is not None and
-                    self.kwargs['dec'] is not None):
-                return np.array(
-                    [self.kwargs['ra'], self.kwargs['dec']], np.float)
+            if (self.kwargs['ra'] is not None and self.kwargs['dec'] is not None):
+                return np.array([self.kwargs['ra'], self.kwargs['dec']], np.float)
         else:
             pointing = (self.observation.plate_pointing.pointing)
-            return np.array(
-                [pointing.center_ra, pointing.center_dec], np.float)
+            return np.array([pointing.center_ra, pointing.center_dec], np.float)
 
     def getHA(self):
         """Returns the HA range in which the exposure was taken."""
@@ -291,8 +286,7 @@ class Exposure(object):
 
         # None values are replaced with NaN, which are easier to work with
         # in numpy arrays.
-        values = [SN2Values.b1_sn2, SN2Values.b2_sn2,
-                  SN2Values.r1_sn2, SN2Values.r2_sn2]
+        values = [SN2Values.b1_sn2, SN2Values.b2_sn2, SN2Values.r1_sn2, SN2Values.r2_sn2]
         valuesNaN = [np.nan if value is None else value for value in values]
 
         if useNaN is True:
@@ -379,8 +373,7 @@ class Exposure(object):
         t0 = time.Time(0, format='mjd', scale='tai')
 
         tStart = t0 + time.TimeDelta(startTime, format='sec', scale='tai')
-        tEnd = tStart + time.TimeDelta(float(self.exposure_time), format='sec',
-                                       scale='tai')
+        tEnd = tStart + time.TimeDelta(float(self.exposure_time), format='sec', scale='tai')
 
         ut0 = tStart.datetime
         ut1 = tEnd.datetime
@@ -399,8 +392,7 @@ class Exposure(object):
         t0 = time.Time(0, format='mjd', scale='tai')
 
         tStart = t0 + time.TimeDelta(startTime, format='sec', scale='tai')
-        tEnd = tStart + time.TimeDelta(
-            float(self.exposure_time), format='sec', scale='tai')
+        tEnd = tStart + time.TimeDelta(float(self.exposure_time), format='sec', scale='tai')
 
         return (tStart.jd, tEnd.jd)
 
@@ -542,8 +534,7 @@ def setExposureStatus(exposure, status):
                     db.mangaDB.ExposureStatus.label == status).one()
                 statusPK = queryStatus.pk
         except:
-            raise TotoroError('status {0} not found in mangaDB.ExposureStatus'
-                              .format(status))
+            raise TotoroError('status {0} not found in mangaDB.ExposureStatus'.format(status))
 
         try:
             exp = session.query(db.mangaDB.Exposure).get(pk)
@@ -632,10 +623,8 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
         if plateDBstatus in ['Bad', 'Override Bad']:
             # Overrides Totoro status to bad, if needed
             if mangaDBstatus != 'Totoro Bad' or force:
-                message = ('exposure is marked {0} in plateDB'
-                           .format(plateDBstatus))
-                return flagExposure(exposure, False, 10, flag=flag,
-                                    message=message)
+                message = ('exposure is marked {0} in plateDB'.format(plateDBstatus))
+                return flagExposure(exposure, False, 10, flag=flag, message=message)
             else:
                 return (False, 10)
 
@@ -658,24 +647,21 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     # Checks plateDB status
     if not exposure.isMock and not exposure.isPlateDBValid():
         message = ('Invalid exposure. plateDB.Exposure.pk={0} '
-                   'is marked {1} in plateDB.exposure_status.'
-                   .format(pk, exposure.status.label))
+                   'is marked {1} in plateDB.exposure_status.'.format(pk, exposure.status.label))
         return flagExposure(exposure, False, 9, flag=flag, message=message)
 
     # Checks dither position
     validDitherPositions = config['exposure']['validDitherPositions']
     if exposure.ditherPosition not in validDitherPositions:
         message = ('Invalid exposure. plateDB.Exposure.pk={0} '
-                   'has dither position {1}'.format(pk,
-                                                    exposure.ditherPosition))
+                   'has dither position {1}'.format(pk, exposure.ditherPosition))
         return flagExposure(exposure, False, 1, flag=flag, message=message)
 
     # Checks transparency
     transparency = exposure._mangaExposure.transparency
     minTransparency = config['exposure']['transparency']
     if transparency is not None and transparency < minTransparency:
-        message = ('Invalid exposure. plateDB.Exposure.pk={0} '
-                   'has low transparency.'.format(pk))
+        message = ('Invalid exposure. plateDB.Exposure.pk={0} ' 'has low transparency.'.format(pk))
         return flagExposure(exposure, False, 7, flag=flag, message=message)
 
     # Checks exposure time
@@ -683,8 +669,7 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     expTime = exposure.exposure_time
     if expTime < minExpTime:
         message = ('Invalid exposure. plateDB.Exposure.pk={0} has an '
-                   'exposure time shorter than the minimum acceptable.'
-                   .format(pk))
+                   'exposure time shorter than the minimum acceptable.'.format(pk))
         return flagExposure(exposure, False, 2, flag=flag, message=message)
 
     # Checks seeing
@@ -693,22 +678,18 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     if seeing > maxSeeing:
 
         message = ('Invalid exposure. plateDB.Exposure.pk={0} '
-                   'has a seeing larger than the maximum acceptable.'
-                   .format(pk))
+                   'has a seeing larger than the maximum acceptable.'.format(pk))
         return flagExposure(exposure, False, 3, flag=flag, message=message)
 
     # Checks visibility window
     buffer = config['exposure']['exposureBuffer']
     exposureHA = exposure.getHA()
-    visibilityWindow = np.array([-exposure.mlhalimit - buffer,
-                                 exposure.mlhalimit + buffer])
-    if not utils.isIntervalInsideOther(exposureHA, visibilityWindow,
-                                       onlyOne=False, wrapAt=360):
+    visibilityWindow = np.array([-exposure.mlhalimit - buffer, exposure.mlhalimit + buffer])
+    if not utils.isIntervalInsideOther(exposureHA, visibilityWindow, onlyOne=False, wrapAt=360):
         message = ('Invalid exposure. plateDB.Exposure.pk={0} '
                    'has HA range [{1}, {2}] that is outside the '
-                   'visibility window of the plate [{3}, {4}]'
-                   .format(pk, exposureHA[0], exposureHA[1],
-                           visibilityWindow[0], visibilityWindow[1]))
+                   'visibility window of the plate [{3}, {4}]'.format(
+                       pk, exposureHA[0], exposureHA[1], visibilityWindow[0], visibilityWindow[1]))
         return flagExposure(exposure, False, 5, flag=flag, message=message)
 
     # Checks altitude of the object. Skipped if exposure is mock.

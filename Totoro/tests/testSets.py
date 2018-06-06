@@ -12,14 +12,17 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from builtins import range
-from Totoro.dbclasses import Plate, Exposure, Set
-from Totoro.db import getConnection
-from Totoro.dbclasses.plate_utils import removeOrphanedSets
-import numpy as np
+from __future__ import division, print_function
+
 import unittest
+from builtins import range
+
+import numpy as np
+
+from Totoro.db import getConnection
+from Totoro.dbclasses import Exposure, Plate, Set
+from Totoro.dbclasses.plate_utils import removeOrphanedSets
+
 
 db = getConnection('test')
 session = db.Session()
@@ -83,8 +86,7 @@ class TestSets(unittest.TestCase):
         # depending on other tests run before
         nSet = None
         for nn, ss in enumerate(plate8484.sets):
-            if (ss.getStatus()[0] == 'Unplugged' and
-                    len(ss.totoroExposures) == 2):
+            if (ss.getStatus()[0] == 'Unplugged' and len(ss.totoroExposures) == 2):
                 nSet = nn
                 break
 
@@ -96,8 +98,11 @@ class TestSets(unittest.TestCase):
         # The status of the new set should be bad because the pluggings are
         # different.
         newExp = Exposure.createMockExposure(
-            startTime=2457135.9304166664, expTime=900,
-            ra=plate8484.ra, dec=plate8484.dec, ditherPosition='S')
+            startTime=2457135.9304166664,
+            expTime=900,
+            ra=plate8484.ra,
+            dec=plate8484.dec,
+            ditherPosition='S')
         exposures = plate8484.sets[nSet].totoroExposures + [newExp]
         newSet = Set.fromExposures(exposures)
 
@@ -108,8 +113,11 @@ class TestSets(unittest.TestCase):
         plugging = plate8484.sets[nSet].totoroExposures[0].getPlugging()
 
         newExp2 = Exposure.createMockExposure(
-            startTime=2457135.9304166664, expTime=900,
-            ra=plate8484.ra, dec=plate8484.dec, ditherPosition='S',
+            startTime=2457135.9304166664,
+            expTime=900,
+            ra=plate8484.ra,
+            dec=plate8484.dec,
+            ditherPosition='S',
             plugging=plugging)
 
         # Tricks SN2 values to avoid the set failing because of SN2 uniformity
@@ -135,14 +143,14 @@ class TestSets(unittest.TestCase):
         statuses = [ss.getStatus()[0] for ss in plate8486.sets]
         self.assertEqual(statuses.count('Incomplete'), 1)
 
-        plate8486.addMockExposure(startTime=2457137.9535648148,
-                                  plugging=plate8486.getActivePlugging())
+        plate8486.addMockExposure(
+            startTime=2457137.9535648148, plugging=plate8486.getActivePlugging())
         self.assertEqual(len(plate8486.sets), 4)
         statuses = [ss.getStatus()[0] for ss in plate8486.sets]
         self.assertEqual(statuses.count('Incomplete'), 2)
 
-        plate8486.addMockExposure(startTime=2457137.9535648148,
-                                  plugging=plate8486.getActivePlugging())
+        plate8486.addMockExposure(
+            startTime=2457137.9535648148, plugging=plate8486.getActivePlugging())
         self.assertEqual(len(plate8486.sets), 4)
         statuses = [ss.getStatus()[0] for ss in plate8486.sets]
         self.assertEqual(statuses.count('Incomplete'), 2)
@@ -203,6 +211,7 @@ class TestSets(unittest.TestCase):
         #         self.assertIsNone(exp.mangadbExposure[0].set_pk)
         #         self.assertEqual(exp.mangadbExposure[0].status.pk, 5)
         #         break
+
 
 if __name__ == '__main__':
     unittest.main()

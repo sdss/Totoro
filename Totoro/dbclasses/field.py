@@ -12,17 +12,19 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
+
+import os
+from numbers import Integral
+
+import numpy as np
+from astropy import table
+
 import Totoro
-from . import plate as TotoroPlate
 from Totoro.db import getConnectionFull
 from Totoro.exceptions import TotoroError
-import os
-from astropy import table
-import numpy as np
-from numbers import Integral
+
+from . import plate as TotoroPlate
 
 
 __all__ = ['Fields', 'Field', 'getTilingCatalogue']
@@ -39,8 +41,8 @@ def getTilingCatalogue(tilingCatalogue=None):
             tilingCatalogue)
 
     if not os.path.exists(tilingCatalogue):
-            raise TotoroError('tiling catalogue {0} does not exist.'
-                              .format(os.path.realpath(tilingCatalogue)))
+        raise TotoroError('tiling catalogue {0} does not exist.'.format(
+            os.path.realpath(tilingCatalogue)))
 
     tiles = table.Table.read(tilingCatalogue)
 
@@ -49,8 +51,7 @@ def getTilingCatalogue(tilingCatalogue=None):
 
 class Fields(list):
 
-    def __init__(self, tilingCatalogue=None, rejectDrilled=True, silent=False,
-                 **kwargs):
+    def __init__(self, tilingCatalogue=None, rejectDrilled=True, silent=False, **kwargs):
         """Returns a list of `Totoro.Field` instances.
 
         Reads a tiling catalogue and returns a list of `Totoro.Field` objects,
@@ -103,21 +104,20 @@ class Fields(list):
 
         with session.begin():
             plates = session.query(plateDB.Plate).join(
-                plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
-            ).filter(plateDB.Survey.label == 'MaNGA',
-                     plateDB.SurveyMode.label.in_(['MaNGA dither',
-                                                   'MaNGA 10min']))
+                plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode).filter(
+                    plateDB.Survey.label == 'MaNGA',
+                    plateDB.SurveyMode.label.in_(['MaNGA dither', 'MaNGA 10min']))
 
             if acceptPriority1:
-                plates.join(plateDB.PlatePointing).filter(
-                    plateDB.PlatePointing.priority > noPlugPriority)
+                plates.join(
+                    plateDB.PlatePointing).filter(plateDB.PlatePointing.priority > noPlugPriority)
 
             plates.order_by(plateDB.Plate.plate_id).all()
 
-        plateMangaTileIds = np.unique(
-            [plate.mangadbPlate.manga_tileid
-             for plate in plates if plate is not None and
-             plate.mangadbPlate is not None])
+        plateMangaTileIds = np.unique([
+            plate.mangadbPlate.manga_tileid for plate in plates
+            if plate is not None and plate.mangadbPlate is not None
+        ])
 
         drilledFields = []
         for field in self:
@@ -128,8 +128,7 @@ class Fields(list):
         for dField in drilledFields:
             self.remove(dField)
 
-        logMsg = ('rejected {0} fields because they have already been drilled'
-                  .format(nRemoved))
+        logMsg = ('rejected {0} fields because they have already been drilled'.format(nRemoved))
         if not silent:
             Totoro.log.info(logMsg)
         else:
@@ -156,8 +155,7 @@ class Fields(list):
             return None
 
         else:
-            raise TotoroError('input must be a manga_tileid integer or a Field'
-                              ' instance.')
+            raise TotoroError('input must be a manga_tileid integer or a Field' ' instance.')
 
 
 class Field(TotoroPlate.Plate):

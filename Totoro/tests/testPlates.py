@@ -12,12 +12,14 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
+
 import unittest
-from Totoro.dbclasses import Plate, fromPlateID
-from Totoro.db import getConnection
+
 from Totoro import exceptions
+from Totoro.db import getConnection
+from Totoro.dbclasses import Plate, fromPlateID
+
 
 db = getConnection('test')
 
@@ -62,8 +64,7 @@ class plateTestCase(unittest.TestCase):
 
         plate = fromPlateID(7815, sets=False)
         self.assertEqual(len(plate.getMangadbExposures()), 18)
-        self.assertEqual(len(plate.getMangadbExposures()),
-                         len(plate.getScienceExposures()))
+        self.assertEqual(len(plate.getMangadbExposures()), len(plate.getScienceExposures()))
 
     # def testSubtransactions(self):
     #     """Fails if trying to load a plate from within a subtransaction."""

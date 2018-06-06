@@ -12,13 +12,15 @@ Revision history:
 
 """
 
-
-from .ccmUnred import ccmUnred
-import numpy as np
-import os
 import glob
+import os
+
+import numpy as np
 from astropy.wcs import WCS
 from scipy.interpolate import griddata
+
+from .ccmUnred import ccmUnred
+
 
 try:
     import fitsio
@@ -137,13 +139,10 @@ class DustMap(object):
             coordsGal = np.array([xx, yy]).T
         else:
             if astropysicsLib:
-                ccICRS = [coords.ICRSCoordinates(xx[ii], yy[ii])
-                          for ii in range(len(xx))]
-                ccGal = [cc.convert(coords.GalacticCoordinates)
-                         for cc in ccICRS]
-                coordsGal = np.array(
-                    [[cc.l.degrees for cc in ccGal],
-                     [cc.b.degrees for cc in ccGal]]).T
+                ccICRS = [coords.ICRSCoordinates(xx[ii], yy[ii]) for ii in range(len(xx))]
+                ccGal = [cc.convert(coords.GalacticCoordinates) for cc in ccICRS]
+                coordsGal = np.array([[cc.l.degrees for cc in ccGal],
+                                      [cc.b.degrees for cc in ccGal]]).T
             else:
                 ccSkyCoords = SkyCoord(xx, yy, frame='icrs', unit='deg')
                 ccGal = ccSkyCoords.galactic
@@ -185,21 +184,19 @@ class DustMap(object):
                 # there is a stored value if interpolate=True but the boundary
                 # conditions are invalid (the pixel is too close to the border
                 # of the image).
-                if (x0 >= 0.0 and y0 >= 0.0 and
-                        x0 <= data.shape[1]-1 and y0 <= data.shape[0]-1):
+                if (x0 >= 0.0 and y0 >= 0.0 and x0 <= data.shape[1] - 1 and
+                        y0 <= data.shape[0] - 1):
                     ebv[jj] = data[y0, x0]
 
                 if interpolate is True:
                     # Checks that the boundary conditions are ok for the
                     # interpolation.
-                    if (xx < 1.0 or yy < 1.0 or xx > data.shape[1]-1 or
-                            yy > data.shape[0]-1):
+                    if (xx < 1.0 or yy < 1.0 or xx > data.shape[1] - 1 or yy > data.shape[0] - 1):
                         continue
 
-                    mgrid = np.mgrid[y0-1:y0+2, x0-1:x0+2]
-                    grid = np.array([mgrid[0].flatten(),
-                                     mgrid[1].flatten()]).T
-                    slice = data[y0-1:y0+2, x0-1:x0+2].flatten()
+                    mgrid = np.mgrid[y0 - 1:y0 + 2, x0 - 1:x0 + 2]
+                    grid = np.array([mgrid[0].flatten(), mgrid[1].flatten()]).T
+                    slice = data[y0 - 1:y0 + 2, x0 - 1:x0 + 2].flatten()
                     ebv[jj] = griddata(grid, slice, (yy, xx))
 
             # del data
@@ -212,11 +209,15 @@ class DustMap(object):
 
             # Calculates the reddened flux (we use -ebv[ii]).
             fluxOut = ccmUnred(lambdaIn, fluxIn, -ebv[ii])
-            iIncrease[ii] = 1. / fluxOut[3] ** 2
-            gIncrease[ii] = 1. / fluxOut[1] ** 2
+            iIncrease[ii] = 1. / fluxOut[3]**2
+            gIncrease[ii] = 1. / fluxOut[1]**2
 
-        return {'galCoords': cc.tolist(), 'EBV': ebv,
-                'iIncrease': iIncrease, 'gIncrease': gIncrease}
+        return {
+            'galCoords': cc.tolist(),
+            'EBV': ebv,
+            'iIncrease': iIncrease,
+            'gIncrease': gIncrease
+        }
 
     def loadMaps(self):
 

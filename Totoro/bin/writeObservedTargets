@@ -13,11 +13,12 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from Totoro import getComplete
-from Gohan.utils.utils import getAllDrilledTargets
+from __future__ import division, print_function
+
 from astropy import table
+
+from Gohan.utils.utils import getAllDrilledTargets
+from Totoro import getComplete
 
 
 def writeObservedTargets():
@@ -29,8 +30,7 @@ def writeObservedTargets():
     targets = []
 
     for plate in complete:
-        plateTargets = drilledTargets[
-            drilledTargets['plateid'] == plate.plate_id]
+        plateTargets = drilledTargets[drilledTargets['plateid'] == plate.plate_id]
         for target in plateTargets:
             if target['mangaid'].strip() not in targets:
                 targets.append(target['mangaid'].strip())

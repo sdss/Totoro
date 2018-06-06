@@ -10,17 +10,16 @@
 #    25 Apr 2016 J. Sánchez-Gallego
 #       Initial version
 
+from __future__ import division, print_function
 
-from __future__ import division
-from __future__ import print_function
+import numpy as np
 from astropy import table
+
 from Gohan.utils import getAllDrilledTargets, sdssMaskBits
 from Totoro import getAll
-import numpy as np
 
 
-ancillaryBits = sdssMaskBits[(sdssMaskBits['flag'] == 'MANGA_TARGET3') &
-                             (sdssMaskBits['bit'] > 0)]
+ancillaryBits = sdssMaskBits[(sdssMaskBits['flag'] == 'MANGA_TARGET3') & (sdssMaskBits['bit'] > 0)]
 
 allPlates = getAll()
 
@@ -40,22 +39,19 @@ def sortAncillaryPrograms(do_print=False):
     completePlates = [plate for plate in allPlates if plate.isComplete]
     plateids = [plate.plate_id for plate in completePlates]
 
-    observedAncillaries = ancillaries[np.in1d(ancillaries['plateid'],
-                                              plateids)]
+    observedAncillaries = ancillaries[np.in1d(ancillaries['plateid'], plateids)]
 
     observedPerProgram = []
     for mask in ancillaryBits:
-        targetsInProgram = (observedAncillaries['manga_target3'] &
-                            1 << mask['bit'])
+        targetsInProgram = (observedAncillaries['manga_target3'] & 1 << mask['bit'])
         observedPerProgram.append(np.sum(targetsInProgram > 0))
 
     ancillaryTable = table.Table(
-        None, names=['label', 'bit', 'nDrilled', 'nObserved'],
-        dtype=['S20', int, int, int])
+        None, names=['label', 'bit', 'nDrilled', 'nObserved'], dtype=['S20', int, int, int])
 
     for ii, mask in enumerate(ancillaryBits):
-        ancillaryTable.add_row((mask['label'], mask['bit'],
-                                drilledPerProgram[ii], observedPerProgram[ii]))
+        ancillaryTable.add_row((mask['label'], mask['bit'], drilledPerProgram[ii],
+                                observedPerProgram[ii]))
 
     ancillaryTable.sort(['nObserved'])
     ancillaryTable.pprint()
@@ -69,8 +65,9 @@ def ancillaryPlatesPrio(sortedAncillary):
     # Ancillary programs with fewer than 5 targets observed.
     ancillary5 = sortedAncillary[sortedAncillary['nObserved'] < 5]
 
-    incompletePlates = [plate for plate in allPlates
-                        if not plate.isComplete and plate.priority > 1]
+    incompletePlates = [
+        plate for plate in allPlates if not plate.isComplete and plate.priority > 1
+    ]
 
     validPlates = []
     for plate in incompletePlates:
@@ -80,9 +77,10 @@ def ancillaryPlatesPrio(sortedAncillary):
                 validPlates.append(plate)
                 break
 
-    prioTable = table.Table(None, names=['plate_id', 'nTargets', 'labels',
-                                         'priority', 'location', 'status'],
-                            dtype=[int, int, 'S100', int, 'S20', 'S20'])
+    prioTable = table.Table(
+        None,
+        names=['plate_id', 'nTargets', 'labels', 'priority', 'location', 'status'],
+        dtype=[int, int, 'S100', int, 'S20', 'S20'])
 
     for plate in validPlates:
         plateTargets = targets[targets['plateid'] == plate.plate_id]
@@ -95,9 +93,8 @@ def ancillaryPlatesPrio(sortedAncillary):
             if nTargetsBit > 0:
                 labels.append('{0} ({1})'.format(mask['label'], nTargetsBit))
 
-        prioTable.add_row((plate.plate_id, nTargets, ', '.join(labels),
-                           plate.priority, plate.getLocation(),
-                           plate.statuses[0].label))
+        prioTable.add_row((plate.plate_id, nTargets, ', '.join(labels), plate.priority,
+                           plate.getLocation(), plate.statuses[0].label))
 
     print()
 

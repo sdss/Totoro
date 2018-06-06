@@ -12,17 +12,18 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from builtins import str
-from builtins import object
-from Totoro import log, config, site
-from Totoro import utils
-from Totoro.scheduler import scheduler_utils as logic
+from __future__ import division, print_function
+
+import warnings
+from builtins import object, str
+
+import numpy as np
+
+from Totoro import config, log, site, utils
 from Totoro.core.colourPrint import _color_text
 from Totoro.exceptions import TotoroUserWarning
-import numpy as np
-import warnings
+from Totoro.scheduler import scheduler_utils as logic
+
 
 expTimeJD = config['exposure']['exposureTime'] / 86400.
 
@@ -65,13 +66,11 @@ class Timeline(object):
 
         for exp in exposures:
             expJD = exp.getJD()
-            self.unallocatedRange = utils.removeInterval(
-                self.unallocatedRange, expJD, wrapAt=None)
+            self.unallocatedRange = utils.removeInterval(self.unallocatedRange, expJD, wrapAt=None)
 
         return
 
-    def calculatePlateCompletion(self, plate, rejectExposures=[],
-                                 useMock=True):
+    def calculatePlateCompletion(self, plate, rejectExposures=[], useMock=True):
         """Calculates plate completion after rejecting exposures."""
 
         from Totoro.dbclasses import Plate, Set
@@ -126,15 +125,16 @@ class Timeline(object):
 
         mode = mode.lower()
 
-        log.debug('scheduling LST range {0} using {1} plates, mode={2}'
-                  .format(self.unallocatedRange.tolist(), len(plates), mode))
+        log.debug('scheduling LST range {0} using {1} plates, mode={2}'.format(
+            self.unallocatedRange.tolist(), len(plates), mode))
 
         jd0 = self.startDate
 
         if useDateAtAPO:
-            platesToSchedule = [plate for plate in plates
-                                if plate.dateAtAPO is None or
-                                plate.dateAtAPO <= self.startDate]
+            platesToSchedule = [
+                plate for plate in plates
+                if plate.dateAtAPO is None or plate.dateAtAPO <= self.startDate
+            ]
         else:
             platesToSchedule = plates
 
@@ -200,8 +200,7 @@ class Timeline(object):
                 flags.append(_color_text('not on the mountain', 'red'))
 
         # Checks if the plate is a backup
-        if (len(plate.statuses) > 0 and
-                plate.statuses[0].label.lower() == 'backup'):
+        if (len(plate.statuses) > 0 and plate.statuses[0].label.lower() == 'backup'):
             flags.append(_color_text('backup plate', 'green'))
 
         if not plate.inFootprint:
@@ -227,19 +226,18 @@ class Timeline(object):
         if not isinstance(plate, Field):
             log.info('...... plate_id={0}, ({1} new exps, '
                      '{2:.2f} -> {3:.2f} complete) {4}'
-                     .format(plate.plate_id, nExps, completionPre,
-                             completionPost, flagsStr))
+                     .format(plate.plate_id, nExps, completionPre, completionPost, flagsStr))
 
             if nOrphanedPost > 0 and mode == 'plugger':
-                warnings.warn('... plate_id={0} has {1} orphaned '
-                              'exps after simulation'
-                              .format(plate.plate_id, nOrphanedPost),
-                              TotoroUserWarning)
+                warnings.warn(
+                    '... plate_id={0} has {1} orphaned '
+                    'exps after simulation'.format(plate.plate_id, nOrphanedPost),
+                    TotoroUserWarning)
 
         else:
-            log.info(_color_text('...... manga_tiledid={0} ({1} new exps, '
-                                 '{2:.2f} -> {3:.2f} complete) {4}'
-                                 .format(plate.getMangaTileID(), nExps,
-                                         completionPre, completionPost,
-                                         flagsStr),
-                                 'yellow'))
+            log.info(
+                _color_text(
+                    '...... manga_tiledid={0} ({1} new exps, '
+                    '{2:.2f} -> {3:.2f} complete) {4}'
+                    .format(plate.getMangaTileID(), nExps, completionPre, completionPost,
+                            flagsStr), 'yellow'))

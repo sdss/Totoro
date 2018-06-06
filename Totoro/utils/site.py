@@ -12,10 +12,11 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from astropy import time
+from __future__ import division, print_function
+
 import numpy as np
+from astropy import time
+
 
 # TBD: we need ephem at APO, since our older astropy does not contain
 # astropy.coordinates.get_sun()
@@ -26,6 +27,7 @@ try:
     import ephem
 except:
     ephem = None
+
 
 class Site(object):
     """A class similar to `astropysics.obstools.Site` to perform LST->calendar
@@ -51,8 +53,13 @@ class Site(object):
 
     """
 
-    def __init__(self, longitude=None, latitude=None, altitude=None,
-                 name=None, verbose=False, **kwargs):
+    def __init__(self,
+                 longitude=None,
+                 latitude=None,
+                 altitude=None,
+                 name=None,
+                 verbose=False,
+                 **kwargs):
 
         self.longitude = 254.179722 if longitude is None else float(longitude)
         self.latitude = 32.766666667 if latitude is None else float(latitude)
@@ -117,8 +124,8 @@ class Site(object):
         # Days since J2000.
         dd = JD - 2451545.0
 
-        lmst = ((280.46061837 + 360.98564736629 * dd +
-                 0.000388 * (dd / 36525.)**2 + self.longitude) % 360) / 15.
+        lmst = ((280.46061837 + 360.98564736629 * dd + 0.000388 *
+                 (dd / 36525.)**2 + self.longitude) % 360) / 15.
 
         return lmst
 
@@ -172,8 +179,7 @@ class Site(object):
 
         lstDelta = diffs + delta
 
-        UTDates = date + time.TimeDelta(lstDelta * 3600, format='sec',
-                                        scale='tai')
+        UTDates = date + time.TimeDelta(lstDelta * 3600, format='sec', scale='tai')
 
         if len(UTDates) == 1:
             return UTDates[0]
@@ -203,11 +209,9 @@ class Site(object):
 
         HA = (LST * 15. - ra) % 360.
 
-        sinAlt = (np.sin(np.deg2rad(dec)) *
-                  np.sin(np.deg2rad(self.latitude)) +
-                  np.cos(np.deg2rad(dec)) *
-                  np.cos(np.deg2rad(self.latitude)) *
-                  np.cos(np.deg2rad(HA)))
+        sinAlt = (
+            np.sin(np.deg2rad(dec)) * np.sin(np.deg2rad(self.latitude)) +
+            np.cos(np.deg2rad(dec)) * np.cos(np.deg2rad(self.latitude)) * np.cos(np.deg2rad(HA)))
 
         return np.rad2deg(np.arcsin(sinAlt))
 

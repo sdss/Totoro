@@ -13,19 +13,23 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-from builtins import str
-import unittest
+from __future__ import division, print_function
+
 import configparser
 import os
-from SDSSconnect import DatabaseConnection
-from SDSSconnect.exceptions import SDSSconnectError
-from SDSSconnect.DatabaseConnection import readProfile
-import warnings
 import textwrap
+import unittest
+import warnings
+from builtins import str
+
+from future import standard_library
+
+from SDSSconnect import DatabaseConnection
+from SDSSconnect.DatabaseConnection import readProfile
+from SDSSconnect.exceptions import SDSSconnectError
+
+
+standard_library.install_aliases()
 
 
 class TestDatabaseConnect(unittest.TestCase):
@@ -35,8 +39,7 @@ class TestDatabaseConnect(unittest.TestCase):
     def setUpClass(cls):
         """Sets up the test suite."""
 
-        cls.tmpProfileSimple = os.path.join(os.path.expanduser('~'),
-                                            'test_profile_simple.ini')
+        cls.tmpProfileSimple = os.path.join(os.path.expanduser('~'), 'test_profile_simple.ini')
 
         # Creates a temporary profile file.
         profileSimpleText = """
@@ -57,8 +60,7 @@ class TestDatabaseConnect(unittest.TestCase):
         with open(cls.tmpProfileSimple, 'wb') as output:
             output.write(textwrap.dedent(profileSimpleText))
 
-        cls.tmpProfileDefaults = os.path.join(os.path.expanduser('~'),
-                                              'test_profile_defaults.ini')
+        cls.tmpProfileDefaults = os.path.join(os.path.expanduser('~'), 'test_profile_defaults.ini')
 
         profileDefaultsText = """
             [DEFAULT]
@@ -134,28 +136,24 @@ class TestDatabaseConnect(unittest.TestCase):
     def testMultipleConnections(self):
         """Tests creating multiple connections."""
 
-        connDefault = DatabaseConnection('test2',
-                                         profilePath=self.tmpProfileSimple)
+        connDefault = DatabaseConnection('test2', profilePath=self.tmpProfileSimple)
         conn2 = DatabaseConnection('test2', profilePath=self.tmpProfileSimple)
         self.assertIs(connDefault, conn2)
         self.assertEqual(connDefault.profile, 'test2')
 
         with warnings.catch_warnings(record=True) as ww:
             warnings.simplefilter('always')
-            conn3 = DatabaseConnection('test2', new=True,
-                                       profilePath=self.tmpProfileSimple)
+            conn3 = DatabaseConnection('test2', new=True, profilePath=self.tmpProfileSimple)
             self.assertIn('overwritting profile test2', str(ww[-1].message))
 
         self.assertIs(connDefault, conn2)
         self.assertIsNot(connDefault, conn3)
         self.assertIsNot(conn2, conn3)
 
-        conn4 = DatabaseConnection('test2', new=True, name='testConn',
-                                   default=True,
-                                   profilePath=self.tmpProfileSimple)
+        conn4 = DatabaseConnection(
+            'test2', new=True, name='testConn', default=True, profilePath=self.tmpProfileSimple)
         self.assertItemsEqual(conn4.listConnections(), ['test2', 'testConn'])
-        self.assertItemsEqual(conn4.listConnections(),
-                              DatabaseConnection.listConnections())
+        self.assertItemsEqual(conn4.listConnections(), DatabaseConnection.listConnections())
         self.assertIsNot(conn4, conn3)
         self.assertIsNot(conn4, connDefault)
         self.assertEqual(conn4.getDefaultConnectionName(), 'testConn')

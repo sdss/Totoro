@@ -12,20 +12,20 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from builtins import object
-from Totoro import log, config, readPath, site
-from Totoro.scheduler.timeline import Timelines
-from Totoro.scheduler import observingPlan
-from Totoro.core.colourPrint import _color_text
-from Totoro import exceptions
-from astropy import table
-from astropy.io.ascii.core import InconsistentTableError
-from astropy import time
-import warnings
-import numpy as np
+from __future__ import division, print_function
+
 import os
+import warnings
+from builtins import object
+
+import numpy as np
+from astropy import table, time
+from astropy.io.ascii.core import InconsistentTableError
+
+from Totoro import config, exceptions, log, readPath, site
+from Totoro.core.colourPrint import _color_text
+from Totoro.scheduler import observingPlan
+from Totoro.scheduler.timeline import Timelines
 
 
 __all__ = ['Planner']
@@ -68,13 +68,18 @@ class Planner(object):
 
     """
 
-    def __init__(self, startDate=None, endDate=None, useFields=True,
-                 plates=None, fields=None, rejectBackup=False,
-                 excludeStarted=False, **kwargs):
+    def __init__(self,
+                 startDate=None,
+                 endDate=None,
+                 useFields=True,
+                 plates=None,
+                 fields=None,
+                 rejectBackup=False,
+                 excludeStarted=False,
+                 **kwargs):
 
         self.startDate = time.Time.now().jd if startDate is None else startDate
-        self.endDate = (observingPlan.plan[-1]['JD1']
-                        if endDate is None else endDate)
+        self.endDate = (observingPlan.plan[-1]['JD1'] if endDate is None else endDate)
         self._useFields = useFields
 
         # Forces plates and fields to be both defined or None.
@@ -83,15 +88,14 @@ class Planner(object):
 
         assert self.startDate < self.endDate, 'startDate > endDate'
 
-        self.blocks = observingPlan.getObservingBlocks(self.startDate,
-                                                       self.endDate)
+        self.blocks = observingPlan.getObservingBlocks(self.startDate, self.endDate)
 
         assert len(self.blocks) >= 1, 'no observing blocks selected'
 
         self.timelines = Timelines(self.blocks)
         self.unallocatedJDs = []
-        log.debug('PLANNER: created Planner instance with {0} timelines'
-                  .format(len(self.timelines)))
+        log.debug('PLANNER: created Planner instance with {0} timelines'.format(
+            len(self.timelines)))
 
         # If plates is defined, we use that list of plates
         if plates is not None:
@@ -101,23 +105,22 @@ class Planner(object):
             validPlates = self.getPlates(**kwargs)
 
             # Selects only plates that are incomplete and have enough priority
-            self.plates = [plate for plate in validPlates
-                           if plate.priority > minimumPlugPriority]
+            self.plates = [plate for plate in validPlates if plate.priority > minimumPlugPriority]
 
             if excludeStarted:
-                self.plates = [plate for plate in self.plates
-                               if len(plate.getTotoroExposures()) == 0]
+                self.plates = [
+                    plate for plate in self.plates if len(plate.getTotoroExposures()) == 0
+                ]
 
             # Outputs the number of plates.
             drilling = [plate for plate in self.plates if not plate.drilled]
 
             txtDrilling = ''
             if len(drilling) > 0:
-                txtDrilling = _color_text('({0} in process of being drilled)'
-                                          .format(len(drilling)), 'red')
+                txtDrilling = _color_text(
+                    '({0} in process of being drilled)'.format(len(drilling)), 'red')
 
-            log.info('PLANNER: Plates found: {0} {1}'.format(len(self.plates),
-                                                             txtDrilling))
+            log.info('PLANNER: Plates found: {0} {1}'.format(len(self.plates), txtDrilling))
 
         # Gets fields
         if fields is not None:
@@ -127,8 +130,10 @@ class Planner(object):
 
         if rejectBackup:
             n_pre = len(self.plates)
-            self.plates = [plate for plate in self.plates
-                           if 'Backup' not in [status.label for status in plate.statuses]]
+            self.plates = [
+                plate for plate in self.plates
+                if 'Backup' not in [status.label for status in plate.statuses]
+            ]
             log.info('PLANNER: rejected {} backup plates'.format(n_pre - len(self.plates)))
 
     def getFields(self, plates):
@@ -146,25 +151,25 @@ class Planner(object):
         from Totoro.dbclasses import Fields
 
         try:
-            scienceCatalogue = table.Table.read(
-                readPath(config['fields']['scienceCatalogue']))
+            scienceCatalogue = table.Table.read(readPath(config['fields']['scienceCatalogue']))
             if 'MANGA_TILEID' not in scienceCatalogue.columns:
-                warnings.warn('PLANNER: science catalogue does not contain '
-                              'MANGA_TILEID. Will not check for number of '
-                              'targets', exceptions.TotoroPlannerWarning)
+                warnings.warn(
+                    'PLANNER: science catalogue does not contain '
+                    'MANGA_TILEID. Will not check for number of '
+                    'targets', exceptions.TotoroPlannerWarning)
                 scienceCatalogue = None
         except Exception:
             scienceCatalogue = None
-            warnings.warn('PLANNER: science catalogue cannot be found. '
-                          'Will not check for number of targets',
-                          exceptions.TotoroPlannerWarning)
+            warnings.warn(
+                'PLANNER: science catalogue cannot be found. '
+                'Will not check for number of targets', exceptions.TotoroPlannerWarning)
 
         tmpFields = Fields(rejectDrilled=True, acceptPriority1=True)
         tileIDPlates = [plate.manga_tileid for plate in plates]
         self.fields = []
 
-        weights = table.Table.read(readPath('+data/tile_weight.dat'),
-                                   format='ascii.commented_header')
+        weights = table.Table.read(
+            readPath('+data/tile_weight.dat'), format='ascii.commented_header')
 
         for field in tmpFields:
 
@@ -182,13 +187,12 @@ class Planner(object):
 
             if scienceCatalogue is not None:
 
-                scienceCatRows = scienceCatalogue[
-                    scienceCatalogue['MANGA_TILEID'] == field.manga_tileid]
+                scienceCatRows = scienceCatalogue[scienceCatalogue['MANGA_TILEID'] ==
+                                                  field.manga_tileid]
 
                 if len(scienceCatRows) < config['fields']['minTargetsInTile']:
-                    log.debug(
-                        'PLANNER: no targets for manga_tileid={0}. Skipping.'
-                        .format(field.manga_tileid))
+                    log.debug('PLANNER: no targets for manga_tileid={0}. Skipping.'
+                              .format(field.manga_tileid))
                     continue
 
             self.fields.append(field)
@@ -241,8 +245,7 @@ class Planner(object):
         from Totoro.dbclasses import getAll
 
         # Gets a list with all the plates
-        allPlates = getAll(rejectSpecial=True, updateSets=False, silent=True,
-                           fullCheck=False)
+        allPlates = getAll(rejectSpecial=True, updateSets=False, silent=True, fullCheck=False)
 
         # Selects plates with valid statuses
         validPlates = []
@@ -263,9 +266,11 @@ class Planner(object):
 
             else:
                 try:
-                    dateAtAPO = table.Table.read(readPath(config['dateAtAPO']),
-                                                 format='ascii', delimiter=',',
-                                                 names=['plateid', 'jd'])
+                    dateAtAPO = table.Table.read(
+                        readPath(config['dateAtAPO']),
+                        format='ascii',
+                        delimiter=',',
+                        names=['plateid', 'jd'])
 
                     for plate in validPlates:
                         row = dateAtAPO[dateAtAPO['plateid'] == plate.plate_id]
@@ -277,8 +282,7 @@ class Planner(object):
                 except InconsistentTableError:
                     warnings.warn(
                         'PLANNER: dateAtAPO file exists but could not be read.'
-                        ' It is probably empty.',
-                        exceptions.TotoroPlannerWarning)
+                        ' It is probably empty.', exceptions.TotoroPlannerWarning)
 
         if useTilesBeingDrilled:
             platesBeingDrilled = Planner._getPlatesBeingDrilled()
@@ -305,13 +309,11 @@ class Planner(object):
             return []
 
         try:
-            tilesBeingDrilled = table.Table.read(
-                path, format='ascii', delimiter=',')
+            tilesBeingDrilled = table.Table.read(path, format='ascii', delimiter=',')
         except InconsistentTableError:
             warnings.warn(
                 'PLANNER: tilesBeingDrilled could not be read although it '
-                'exists. Make sure the file is not empty.',
-                exceptions.TotoroPlannerWarning)
+                'exists. Make sure the file is not empty.', exceptions.TotoroPlannerWarning)
             return []
         except:
             raise exceptions.TotoroPlannerError(
@@ -333,8 +335,7 @@ class Planner(object):
             tileRow = tiles[tiles['ID'] == manga_tileid]
 
             mockPlate = Plate.createMockPlate(
-                ra=tileRow['RA'][0], dec=tileRow['DEC'][0],
-                manga_tileid=manga_tileid, silent=True)
+                ra=tileRow['RA'][0], dec=tileRow['DEC'][0], manga_tileid=manga_tileid, silent=True)
 
             mockPlate.manga_tileid = manga_tileid
             mockPlate.drilled = False
@@ -349,7 +350,8 @@ class Planner(object):
     def schedule(self,
                  goodWeatherFraction=config['planner']['goodWeatherFraction'],
                  efficiency=config['planner']['efficiency'],
-                 prioritiseAPO=False, **kwargs):
+                 prioritiseAPO=False,
+                 **kwargs):
         """Runs the scheduling simulation.
 
         Parameters
@@ -374,11 +376,9 @@ class Planner(object):
         SN2_red = config['SN2thresholds']['plateRed']
         SN2_blue = config['SN2thresholds']['plateBlue']
 
-        log.info('PLANNER: Good weather fraction: {0:.2f}'
-                 .format(goodWeatherFraction))
+        log.info('PLANNER: Good weather fraction: {0:.2f}'.format(goodWeatherFraction))
         log.info('PLANNER: Efficiency: {0:.2f}'.format(efficiency))
-        log.info('PLANNER: SN2 red={0:.1f}, blue={1:.1f}'
-                 .format(SN2_red, SN2_blue))
+        log.info('PLANNER: SN2 red={0:.1f}, blue={1:.1f}'.format(SN2_red, SN2_blue))
         log.info('PLANNER: prioritise APO={0}'.format(prioritiseAPO))
 
         # Gets the indices of the timelines with good weather.
@@ -390,47 +390,46 @@ class Planner(object):
             totalTime = 24. * (timeline.endDate - timeline.startDate)
 
             log.info('Scheduling timeline '
-                     '{0:.3f}-{1:.3f} ({2:.2f}-{3:.2f}) [{4}] ({5:.1f}h). '
-                     .format(timeline.startDate, timeline.endDate,
-                             site.localSiderealTime(timeline.startDate),
-                             site.localSiderealTime(timeline.endDate),
-                             startDate.iso.split()[0], totalTime))
+                     '{0:.3f}-{1:.3f} ({2:.2f}-{3:.2f}) [{4}] ({5:.1f}h). '.format(
+                         timeline.startDate, timeline.endDate,
+                         site.localSiderealTime(timeline.startDate),
+                         site.localSiderealTime(timeline.endDate),
+                         startDate.iso.split()[0], totalTime))
 
             if nn not in goodWeatherIdx:
-                log.info(_color_text('... skipping timeline because of '
-                                     'bad weather.', 'cyan'))
+                log.info(_color_text('... skipping timeline because of ' 'bad weather.', 'cyan'))
                 timeline.observed = False
                 continue
 
             timeline.observed = True
 
             if not self._useFields:
-                timeline.schedule(self.plates, mode='planner',
-                                  prioritiseAPO=prioritiseAPO, **kwargs)
+                timeline.schedule(
+                    self.plates, mode='planner', prioritiseAPO=prioritiseAPO, **kwargs)
             else:
-                timeline.schedule(self.plates + self.fields,
-                                  mode='planner', prioritiseAPO=prioritiseAPO,
-                                  **kwargs)
+                timeline.schedule(
+                    self.plates + self.fields,
+                    mode='planner',
+                    prioritiseAPO=prioritiseAPO,
+                    **kwargs)
 
             remainingTime = timeline.remainingTime
             colour = 'red' if remainingTime > 0.1 else 'default'
             log.info(
                 _color_text(
-                    '... plates observed: {0} (Unused time {1:.2f}h)'
-                    .format(len(timeline.scheduled), remainingTime), colour))
+                    '... plates observed: {0} (Unused time {1:.2f}h)'.format(
+                        len(timeline.scheduled), remainingTime), colour))
 
             if remainingTime > 0:
-                unallocatedThisTimeline = np.atleast_2d(
-                    timeline.unallocatedRange)
+                unallocatedThisTimeline = np.atleast_2d(timeline.unallocatedRange)
                 for j0, j1 in unallocatedThisTimeline:
                     self.unallocatedJDs.append([j0, j1])
 
             nCarts = len(config['mangaCarts']) - len(config['offlineCarts'])
             if len(timeline.scheduled) > nCarts:
                 warnings.warn(
-                    'more plates ({0}) scheduled than carts available ({1})'
-                    .format(len(timeline.scheduled), nCarts),
-                    exceptions.TotoroPlannerWarning)
+                    'more plates ({0}) scheduled than carts available ({1})'.format(
+                        len(timeline.scheduled), nCarts), exceptions.TotoroPlannerWarning)
 
         self.unallocatedJDs = np.array(self.unallocatedJDs)
 
@@ -440,7 +439,6 @@ class Planner(object):
         np.random.seed(seed if seed is not None else config['planner']['seed'])
 
         nTimelines = int(len(self.timelines) * goodWeatherFraction)
-        indices = np.random.choice(np.arange(len(self.timelines)), nTimelines,
-                                   replace=False)
+        indices = np.random.choice(np.arange(len(self.timelines)), nTimelines, replace=False)
 
         return np.sort(indices)

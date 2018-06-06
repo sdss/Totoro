@@ -7,7 +7,6 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 # @Copyright: José Sánchez-Gallego
 
-
 import warnings
 
 import click
@@ -28,49 +27,40 @@ def totoro():
 
 
 @totoro.command()
-@click.option('--start-date', type=float,
-              help='The start date for the simulation. '
-                   'If not set, defaults to the current time.')
-@click.option('-b', '--no-backup', is_flag=True,
-              default=False, help='Do not use backup plates.')
-@click.option('-s', '--save', type=click.Path(),
-              help='Saves the simulation exposures to a file.')
-@click.option('-b', '--no-backup', is_flag=True,
-              default=False, help='Do not use backup plates.')
-@click.option('-w', '--weather-fraction', type=float, default=1.0,
-              help='The good weather fraction to use.')
-@click.option('-e', '--efficiency', type=float, default=0.755,
-              help='The observing efficiency.')
+@click.option(
+    '--start-date',
+    type=float,
+    help='The start date for the simulation. '
+    'If not set, defaults to the current time.')
+@click.option('-b', '--no-backup', is_flag=True, default=False, help='Do not use backup plates.')
+@click.option('-s', '--save', type=click.Path(), help='Saves the simulation exposures to a file.')
+@click.option('-b', '--no-backup', is_flag=True, default=False, help='Do not use backup plates.')
+@click.option(
+    '-w', '--weather-fraction', type=float, default=1.0, help='The good weather fraction to use.')
+@click.option('-e', '--efficiency', type=float, default=0.755, help='The observing efficiency.')
 @click.argument('end-date', type=float)
-def simulate(end_date, start_date=None, no_backup=False, save=False,
-             weather_fraction=1.0, efficiency=0.755):
+def simulate(end_date,
+             start_date=None,
+             no_backup=False,
+             save=False,
+             weather_fraction=1.0,
+             efficiency=0.755):
     """Simulates a range of MJDs."""
 
     if no_backup:
         warnings.warn('Rejecting all backup plates.', TotoroUserWarning)
 
-    planner = Planner(
-        startDate=start_date,
-        endDate=end_date,
-        rejectBackup=no_backup)
-    planner.schedule(
-        goodWeatherFraction=weather_fraction,
-        efficiency=efficiency,
-        useFields=True)
+    planner = Planner(startDate=start_date, endDate=end_date, rejectBackup=no_backup)
+    planner.schedule(goodWeatherFraction=weather_fraction, efficiency=efficiency, useFields=True)
 
     if save:
-        saveExposures(
-            planner.plates +
-            planner.fields,
-            str(save),
-            startDate=planner.startDate)
+        saveExposures(planner.plates + planner.fields, str(save), startDate=planner.startDate)
 
 
 @totoro.command()
-@click.option('-k', '--marked', is_flag=True,
-              help='If set, only marked plates will be considered.')
-@click.option('-v', '--verbose', is_flag=True,
-              help='Print lots of extra output.')
+@click.option(
+    '-k', '--marked', is_flag=True, help='If set, only marked plates will be considered.')
+@click.option('-v', '--verbose', is_flag=True, help='Print lots of extra output.')
 @click.argument('mjd', type=int, nargs=-1)
 def plugging(mjd=None, marked=False, verbose=False):
     """Creates a plugging request for a certain MJD."""

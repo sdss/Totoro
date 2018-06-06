@@ -12,15 +12,16 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
+
+import argparse
 import os
 import sys
-import argparse
+
 from astropy import time
-from Totoro.scheduler import Plugger
-from Totoro.scheduler import observingPlan
+
 from Totoro import log
+from Totoro.scheduler import Plugger, observingPlan
 
 
 def mangaPluggingRequest(mjd=None, marked=False):
@@ -43,15 +44,22 @@ def mangaPluggingRequest(mjd=None, marked=False):
 
 def main(argv=None):
 
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     prog=os.path.basename(sys.argv[0]))
-    parser.add_argument('-m', '--mjd', metavar='MJD', type=int, default=None,
-                        help='The MJD for which the plugging is requested.')
-    parser.add_argument('-k', '--marked', dest='marked',
-                        action='store_true',
-                        help='if set, only marked plates will be considered.')
-    parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
-                        help='Print lots of extra output.')
+    parser = argparse.ArgumentParser(description=__doc__, prog=os.path.basename(sys.argv[0]))
+    parser.add_argument(
+        '-m',
+        '--mjd',
+        metavar='MJD',
+        type=int,
+        default=None,
+        help='The MJD for which the plugging is requested.')
+    parser.add_argument(
+        '-k',
+        '--marked',
+        dest='marked',
+        action='store_true',
+        help='if set, only marked plates will be considered.')
+    parser.add_argument(
+        '-v', '--verbose', action='store_true', dest='verbose', help='Print lots of extra output.')
 
     args = parser.parse_args()
 
@@ -63,5 +71,5 @@ def main(argv=None):
     return
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

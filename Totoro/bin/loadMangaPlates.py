@@ -12,16 +12,19 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from Totoro import config, readPath
-from Totoro.db import getConnection
-from Totoro.exceptions import TotoroError
-from pydl.pydlutils.yanny import yanny
-from astropy import table
+from __future__ import division, print_function
+
 import glob
 import os
 import sys
+
+from astropy import table
+from pydl.pydlutils.yanny import yanny
+
+from Totoro import config, readPath
+from Totoro.db import getConnection
+from Totoro.exceptions import TotoroError
+
 
 db = getConnection()
 session = db.Session()
@@ -33,8 +36,7 @@ def getMangaTileIDs():
 
     mangacorePath = readPath(config['fields']['mangacore'])
     plateTargets = glob.glob(
-        os.path.join(mangacorePath,
-                     'platedesign/platetargets/plateTargets-*.par'))
+        os.path.join(mangacorePath, 'platedesign/platetargets/plateTargets-*.par'))
 
     if len(plateTargets) == 0:
         raise TotoroError('no plateTargets files found.')
@@ -44,8 +46,7 @@ def getMangaTileIDs():
     for plateTargetsFile in plateTargets:
         pT = yanny(plateTargetsFile)['PLTTRGT']
         for target in pT:
-            if (target['plateid'] not in mangaTileIDs and
-                    target['manga_tileid'] > 0):
+            if (target['plateid'] not in mangaTileIDs and target['manga_tileid'] > 0):
                 mangaTileIDs[target['plateid']] = target['manga_tileid']
             if target['plateid'] not in neverobserve:
                 neverobserve[target['plateid']] = target['neverobserve']
@@ -57,11 +58,9 @@ def readSpecialPlates():
     """Returns an astropy.table.Table instance with the data for special
     plates."""
 
-    specialPlatesFile = os.path.join(os.path.dirname(__file__),
-                                     '../data/specialPlates.dat')
+    specialPlatesFile = os.path.join(os.path.dirname(__file__), '../data/specialPlates.dat')
 
-    return table.Table.read(specialPlatesFile, format='ascii.commented_header',
-                            delimiter=';')
+    return table.Table.read(specialPlatesFile, format='ascii.commented_header', delimiter=';')
 
 
 def loadMangaPlates():
@@ -75,8 +74,7 @@ def loadMangaPlates():
 
     with session.begin():
         allPlates = session.query(db.plateDB.Plate).join(
-            db.plateDB.PlateToSurvey, db.plateDB.Survey,
-            db.plateDB.SurveyMode).filter(
+            db.plateDB.PlateToSurvey, db.plateDB.Survey, db.plateDB.SurveyMode).filter(
                 db.plateDB.Survey.label == 'MaNGA',
                 db.plateDB.SurveyMode.label.like('%MaNGA%')).all()
 
@@ -85,8 +83,8 @@ def loadMangaPlates():
         for nn, plate in enumerate(allPlates):
 
             try:
-                newPlate = session.query(db.mangaDB.Plate).filter(
-                    db.mangaDB.Plate.platedb_plate_pk == plate.pk).one()
+                newPlate = session.query(
+                    db.mangaDB.Plate).filter(db.mangaDB.Plate.platedb_plate_pk == plate.pk).one()
             except:
                 newPlate = db.mangaDB.Plate()
 
@@ -96,12 +94,10 @@ def loadMangaPlates():
                 newPlate.manga_tileid = None
 
             if plate.plate_id in specialPlates['plateid']:
-                row = specialPlates[specialPlates['plateid'] ==
-                                    plate.plate_id]
+                row = specialPlates[specialPlates['plateid'] == plate.plate_id]
                 newPlate.special_plate = True
                 newPlate.all_sky_plate = bool(row['all_sky_plate'][0])
-                newPlate.commissioning_plate = bool(
-                    row['commissioning_plate'][0])
+                newPlate.commissioning_plate = bool(row['commissioning_plate'][0])
                 newPlate.comment = row['comment'][0]
             else:
                 newPlate.special_plate = False

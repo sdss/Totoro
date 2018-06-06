@@ -5,8 +5,8 @@ import warnings
 from .exceptions import DustMapWarning, TotoroError
 # warnings.filterwarnings('ignore', module='astropy.time.core')
 warnings.filterwarnings('ignore', 'Module argparse was already imported')
-warnings.filterwarnings('ignore', 'Skipped unsupported reflection of ' +
-                        'expression-based index q3c_field_idx')
+warnings.filterwarnings(
+    'ignore', 'Skipped unsupported reflection of ' + 'expression-based index q3c_field_idx')
 
 from .readPath import readPath
 __DEFAULT_CONFIG_FILE__ = readPath('+defaults.yaml')
@@ -26,8 +26,7 @@ try:
     from .utils.dust_map import DustMap
     dustMap = DustMap()
 except (ImportError, ValueError):
-    warnings.warn('no dust map found. No Galactic extinction '
-                  'will be applied', DustMapWarning)
+    warnings.warn('no dust map found. No Galactic extinction ' 'will be applied', DustMapWarning)
     dustMap = None
 except:
     raise TotoroError('something went wrong while importing the dust map.')
@@ -37,6 +36,5 @@ site = Site()
 
 from Totoro.dbclasses import *
 from Totoro.scheduler import Planner, Plugger
-
 
 __version__ = '2.0.0dev'

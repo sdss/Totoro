@@ -12,29 +12,29 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from builtins import map
-from builtins import object
-from Totoro.db import getConnectionFull
-from Totoro import exceptions as TotoroExceptions
-from Totoro import log, config, dustMap, site
-from Totoro import utils
-from Totoro.scheduler import observingPlan
-from Totoro.dbclasses import Set as TotoroSet
-from Totoro.dbclasses import Exposure as TotoroExposure
-from Totoro.dbclasses import plate_utils as plateUtils
-from Totoro.scheduler.footprint import getPlatesInFootprint
+from __future__ import division, print_function
+
 import warnings
-from astropy import time
-import numpy as np
+from builtins import map, object
 from copy import deepcopy
-from sqlalchemy import or_, and_
+
+import numpy as np
+from astropy import time
+from sqlalchemy import and_, or_
 from sqlalchemy.orm.exc import NoResultFound
 
+from Totoro import config, dustMap
+from Totoro import exceptions as TotoroExceptions
+from Totoro import log, site, utils
+from Totoro.db import getConnectionFull
+from Totoro.dbclasses import Exposure as TotoroExposure
+from Totoro.dbclasses import Set as TotoroSet
+from Totoro.dbclasses import plate_utils as plateUtils
+from Totoro.scheduler import observingPlan
+from Totoro.scheduler.footprint import getPlatesInFootprint
 
-__all__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plate',
-           'fromPlateID']
+
+__all__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plate', 'fromPlateID']
 
 
 def getPlugged(**kwargs):
@@ -47,30 +47,24 @@ def getPlugged(**kwargs):
 
     with session.begin():
         activePluggings = session.query(
-            plateDB.ActivePlugging).join(
-                plateDB.Plugging,
-                plateDB.Plate,
-                plateDB.PlateToSurvey,
-                plateDB.Survey,
-                plateDB.SurveyMode).filter(
-                    plateDB.Survey.label == 'MaNGA',
-                    plateDB.SurveyMode.label.ilike('MaNGA%')).order_by(
-                        plateDB.Plate.plate_id).all()
+            plateDB.ActivePlugging).join(plateDB.Plugging, plateDB.Plate, plateDB.PlateToSurvey,
+                                         plateDB.Survey, plateDB.SurveyMode).filter(
+                                             plateDB.Survey.label == 'MaNGA',
+                                             plateDB.SurveyMode.label.ilike('MaNGA%')).order_by(
+                                                 plateDB.Plate.plate_id).all()
 
     plates = [actPlug.plugging.plate for actPlug in activePluggings]
 
     return Plates(plates, **kwargs)
 
 
-def _getValidPlates(plates, rejectLowPriority=False,
-                    rejectSpecial=False, **kargs):
+def _getValidPlates(plates, rejectLowPriority=False, rejectSpecial=False, **kargs):
     """Rejects low priority and special plates."""
 
     minimumPriority = config['plugger']['noPlugPriority']
 
     if rejectLowPriority:
-        plates = [plate for plate in plates
-                  if plate.plate_pointings[0].priority > minimumPriority]
+        plates = [plate for plate in plates if plate.plate_pointings[0].priority > minimumPriority]
 
     validPlates = []
     if rejectSpecial:
@@ -101,28 +95,27 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False, raRange=None, **kwargs):
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode).filter(
                 plateDB.Survey.label == 'MaNGA',
-                plateDB.SurveyMode.label.in_(['MaNGA dither', 'MaNGA 10min'])
-        ).join(plateDB.PlateLocation).filter(
-            plateDB.PlateLocation.label == 'APO').join(
-                plateDB.PlatePointing, plateDB.Pointing)
+                plateDB.SurveyMode.label.in_(['MaNGA dither', 'MaNGA 10min'])).join(
+                    plateDB.PlateLocation).filter(plateDB.PlateLocation.label == 'APO').join(
+                        plateDB.PlatePointing, plateDB.Pointing)
 
         _checkNumberPlatesAtAPO(plates)
 
         if onlyMarked is False:
             plates = plates
         else:
-            plates = plates.join(plateDB.PlateToPlateStatus,
-                                 plateDB.PlateStatus).filter(
-                plateDB.PlateStatus.label == 'Accepted')
+            plates = plates.join(
+                plateDB.PlateToPlateStatus,
+                plateDB.PlateStatus).filter(plateDB.PlateStatus.label == 'Accepted')
 
         if raRange is not None:
             if raRange.size == 2:
-                plates = plates.filter(
-                    plateDB.Pointing.center_ra >= raRange[0],
-                    plateDB.Pointing.center_ra <= raRange[1])
+                plates = plates.filter(plateDB.Pointing.center_ra >= raRange[0],
+                                       plateDB.Pointing.center_ra <= raRange[1])
             elif raRange.size == 4:
                 plates = plates.filter(
-                    or_(and_(plateDB.Pointing.center_ra >= raRange[0][0],
+                    or_(
+                        and_(plateDB.Pointing.center_ra >= raRange[0][0],
                              plateDB.Pointing.center_ra <= raRange[0][1]),
                         and_(plateDB.Pointing.center_ra >= raRange[1][0],
                              plateDB.Pointing.center_ra <= raRange[1][1])))
@@ -150,14 +143,12 @@ def getAll(onlyIncomplete=False, **kwargs):
 
     with session.begin():
         plates = session.query(plateDB.Plate).join(
-            plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
-        ).filter(plateDB.Survey.label == 'MaNGA',
-                 plateDB.SurveyMode.label.in_(['MaNGA dither',
-                                               'MaNGA 10min'])).order_by(
-            plateDB.Plate.plate_id)
+            plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode).filter(
+                plateDB.Survey.label == 'MaNGA',
+                plateDB.SurveyMode.label.in_(['MaNGA dither',
+                                              'MaNGA 10min'])).order_by(plateDB.Plate.plate_id)
 
-    platesAtAPO = plates.join(plateDB.PlateLocation).filter(
-        plateDB.PlateLocation.label == 'APO')
+    platesAtAPO = plates.join(plateDB.PlateLocation).filter(plateDB.PlateLocation.label == 'APO')
     _checkNumberPlatesAtAPO(platesAtAPO)
 
     plates = plates.order_by(plateDB.Plate.plate_id).all()
@@ -177,11 +168,10 @@ def get_mastar():
 
     with session.begin():
         plates = session.query(plateDB.Plate).join(
-            plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode
-        ).filter(plateDB.Survey.label == 'MaNGA',
-                 or_(plateDB.SurveyMode.label == 'APOGEE lead',
-                     plateDB.SurveyMode.label == 'MaStar')).order_by(
-                         plateDB.Plate.plate_id)
+            plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode).filter(
+                plateDB.Survey.label == 'MaNGA',
+                or_(plateDB.SurveyMode.label == 'APOGEE lead',
+                    plateDB.SurveyMode.label == 'MaStar')).order_by(plateDB.Plate.plate_id)
 
     plates = plates.order_by(plateDB.Plate.plate_id).all()
 
@@ -194,8 +184,7 @@ def _getIncomplete(plates, **kwargs):
 
     incompletePlates = []
     for totoroPlate in totoroPlates:
-        if not utils.isPlateComplete(totoroPlate, write_apocomplete=False,
-                                     mark_complete=False):
+        if not utils.isPlateComplete(totoroPlate, write_apocomplete=False, mark_complete=False):
             incompletePlates.append(totoroPlate)
 
     return incompletePlates
@@ -213,12 +202,12 @@ def getComplete(**kwargs):
 
     with session.begin():
         plates = session.query(plateDB.Plate).join(
-            plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode,
-            plateDB.Plugging, plateDB.PluggingStatus).filter(
+            plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode, plateDB.Plugging,
+            plateDB.PluggingStatus).filter(
                 plateDB.Survey.label == 'MaNGA',
                 plateDB.SurveyMode.label.in_(['MaNGA dither', 'MaNGA 10min']),
-                plateDB.PluggingStatus.label.in_(['Good', 'Overridden Good'])
-        ).order_by(plateDB.Plate.plate_id).all()
+                plateDB.PluggingStatus.label.in_(['Good', 'Overridden Good'])).order_by(
+                    plateDB.Plate.plate_id).all()
 
     return Plates(plates, **kwargs)
 
@@ -230,9 +219,9 @@ def _checkNumberPlatesAtAPO(plates):
     nPlatesAPO = config['numberPlatesAllowedAtAPO']
     nPlates = plates.count()
     if nPlates >= 0.9 * nPlatesAPO:
-        warnings.warn('MaNGA has {0} plates at APO when the maximum is {1}'
-                      .format(nPlates, nPlatesAPO),
-                      TotoroExceptions.TotoroUserWarning)
+        warnings.warn(
+            'MaNGA has {0} plates at APO when the maximum is {1}'.format(nPlates, nPlatesAPO),
+            TotoroExceptions.TotoroUserWarning)
 
     return
 
@@ -248,8 +237,7 @@ class Plates(list):
         elif all([isinstance(ii, plateDB.Plate) for ii in inp]):
             list.__init__(self, [Plate(ii, **kwargs) for ii in inp])
         else:
-            list.__init__(self, [Plate(ii, format=format, **kwargs)
-                                 for ii in inp])
+            list.__init__(self, [Plate(ii, format=format, **kwargs) for ii in inp])
 
     @staticmethod
     def getPlugged(**kwargs):
@@ -318,9 +306,15 @@ class Plate(object):
             cls._instances[me._dbObject] = me
             return me
 
-    def __init__(self, input=None, format='pk', mock=False,
-                 updateSets=True, mjd=None, fullCheck=True,
-                 manga_tileid=None, **kwargs):
+    def __init__(self,
+                 input=None,
+                 format='pk',
+                 mock=False,
+                 updateSets=True,
+                 mjd=None,
+                 fullCheck=True,
+                 manga_tileid=None,
+                 **kwargs):
         """A custom class based on plateDB.Plate."""
 
         self.__dbAttributes__ = self._dbObject.__mapper__.attrs
@@ -345,8 +339,7 @@ class Plate(object):
             self._dust = None
 
         if not self.isMock:
-            self.sets = [TotoroSet(set, **kwargs)
-                         for set in self.getMangaDBSets()]
+            self.sets = [TotoroSet(set, **kwargs) for set in self.getMangaDBSets()]
 
             self.checkPlate(full=fullCheck)
 
@@ -358,9 +351,8 @@ class Plate(object):
 
     def __repr__(self):
         return ('<Totoro Plate (plate_id={0}, manga_tileid={1}, '
-                'completion={2:.2f})>'
-                .format(self.plate_id, self.manga_tileid,
-                        self.getPlateCompletion()))
+                'completion={2:.2f})>'.format(self.plate_id, self.manga_tileid,
+                                              self.getPlateCompletion()))
 
     def _initFromData(self, input, format):
         """Init a new Plate instance from a DB query."""
@@ -368,12 +360,10 @@ class Plate(object):
         with self.session.begin():
             try:
                 plate = self.session.query(self.db.plateDB.Plate).filter(
-                    eval('self.db.plateDB.Plate.{0} == {1}'
-                         .format(format, input))).one()
+                    eval('self.db.plateDB.Plate.{0} == {1}'.format(format, input))).one()
             except NoResultFound:
                 raise TotoroExceptions.TotoroError('no plate found for input '
-                                                   '{0}={1}'
-                                                   .format(format, input))
+                                                   '{0}={1}'.format(format, input))
 
         return plate
 
@@ -399,8 +389,7 @@ class Plate(object):
         newPlate = cls(None, mock=True, **kwargs)
         newPlate.sets = sets
 
-        log.debug('created mock plate from sets pk={0}'.format(
-            ', '.join(map(str, sets))))
+        log.debug('created mock plate from sets pk={0}'.format(', '.join(map(str, sets))))
 
         return newPlate
 
@@ -414,7 +403,7 @@ class Plate(object):
         mockPlate.isMock = True
 
         log.debug('created mock plate with ra={0:.3f} and dec={0:.3f}'.format(
-                  mockPlate.coords[0], mockPlate.coords[1]))
+            mockPlate.coords[0], mockPlate.coords[1]))
 
         return mockPlate
 
@@ -430,9 +419,8 @@ class Plate(object):
 
         # Finds the sets for this plate
         sets = self.session.query(mangaDB.Set).distinct(mangaDB.Set.pk).join(
-            mangaDB.Exposure, plateDB.Exposure, plateDB.Observation,
-            plateDB.PlatePointing, plateDB.Plate).filter(
-                plateDB.Plate.pk == self.pk).all()
+            mangaDB.Exposure, plateDB.Exposure, plateDB.Observation, plateDB.PlatePointing,
+            plateDB.Plate).filter(plateDB.Plate.pk == self.pk).all()
 
         # sets = sorted(sets, key=lambda set: set.pk)
 
@@ -456,11 +444,11 @@ class Plate(object):
             nMaNGAExposures = len(self.getMangadbExposures())
             nScienceExposures = len(self.getScienceExposures())
             if nMaNGAExposures != nScienceExposures:
-                warnings.warn('plate_id={1}: {0} plateDB.Exposures found '
-                              'but only {2} mangaDB.Exposures'.format(
-                                  nScienceExposures, self.plate_id,
-                                  nMaNGAExposures),
-                              TotoroExceptions.NoMangaExposure)
+                warnings.warn(
+                    'plate_id={1}: {0} plateDB.Exposures found '
+                    'but only {2} mangaDB.Exposures'.format(nScienceExposures, self.plate_id,
+                                                            nMaNGAExposures),
+                    TotoroExceptions.NoMangaExposure)
 
     @property
     def isMaNGA(self):
@@ -502,8 +490,7 @@ class Plate(object):
         #                  .format(self.plate_id))
 
         if (self.currentSurveyMode is None or
-                self.currentSurveyMode.label not in ['MaNGA dither',
-                                                     'MaNGA 10min']):
+                self.currentSurveyMode.label not in ['MaNGA dither', 'MaNGA 10min']):
             log.debug('plate_id={0} has surveyMode which is not MaNGA '
                       'dither/10min. Not updating sets.'.format(self.plate_id))
             return False
@@ -513,8 +500,7 @@ class Plate(object):
         return result
 
     def rearrangeSets(self, LST=None, mode='optimal', scope='all', **kwargs):
-        result = plateUtils.rearrangeSets(self, LST=LST, scope=scope,
-                                          mode=mode, **kwargs)
+        result = plateUtils.rearrangeSets(self, LST=LST, scope=scope, mode=mode, **kwargs)
 
         return result
 
@@ -534,20 +520,20 @@ class Plate(object):
     def getCoordinates(self):
 
         if 'ra' in self._kwargs and 'dec' in self._kwargs:
-            if (self._kwargs['ra'] is not None and
-                    self._kwargs['dec'] is not None):
-                return np.array(
-                    [self._kwargs['ra'], self._kwargs['dec']], np.float)
+            if (self._kwargs['ra'] is not None and self._kwargs['dec'] is not None):
+                return np.array([self._kwargs['ra'], self._kwargs['dec']], np.float)
         else:
 
             if len(self.plate_pointings) > 1:
-                warnings.warn('plate_id={0:d}: multiple plate pointings found.'
-                              ' Using the first one.'.format(self.plate_id),
-                              TotoroExceptions.MultiplePlatePointings)
+                warnings.warn(
+                    'plate_id={0:d}: multiple plate pointings found.'
+                    ' Using the first one.'.format(self.plate_id),
+                    TotoroExceptions.MultiplePlatePointings)
 
-            return np.array(
-                [self.plate_pointings[0].pointing.center_ra,
-                 self.plate_pointings[0].pointing.center_dec], np.float)
+            return np.array([
+                self.plate_pointings[0].pointing.center_ra,
+                self.plate_pointings[0].pointing.center_dec
+            ], np.float)
 
     @property
     def isComplete(self):
@@ -565,8 +551,7 @@ class Plate(object):
         if self._complete is not None:
             return self._complete
         else:
-            status = utils.isPlateComplete(self, write_apocomplete=True,
-                                           overwrite=False)
+            status = utils.isPlateComplete(self, write_apocomplete=True, overwrite=False)
             # If the plate is mock, caches the status.
             if status is True and self.isMock:
                 self._complete = status
@@ -591,8 +576,7 @@ class Plate(object):
             if ss.getStatus()[0] in validStatuses:
                 sets.append(ss)
 
-        exposureSN2 = np.array([exp.getSN2Array() for ss in sets
-                                for exp in ss.totoroExposures])
+        exposureSN2 = np.array([exp.getSN2Array() for ss in sets for exp in ss.totoroExposures])
 
         if exposureSN2.shape[0] == 0:
             return 0
@@ -603,16 +587,17 @@ class Plate(object):
         if np.isnan(blueSN2) or np.isnan(redSN2):
             return 0
         else:
-            return np.min([blueSN2 / config['SN2thresholds']['plateBlue'],
-                          redSN2 / config['SN2thresholds']['plateRed']])
+            return np.min([
+                blueSN2 / config['SN2thresholds']['plateBlue'],
+                redSN2 / config['SN2thresholds']['plateRed']
+            ])
 
     def getSN2Array(self, **kwargs):
         """Same as getCumulatedSN2. Added for consistency with Set and
         Exposure."""
         return self.getCumulatedSN2(**kwargs)
 
-    def getCumulatedSN2(self, includeIncomplete=False, useMock=True,
-                        **kwargs):
+    def getCumulatedSN2(self, includeIncomplete=False, useMock=True, **kwargs):
         """Returns the cumulated SN2 from all valid sets.
         If includeIncomplete=True, incomplete sets SN2 are also included.
         If useMock=False, mock sets are ignored.
@@ -638,8 +623,7 @@ class Plate(object):
         if len(validSets) == 0:
             return np.array([0.0, 0.0, 0.0, 0.0])
         else:
-            return np.nansum([set.getSN2Array(useMock=useMock)
-                              for set in validSets], axis=0)
+            return np.nansum([set.getSN2Array(useMock=useMock) for set in validSets], axis=0)
 
     def getActiveCartNumber(self):
         """Returns the cart number of the active plugging. Raises an error if
@@ -649,8 +633,8 @@ class Plate(object):
             if len(plugging.activePlugging) > 0:
                 return int(plugging.cartridge.number)
 
-        raise TotoroExceptions.PlateNotPlugged(
-            'plate_id={0} is not currently plugged'.format(self.plate_id))
+        raise TotoroExceptions.PlateNotPlugged('plate_id={0} is not currently plugged'.format(
+            self.plate_id))
 
     def getActivePlugging(self):
         """Returns the active plugging or None if none found."""
@@ -673,8 +657,7 @@ class Plate(object):
         for exp in scienceExps:
             if exp.mangadbExposure is None or len(exp.mangadbExposure) == 0:
                 raise TotoroExceptions.TotoroError(
-                    'platedb exposure_no={0} has no mangadb counterpart'
-                    .format(exp.exposure_no))
+                    'platedb exposure_no={0} has no mangadb counterpart'.format(exp.exposure_no))
             else:
                 mangaExposures.append(exp.mangadbExposure[0])
 
@@ -710,8 +693,9 @@ class Plate(object):
 
         # Some exposures not in sets may be missing.
         allExposures = self.getMangadbExposures()
-        totoroExposures += [TotoroExposure(exp.pk, parent='mangadb')
-                            for exp in allExposures if exp.set_pk is None]
+        totoroExposures += [
+            TotoroExposure(exp.pk, parent='mangadb') for exp in allExposures if exp.set_pk is None
+        ]
 
         return totoroExposures
 
@@ -748,12 +732,10 @@ class Plate(object):
 
         """
 
-        if (self.mangadbPlate is not None and
-                self.mangadbPlate.ha_min is not None and
+        if (self.mangadbPlate is not None and self.mangadbPlate.ha_min is not None and
                 self.mangadbPlate.ha_max is not None):
 
-            haRange = np.array([self.mangadbPlate.ha_min,
-                                self.mangadbPlate.ha_max])
+            haRange = np.array([self.mangadbPlate.ha_min, self.mangadbPlate.ha_max])
 
         else:
 
@@ -777,9 +759,10 @@ class Plate(object):
         jdRange = observingPlan.getMJD(mjd)
 
         if jdRange is None:
-            warnings.warn('no observing block found for MJD={0:d}. '
-                          'Observing windows will not be contrained.'
-                          .format(mjd), TotoroExceptions.NoObservingBlock)
+            warnings.warn(
+                'no observing block found for MJD={0:d}. '
+                'Observing windows will not be contrained.'.format(mjd),
+                TotoroExceptions.NoObservingBlock)
             return haRange
 
         observingRangeLST = np.array(list(map(site.localSiderealTime, jdRange)))
@@ -821,8 +804,7 @@ class Plate(object):
             raise ValueError('date0 is greater than date1')
 
         if returnType == 'str':
-            return ('{0:%H:%M}'.format(date0.datetime),
-                    '{0:%H:%M}'.format(date1.datetime))
+            return ('{0:%H:%M}'.format(date0.datetime), '{0:%H:%M}'.format(date1.datetime))
         elif returnType == 'datetime':
             return (date0.datetime, date1.datetime)
         else:
@@ -860,16 +842,27 @@ class Plate(object):
             return True
         return False
 
-    def addMockExposure(self, exposure=None, startTime=None, set=None,
-                        expTime=None, silent=False, rearrange=True, **kwargs):
+    def addMockExposure(self,
+                        exposure=None,
+                        startTime=None,
+                        set=None,
+                        expTime=None,
+                        silent=False,
+                        rearrange=True,
+                        **kwargs):
         """Creates a mock expusure in the best possible way."""
 
         ra, dec = self.coords
 
         if exposure is None:
             exposure = TotoroExposure.createMockExposure(
-                startTime=startTime, expTime=expTime, ra=ra, dec=dec,
-                dust=self.dust, plate=self, **kwargs)
+                startTime=startTime,
+                expTime=expTime,
+                ra=ra,
+                dec=dec,
+                dust=self.dust,
+                plate=self,
+                **kwargs)
 
         validSet = plateUtils.getOptimalSet(self, exposure)
 
@@ -899,13 +892,12 @@ class Plate(object):
             # incomplete sets is small
             nExpIncompleteSets = len(self.getExposuresInIncompleteSets())
             if nExpIncompleteSets <= 5:
-                self.rearrangeSets(mode='optimal', scope='incomplete',
-                                   silent=True)
+                self.rearrangeSets(mode='optimal', scope='incomplete', silent=True)
             else:
-                warnings.warn('plate={0}: skipping incomplete set '
-                              'rearrangement because plate has > 5 exposures '
-                              'in incomplete sets'.format(self.plate_id),
-                              TotoroExceptions.TotoroUserWarning)
+                warnings.warn(
+                    'plate={0}: skipping incomplete set '
+                    'rearrangement because plate has > 5 exposures '
+                    'in incomplete sets'.format(self.plate_id), TotoroExceptions.TotoroUserWarning)
 
         return exposure
 
@@ -1026,11 +1018,8 @@ class Plate(object):
 
         HA = (LST * 15. - self.ra) % 360.
 
-        sinAlt = (np.sin(np.deg2rad(self.dec)) *
-                  np.sin(np.deg2rad(site.latitude)) +
-                  np.cos(np.deg2rad(self.dec)) *
-                  np.cos(np.deg2rad(site.latitude)) *
-                  np.cos(np.deg2rad(HA)))
+        sinAlt = (np.sin(np.deg2rad(self.dec)) * np.sin(np.deg2rad(site.latitude)) + np.cos(
+            np.deg2rad(self.dec)) * np.cos(np.deg2rad(site.latitude)) * np.cos(np.deg2rad(HA)))
 
         return np.rad2deg(np.arcsin(sinAlt))
 
@@ -1042,8 +1031,8 @@ class Plate(object):
         latRad = np.deg2rad(site.latitude)
         decRad = np.deg2rad(self.dec)
 
-        xx = ((np.sin(altRad) - np.sin(latRad) * np.sin(decRad)) /
-              (np.cos(latRad) * np.cos(decRad)))
+        xx = (
+            (np.sin(altRad) - np.sin(latRad) * np.sin(decRad)) / (np.cos(latRad) * np.cos(decRad)))
 
         if xx > 1 or xx < -1:
             return np.array([0, 0])
