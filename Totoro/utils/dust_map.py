@@ -19,7 +19,7 @@ import numpy as np
 from astropy.wcs import WCS
 from scipy.interpolate import griddata
 
-from .ccmUnred import ccmUnred
+from .ccm_unred import ccmUnred
 
 
 try:
