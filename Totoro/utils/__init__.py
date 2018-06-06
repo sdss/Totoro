@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 
-from utils import *
-from intervals import *
+from .utils import *
+from .intervals import *

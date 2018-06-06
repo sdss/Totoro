@@ -13,6 +13,7 @@ system.
 
 """
 
+from past.builtins import basestring
 import yaml
 import os
 from Totoro import exceptions
@@ -82,7 +83,7 @@ class TotoroConfig(dict):
     def merge(self, user, default):
         """Merges two dictionaries recursively."""
         if isinstance(user, dict) and isinstance(default, dict):
-            for kk, vv in default.iteritems():
+            for kk, vv in default.items():
                 if kk not in user:
                     user[kk] = vv
                 else:

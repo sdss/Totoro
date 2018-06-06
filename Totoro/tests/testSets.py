@@ -14,6 +14,7 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+from builtins import range
 from Totoro.dbclasses import Plate, Exposure, Set
 from Totoro.db import getConnection
 from Totoro.dbclasses.plate_utils import removeOrphanedSets

@@ -14,6 +14,7 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+from builtins import range
 from Totoro.scheduler import Plugger
 from Totoro import config
 from Totoro.db import getConnection

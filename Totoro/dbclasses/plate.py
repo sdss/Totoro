@@ -14,6 +14,8 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+from builtins import map
+from builtins import object
 from Totoro.db import getConnectionFull
 from Totoro import exceptions as TotoroExceptions
 from Totoro import log, config, dustMap, site
@@ -780,7 +782,7 @@ class Plate(object):
                           .format(mjd), TotoroExceptions.NoObservingBlock)
             return haRange
 
-        observingRangeLST = np.array(map(site.localSiderealTime, jdRange))
+        observingRangeLST = np.array(list(map(site.localSiderealTime, jdRange)))
         observingRangeHA = (observingRangeLST * 15 - self.ra) % 360.
 
         haRange = utils.getIntervalIntersection(haRange, observingRangeHA)

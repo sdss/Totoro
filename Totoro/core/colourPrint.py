@@ -13,6 +13,7 @@ This module includes astropy-based functions for colour printing.
 
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
+from builtins import range
 
 __ALL__ = ['colourPrint']
 
@@ -201,7 +202,7 @@ def colourPrint(*args, **kwargs):
 
     write = file.write
     if isatty(file):
-        for i in xrange(0, len(args), 2):
+        for i in range(0, len(args), 2):
             msg = args[i]
             if i + 1 == len(args):
                 color = ''
@@ -221,7 +222,7 @@ def colourPrint(*args, **kwargs):
 
         write(end)
     else:
-        for i in xrange(0, len(args), 2):
+        for i in range(0, len(args), 2):
             msg = args[i]
             if not IS_PY3 and isinstance(msg, bytes):
                 # Support decoding bytes to unicode on Python 2; use the

@@ -11,6 +11,8 @@ Licensed under a 3-clause BSD license.
 
 from __future__ import division
 from __future__ import print_function
+from past.builtins import basestring
+from builtins import object
 from astropy import table, time
 from Totoro import exceptions
 import warnings

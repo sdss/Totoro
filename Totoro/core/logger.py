@@ -6,6 +6,7 @@ The module is heavily based on the astropy logging system.
 
 from __future__ import print_function
 
+from builtins import str
 import logging
 import os
 import re
@@ -132,7 +133,7 @@ class TotoroLogger(Logger):
 
         mod_name = None
         mod_path, __ = os.path.splitext(mod_path)
-        for __, mod in sys.modules.items():
+        for __, mod in list(sys.modules.items()):
             path = os.path.splitext(getattr(mod, '__file__', ''))[0]
             if path == mod_path:
                 mod_name = mod.__name__
@@ -215,7 +216,7 @@ class TotoroLogger(Logger):
         except (IOError, OSError) as e:
             warnings.warn(
                 'log file {0!r} could not be opened for writing: '
-                '{1}'.format(logFilePath, unicode(e)), RuntimeWarning)
+                '{1}'.format(logFilePath, str(e)), RuntimeWarning)
         else:
             self.fh.setFormatter(fmt)
             self.addHandler(self.fh)

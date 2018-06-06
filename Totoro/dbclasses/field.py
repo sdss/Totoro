@@ -14,8 +14,9 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+from __future__ import absolute_import
 import Totoro
-import plate as TotoroPlate
+from . import plate as TotoroPlate
 from Totoro.db import getConnectionFull
 from Totoro.exceptions import TotoroError
 import os

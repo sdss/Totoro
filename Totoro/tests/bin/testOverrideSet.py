@@ -14,6 +14,9 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+from builtins import str
+from builtins import map
+from builtins import range
 import unittest
 import numpy as np
 import warnings
@@ -98,7 +101,7 @@ class TestOverrideSet(unittest.TestCase):
         """Test overriding all the exposures in a set to Override Good."""
 
         exps = [177773, 177774, 177775]
-        main(argv=['-v', 'good'] + map(str, exps))
+        main(argv=['-v', 'good'] + list(map(str, exps)))
 
         for exp in exps:
             totExp = Exposure(exp, format='exposure_no', parent='plateDB')
@@ -119,7 +122,7 @@ class TestOverrideSet(unittest.TestCase):
         """Test overriding exposures from different sets into a good set."""
 
         exps = [177773, 177774, 177778]
-        main(argv=['-v', 'good'] + map(str, exps))
+        main(argv=['-v', 'good'] + list(map(str, exps)))
 
         setPKs = []
         for exp in exps:
@@ -157,7 +160,7 @@ class TestOverrideSet(unittest.TestCase):
         """Test overriding all the exposures in a set to Override Bad."""
 
         exps = [177773, 177774, 177775]
-        main(argv=['-v', 'bad'] + map(str, exps))
+        main(argv=['-v', 'bad'] + list(map(str, exps)))
 
         for exp in exps:
             totExp = Exposure(exp, format='exposure_no', parent='plateDB')
@@ -188,7 +191,7 @@ class TestOverrideSet(unittest.TestCase):
 
         with warnings.catch_warnings(record=True) as ww:
 
-            main(argv=['-v', 'bad'] + map(str, exps))
+            main(argv=['-v', 'bad'] + list(map(str, exps)))
 
             warnMessages = '\n'.join([str(ww[ii].message)
                                       for ii in range(len(ww))])
@@ -235,7 +238,7 @@ class TestOverrideSet(unittest.TestCase):
 
         # We override a set as bad
         exps = [177773, 177774, 177778]
-        overridenSetPK = main(argv=['-v', 'bad'] + map(str, exps))
+        overridenSetPK = main(argv=['-v', 'bad'] + list(map(str, exps)))
 
         # Checks that the new overridden set is 297
         with session.begin():
@@ -264,7 +267,7 @@ class TestOverrideSet(unittest.TestCase):
 
         # Now we repeat the test but using --reload. The plate should be left
         # in the original state but with sets 1 and 2 exchanged.
-        overridenSetPK = main(argv=['-v', 'bad'] + map(str, exps))
+        overridenSetPK = main(argv=['-v', 'bad'] + list(map(str, exps)))
 
         # Now we remove the set
         main(argv=['-v', 'remove', '--reload', str(overridenSetPK)])
@@ -291,7 +294,7 @@ class TestOverrideSet(unittest.TestCase):
         # Checks a fake set
         exps = [177773, 177774, 177778]
         (status, code,
-         statusMock, codeMock) = main(argv=['-v', 'info'] + map(str, exps))
+         statusMock, codeMock) = main(argv=['-v', 'info'] + list(map(str, exps)))
 
         self.assertEqual(status, 'Bad')
         self.assertEqual(code, 2)
@@ -301,7 +304,7 @@ class TestOverrideSet(unittest.TestCase):
         # Now we check a real good one
         exps = [177773, 177774, 177775]
         (status, code,
-         statusMock, codeMock) = main(argv=['-v', 'info'] + map(str, exps))
+         statusMock, codeMock) = main(argv=['-v', 'info'] + list(map(str, exps)))
 
         self.assertEqual(status, 'Excellent')
         self.assertEqual(code, 10)
@@ -310,9 +313,9 @@ class TestOverrideSet(unittest.TestCase):
 
         # Lets override the first example as bad
         exps = [177773, 177774, 177778]
-        main(argv=['-v', 'bad'] + map(str, exps))
+        main(argv=['-v', 'bad'] + list(map(str, exps)))
         (status, code,
-         statusMock, codeMock) = main(argv=['-v', 'info'] + map(str, exps))
+         statusMock, codeMock) = main(argv=['-v', 'info'] + list(map(str, exps)))
 
         self.assertEqual(status, 'Override Bad')
         self.assertEqual(code, 10)
@@ -331,7 +334,7 @@ class TestOverrideSet(unittest.TestCase):
         """Tests when one of the original sets in empty after overriding."""
 
         exps = [198371, 198447, 198258]
-        main(argv=['-v', 'good'] + map(str, exps))
+        main(argv=['-v', 'good'] + list(map(str, exps)))
 
         with session.begin():
             exp198371 = session.query(db.plateDB.Exposure).filter(

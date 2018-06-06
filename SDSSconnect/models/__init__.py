@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import warnings
 
 # warnings.filterwarnings(
@@ -7,4 +8,4 @@ import warnings
 warnings.filterwarnings('ignore',
                         'Skipped unsupported reflection of expression-based')
 
-from relationships import createRelationships
+from .relationships import createRelationships

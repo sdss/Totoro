@@ -15,6 +15,8 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+from builtins import str
+from builtins import object
 import re
 import os
 # import inflect
@@ -130,7 +132,7 @@ class ModelWrapper(object):
     def __init__(self, Base, prefix):
         """Creates a wrapper around Base.class names with a certain prefix."""
 
-        for key in Base.classes.keys():
+        for key in list(Base.classes.keys()):
             if prefix in key:
                 exec('self.{0} = Base.classes.{1}'
                      .format(key[len(prefix):], key))

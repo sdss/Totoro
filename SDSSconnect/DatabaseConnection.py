@@ -15,6 +15,11 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 from sqlalchemy import create_engine, MetaData
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
@@ -27,7 +32,7 @@ from SDSSconnect.exceptions import SDSSconnectUserWarning, SDSSconnectError
 from SDSSconnect.models import methods
 
 import warnings
-import ConfigParser
+import configparser
 import os
 
 
@@ -43,7 +48,7 @@ def readProfile(profile=None, path=None):
     if not os.path.exists(profilesPath):
         raise RuntimeError('profile not found in {0}'.format(profilesPath))
 
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(profilesPath)
 
     # If no profile is defined, we try to return the DEFAULTS section and, if
@@ -120,7 +125,7 @@ class DatabaseConnection(object):
         default = kwargs.get('default', False)
         profile = kwargs.get('profile', None)
 
-        if len(cls._singletons.keys()) == 0 or new:
+        if len(list(cls._singletons.keys())) == 0 or new:
 
             newInstance = cls._createNewInstance(**kwargs)
             profile = newInstance.profile
@@ -129,7 +134,7 @@ class DatabaseConnection(object):
                 warnings.warn('overwritting profile {0}'.format(profile),
                               SDSSconnectUserWarning)
 
-            if default or len(cls._singletons.keys()) == 0:
+            if default or len(list(cls._singletons.keys())) == 0:
                 cls._defaultConnectionProfile = newInstance.profile
 
             cls._singletons[newInstance.profile] = newInstance
@@ -196,7 +201,7 @@ class DatabaseConnection(object):
     def listConnections(cls):
         """Returns a list of all available connections."""
 
-        return cls._singletons.keys()
+        return list(cls._singletons.keys())
 
     @classmethod
     def getDefaultConnectionName(cls):
@@ -250,7 +255,7 @@ class DatabaseConnection(object):
         # We are going to create our own relationships, so we remove these.
         for model in self.Base.classes:
             if 'Platedb_' in model.__name__ or 'Mangadb_' in model.__name__:
-                for relationship in model.__mapper__.relationships.keys():
+                for relationship in list(model.__mapper__.relationships.keys()):
                     delattr(model, str(relationship))
 
         if models == __MODELS__:

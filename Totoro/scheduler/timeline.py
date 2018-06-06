@@ -14,6 +14,8 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+from builtins import str
+from builtins import object
 from Totoro import log, config, site
 from Totoro import utils
 from Totoro.scheduler import scheduler_utils as logic

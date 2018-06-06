@@ -16,6 +16,9 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+from builtins import str
+from builtins import range
+from builtins import object
 from Totoro import log, config, site
 from Totoro.db import getConnection
 from Totoro.scheduler.timeline import Timeline
@@ -418,7 +421,7 @@ class Plugger(object):
         log.important('Plugging allocation for MJD={0:d} follows:'
                       .format(mjd))
 
-        for cartNo, plate in self.carts.iteritems():
+        for cartNo, plate in self.carts.items():
 
             cartStatus = getCartStatus(activePluggings, cartNo)
             pluggedPlate = cartStatus[1]
@@ -624,7 +627,7 @@ class Plugger(object):
         cartOrder = self.getCartOrder(mode=mode)
 
         # Removes cart without an allocated MaNGA plate
-        carts = OrderedDict([(key, value) for key, value in self.carts.items()
+        carts = OrderedDict([(key, value) for key, value in list(self.carts.items())
                              if value is not None])
 
         # First we add carts not used to cart_order, with lower priority
@@ -681,7 +684,7 @@ class Plugger(object):
         scheduled = []
         forcePlug = []
 
-        for cart, plate in self.carts.iteritems():
+        for cart, plate in self.carts.items():
             if plate is None:
                 continue
             if plate.priority == forcePlugPriority:

@@ -16,6 +16,7 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+from builtins import range
 from Totoro import log, config, site
 from Totoro.db import getConnection
 from Totoro import exceptions
@@ -585,7 +586,7 @@ def calculatePermutations(inputList):
 
     cartesianProduct = itertools.product(*indices)
     for prod in cartesianProduct:
-        yield list(itertools.izip_longest(*prod))
+        yield list(itertools.zip_longest(*prod))
 
 
 def getNumberPermutations(ditherPositions):
@@ -599,11 +600,11 @@ def getNumberPermutations(ditherPositions):
         repDict[cc] += 1
 
     maxNDither = 0
-    for key in repDict.keys():
+    for key in list(repDict.keys()):
         if repDict[key] > maxNDither:
             maxNDither = repDict[key]
 
-    return int(factorial(maxNDither) ** (len(repDict.keys()) - 1))
+    return int(factorial(maxNDither) ** (len(list(repDict.keys())) - 1))
 
 
 def fixBadSets(sets):
@@ -692,7 +693,7 @@ def getConsecutiveSets(nSets=1):
 
     # If no consecutive range of pks exists, just continues from the last pk
     if pks is None:
-        pks = range(setPKs[-1] + 1, setPKs[-1] + 1 + nSets)
+        pks = list(range(setPKs[-1] + 1, setPKs[-1] + 1 + nSets))
 
     return pks
 

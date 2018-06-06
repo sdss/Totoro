@@ -15,6 +15,7 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 
+from builtins import map
 from Totoro import log
 from Totoro.db import getConnection
 from Totoro.dbclasses.exposure import Exposure, setExposureStatus

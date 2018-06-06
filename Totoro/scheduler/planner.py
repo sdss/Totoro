@@ -14,6 +14,7 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
+from builtins import object
 from Totoro import log, config, readPath, site
 from Totoro.scheduler.timeline import Timelines
 from Totoro.scheduler import observingPlan

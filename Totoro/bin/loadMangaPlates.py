@@ -17,7 +17,7 @@ from __future__ import print_function
 from Totoro import config, readPath
 from Totoro.db import getConnection
 from Totoro.exceptions import TotoroError
-from sdss.utilities import yanny
+from pydl.pydlutils.yanny import yanny
 from astropy import table
 import glob
 import os
@@ -42,7 +42,7 @@ def getMangaTileIDs():
     mangaTileIDs = {}
     neverobserve = {}
     for plateTargetsFile in plateTargets:
-        pT = yanny.yanny(plateTargetsFile, np=True)['PLTTRGT']
+        pT = yanny(plateTargetsFile)['PLTTRGT']
         for target in pT:
             if (target['plateid'] not in mangaTileIDs and
                     target['manga_tileid'] > 0):

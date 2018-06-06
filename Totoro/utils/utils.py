@@ -15,6 +15,8 @@ Revision history:
 from __future__ import division
 from __future__ import print_function
 
+from builtins import str
+from builtins import range
 from collections import OrderedDict
 from itertools import combinations
 
@@ -31,17 +33,30 @@ from Totoro import config
 from Totoro import exceptions
 from Totoro.db import getConnection
 
-from sdss.manga.mlhalimit import mlhalimit as mlhalimitHours
-from sdss.utilities.yanny import yanny
+from pydl.pydlutils.yanny import yanny
 
 
 _avoid_cart2_cahche = {}
 
 
 def mlhalimit(dec):
-    """Returns HA limits in degrees."""
+    """Returns HA limits in DEGREES.
 
-    return mlhalimitHours(dec) * 15.
+    Calculates the maximum HAs acceptable for a list of declinations.
+    Uses the polynomial fit by David Law and a omega limit of 0.5.
+    """
+
+    isIterable = hasattr(dec, '__iter__')
+
+    funcFit = np.array([1.78693, 0.0663050, -0.00174096, 2.62002e-05,
+                        -1.03959e-07, -1.49150e-09])[::-1]
+
+    dec = np.atleast_1d(dec)
+    halimit = np.abs(np.polyval(funcFit, dec)) * 15.
+
+    # halimit[np.where((dec < -10) | (dec > 80))] = 0.0
+
+    return halimit[0] if not isIterable else halimit
 
 
 def computeAirmass(dec, ha, lat=config['observatory']['latitude'],
@@ -478,7 +493,7 @@ def get_closest_holes(plateid):
             raise ValueError('cannot find plateHoles for plate {0}'
                              .format(plateid))
 
-    plateHoles = yanny(plateHoles_path, np=True)['STRUCT1']
+    plateHoles = yanny(plateHoles_path)['STRUCT1']
 
     mask = np.in1d(plateHoles['holetype'], valid_holes)
     holes = plateHoles[mask]
@@ -488,7 +503,7 @@ def get_closest_holes(plateid):
     focal[:, 1] = holes['yfocal']
 
     distances = pdist(focal)
-    pdist_indices = list(combinations(range(focal.shape[0]), 2))
+    pdist_indices = list(combinations(list(range(focal.shape[0])), 2))
 
     for kk in np.argsort(distances):
         ii, jj = pdist_indices[kk]
@@ -502,7 +517,7 @@ def get_closest_holes(plateid):
 def avoid_cart_2(plate):
     """Finds closest pair of holes and decides whether to use cart 2.
 
-    This is beacuse cart 2 has heat shrinks around some of the fibres,
+    This is because cart 2 has heat shrinks around some of the fibres,
     which effectively increases their ferrule size. If the distance between
     holes is smaller than the enlarged ferrule sizes, we should avoid
     cart 2, if possible.

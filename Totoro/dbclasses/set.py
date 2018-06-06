@@ -14,7 +14,10 @@ Revision history:
 
 from __future__ import division
 from __future__ import print_function
-from exposure import Exposure
+from __future__ import absolute_import
+from builtins import range
+from builtins import object
+from .exposure import Exposure
 from Totoro.db import getConnectionFull
 from Totoro import log, config, site
 from Totoro import exceptions
