@@ -1,18 +1,11 @@
 #!/usr/bin/env python
-# encoding: utf-8
-"""
-pluger.py
-
-Created by José Sánchez-Gallego on 20 Oct 2014.
-Licensed under a 3-clause BSD license.
-
-Revision history:
-    20 Oct 2014 J. Sánchez-Gallego
-      Initial version
-    15 Nov 2014 J. Sánchez-Gallego
-      Improved the logic and added some convenience functions
-
-"""
+# -*- coding:utf-8 -*-
+# @Author: José Sánchez-Gallego (gallegoj@uw.edu)
+# @Created: 2014-10-20
+# @LastModified: 2014-11-15
+# @Filename: plugger.py
+# @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
+# @Copyright: José Sánchez-Gallego
 
 from __future__ import division, print_function
 
@@ -53,7 +46,7 @@ replaceMsgs = {
 
 
 def getForcePlugPlates():
-    """Returns a list of plates with priority `forcePlugPriority`."""
+    """Returns a list of plates with priority ``forcePlugPriority``."""
 
     from Totoro.dbclasses.plate import Plates
 
@@ -211,7 +204,7 @@ class Plugger(object):
     """A class to schedule plugging requests.
 
     A new `Plugger` instance is initiated by providing a `startDate` and
-    `endDate`. If both of them are None, no scheduling is performed and only
+    ``endDate``. If both of them are None, no scheduling is performed and only
     the already plugged plates are included.
 
     Parameters
@@ -252,9 +245,8 @@ class Plugger(object):
         self.startDate = None
         self.endDate = None
 
-        warnings.warn(
-            'PLUGGER: no JD1, JD2 values provided. Plugger will '
-            'only return plugged, on-completed plates.', TotoroPluggerWarning)
+        warnings.warn('PLUGGER: no JD1, JD2 values provided. Plugger will '
+                      'only return plugged, on-completed plates.', TotoroPluggerWarning)
 
         # Get MaNGA plugged plates
         pluggedPlates = getPlugged(fullCheck=False, updateSets=False)
@@ -268,10 +260,10 @@ class Plugger(object):
                 self.carts[cart] = plate
 
     def _initFromDates(self, jd0, jd1, **kwargs):
-        """Initialites the Plugger instance from two JD dates.
+        """Initialises the Plugger instance from two JD dates.
 
         This method does not actually schedules plates for the range
-        `[jd0, jd1]`. Instead, it creates the `Totoro.Timeline` object for
+        ``[jd0, jd1]``. Instead, it creates the `Totoro.Timeline` object for
         this plugging requests and obtains the list of plates that can be
         scheduled. The real scheduling happens when `Plugger.schedule()`
         is called.
@@ -491,10 +483,10 @@ class Plugger(object):
         forcePlugPriority = int(config['plugger']['forcePlugPriority'])
 
         if len(plates) > len(self.carts):
-            warnings.warn(
-                'PLUGGER: {0} plates to allocate but only {1} carts '
-                'available. Using the first {1} plates.'.format(len(plates), len(self.carts)),
-                TotoroPluggerWarning)
+            warnings.warn('PLUGGER: {0} plates to allocate but only {1} carts '
+                          'available. Using the first {1} plates.'.format(len(plates),
+                                                                          len(self.carts)),
+                          TotoroPluggerWarning)
             plates = plates[0:len(self.carts)]
 
         # Gets the active pluggings
@@ -575,10 +567,9 @@ class Plugger(object):
             cartData = self._getCart(sortedCarts, plate)
 
             if cartData is None:
-                warnings.warn(
-                    'cannot allocate a cart for plate {}. '
-                    'There may be unallocated time as a result.'.format(plate.plate_id),
-                    TotoroPluggerWarning)
+                warnings.warn('cannot allocate a cart for plate {}. '
+                              'There may be unallocated time as a result.'.format(plate.plate_id),
+                              TotoroPluggerWarning)
                 continue
 
             cartNumber, pluggedPlate, statusCode, completion = cartData
@@ -619,8 +610,8 @@ class Plugger(object):
         cartOrder = self.getCartOrder(mode=mode)
 
         # Removes cart without an allocated MaNGA plate
-        carts = OrderedDict(
-            [(key, value) for key, value in list(self.carts.items()) if value is not None])
+        carts = OrderedDict([(key, value) for key, value in list(self.carts.items())
+                             if value is not None])
 
         # First we add carts not used to cart_order, with lower priority
         nonUsedCarts = [cartNo for cartNo in config['mangaCarts'] if cartNo not in cartOrder]
