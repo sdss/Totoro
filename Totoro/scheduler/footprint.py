@@ -411,7 +411,10 @@ GAMA_3 = getRectangle((211.5, 223.5, -2, 2))
 GAMA = [GAMA_1, GAMA_2, GAMA_3]
 
 # ALFALFA regions
-ALFALFA_1 = getRectangle((7.5 * 15, 16.5 * 15, 0, 36))
+ALFALFA_1 = getPolygon(np.array([[110, 0.], [250, 0], [250, 18], [232, 18], [232, 24],
+                                 [250, 24], [250, 32], [232, 32], [232, 37], [140, 37],
+                                 [140, 32], [110, 32], [110, 24], [140, 24], [140, 18],
+                                 [110, 18], [110, 0.]]))
 ALFALFA_2 = getRectangle((0, 3. * 15, 0, 36))
 ALFALFA_3 = getRectangle((22 * 15, 24 * 15, 0, 36))
 ALFALFA = [ALFALFA_1, ALFALFA_2, ALFALFA_3]
