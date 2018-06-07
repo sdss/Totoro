@@ -243,7 +243,7 @@ class Plugger(object):
     def _initNoManga(self):
         """Inits a Plugger instance when no MaNGA time is scheduled.
 
-        In this case, the cart assignement contains only those plugged MaNGA
+        In this case, the cart assignment contains only those plugged MaNGA
         plates that are not complete, sorted by preference of the carts being
         overridden by APOGEE."""
 
