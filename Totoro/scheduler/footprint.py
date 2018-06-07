@@ -191,7 +191,7 @@ def getRectangle(vertices, angle=0.0):
 
 def plotPatch(ax, regPatch, zorder=100, projection='rect', useRadians=False, org=0, **kwargs):
 
-    vertices = regPatch.get_path().vertices
+    vertices = regPatch.get_path().vertices.copy()
 
     if projection != 'rect':
         RA = vertices[:, 0]
