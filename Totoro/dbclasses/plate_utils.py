@@ -14,16 +14,18 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from Totoro import log, config, site
-from Totoro.db import getConnection
-from Totoro import exceptions
-from Totoro.utils import intervals
-from scipy.misc import factorial
-import numpy as np
+from __future__ import division, print_function
+
 import collections
 import itertools
+from builtins import range
+
+import numpy as np
+from scipy.misc import factorial
+
+from Totoro import config, exceptions, log, site
+from Totoro.db import getConnection
+from Totoro.utils import intervals
 
 
 def updatePlate(plate, rearrangeIncomplete=False, **kwargs):
@@ -40,21 +42,18 @@ def updatePlate(plate, rearrangeIncomplete=False, **kwargs):
 
     unassignedExposures = getUnassignedExposures(plate)
 
-    newExposures = [exp for exp in unassignedExposures
-                    if exp.isValid(force=True, flag=True)[0]]
+    newExposures = [exp for exp in unassignedExposures if exp.isValid(force=True, flag=True)[0]]
 
     if len(newExposures) == 0:
         return False
 
-    log.debug('plate_id={0}: found {1} new exposures'
-              .format(plate.plate_id, len(newExposures)))
+    log.debug('plate_id={0}: found {1} new exposures'.format(plate.plate_id, len(newExposures)))
 
     for exp in newExposures:
         assignExposureToOptimalSet(plate, exp)
 
         if rearrangeIncomplete:
-            result = rearrangeSets(plate, mode='optimal', scope='incomplete',
-                                   silent=True)
+            result = rearrangeSets(plate, mode='optimal', scope='incomplete', silent=True)
 
             if not result:
                 return result
@@ -69,8 +68,9 @@ def getUnassignedExposures(plate):
 
     scienceExposures = plate.getScienceExposures()
 
-    unassigned = [TotoroExposure(exp) for exp in scienceExposures
-                  if exp.mangadbExposure[0].set_pk is None]
+    unassigned = [
+        TotoroExposure(exp) for exp in scienceExposures if exp.mangadbExposure[0].set_pk is None
+    ]
 
     unassignedSorted = sorted(unassigned, key=lambda exp: exp.exposure_no)
 
@@ -93,7 +93,7 @@ def assignExposureToOptimalSet(plate, exposure):
     optimalSet = getOptimalSet(plate, exposure)
 
     if optimalSet is None:
-        setPK = getConsecutiveSets(1)[0]
+        setPK = int(getConsecutiveSets(1)[0])
         with session.begin():
             if session.query(db.mangaDB.Set).get(setPK) is None:
                 newSet = db.mangaDB.Set(pk=setPK)
@@ -104,15 +104,12 @@ def assignExposureToOptimalSet(plate, exposure):
                 exposure.mangadbExposure[0].set_pk = newSet.pk
 
                 log.debug('plate_id={0}: exposure_no={1} assigned to '
-                          'new set pk={2}'
-                          .format(plate.plate_id, exposure.exposure_no,
-                                  newSet.pk))
+                          'new set pk={2}'.format(plate.plate_id, exposure.exposure_no, newSet.pk))
                 totoroNewSet = TotoroSet(newSet)
                 plate.sets.append(totoroNewSet)
             else:
                 log.debug('plate_id={0}: something failed while assigning new '
-                          'set_pk to exposure_no={1}'
-                          .format(plate.plate_id, exposure.exposure_no))
+                          'set_pk to exposure_no={1}'.format(plate.plate_id, exposure.exposure_no))
                 return
     else:
         with session.begin():
@@ -121,8 +118,8 @@ def assignExposureToOptimalSet(plate, exposure):
             if ss.pk == optimalSet.pk:
                 ss.totoroExposures.append(exposure)
 
-        log.debug('plate_id={0}: exposure_no={1} assigned to set pk={2}'
-                  .format(plate.plate_id, exposure.exposure_no, optimalSet.pk))
+        log.debug('plate_id={0}: exposure_no={1} assigned to set pk={2}'.format(
+            plate.plate_id, exposure.exposure_no, optimalSet.pk))
 
     return
 
@@ -134,8 +131,9 @@ def getOptimalSet(plate, exposure):
 
     dither = exposure.ditherPosition
 
-    incompleteSets = [set for set in plate.sets
-                      if set.getStatus()[0] in ['Incomplete', 'Unplugged']]
+    incompleteSets = [
+        set for set in plate.sets if set.getStatus()[0] in ['Incomplete', 'Unplugged']
+    ]
 
     validSets = []
     signalNoise = []
@@ -208,8 +206,7 @@ def _getSetStatusLabel(exposure):
         return None
 
 
-def rearrangeSets(plate, mode='complete', scope='all', force=False,
-                  LST=None, silent=False):
+def rearrangeSets(plate, mode='complete', scope='all', force=False, LST=None, silent=False):
     """Rearranges exposures in a plate.
 
     If `mode='complete'`, uses a brute-force approach to obtain the best
@@ -269,8 +266,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
         permutationLimit = config['setArrangement']['permutationLimitPlate']
         exposures = [Exposure(exp) for exp in plate.getScienceExposures()]
     elif scope.lower() == 'incomplete':
-        permutationLimit = config['setArrangement'][
-            'permutationLimitIncomplete']
+        permutationLimit = config['setArrangement']['permutationLimitIncomplete']
         exposures = []
         for ss in plate.sets:
             if ss.getStatus()[0] in ['Incomplete', 'Unplugged']:
@@ -296,14 +292,14 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
             validExposures.append(exp)
 
     # Stores overridden sets
-    overridenSets = [ss for ss in plate.sets if ss.status is not None and
-                     'Override' in ss.status.label]
+    overridenSets = [
+        ss for ss in plate.sets if ss.status is not None and 'Override' in ss.status.label
+    ]
 
     # Does some logging.
-    logMode('plate_id={0}: rearranging sets, mode=\'{1}\', scope=\'{2}\''
-            .format(plate.plate_id, mode, scope))
-    logMode('plate_id={0}: found {1} valid exposures'
-            .format(plate.plate_id, len(validExposures)))
+    logMode('plate_id={0}: rearranging sets, mode=\'{1}\', scope=\'{2}\''.format(
+        plate.plate_id, mode, scope))
+    logMode('plate_id={0}: found {1} valid exposures'.format(plate.plate_id, len(validExposures)))
 
     # No exposures to consider.
     if len(validExposures) == 0:
@@ -331,8 +327,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
     ditherPositions = [exp.ditherPosition for exp in validExposures]
     nPermutations = getNumberPermutations(ditherPositions)
 
-    logMode('plate_id={0}: testing {1} permutations'.format(plate.plate_id,
-                                                            nPermutations))
+    logMode('plate_id={0}: testing {1} permutations'.format(plate.plate_id, nPermutations))
 
     if nPermutations > permutationLimit:
         if force is False:
@@ -375,8 +370,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
 
         for setIndices in permutation:
 
-            setExposures = [validExposures[ii] for ii in setIndices
-                            if ii is not None]
+            setExposures = [validExposures[ii] for ii in setIndices if ii is not None]
 
             ss = Set.fromExposures(setExposures)
             sets.append(ss)
@@ -406,15 +400,13 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
 
         # If the plate completion is lower than setRearrFactor times the
         # current maximum completion, we don't bother storing this permutation.
-        if (len(completions) == 0 or
-                plateCompletion >= setRearrFactor * np.max(completions)):
+        if (len(completions) == 0 or plateCompletion >= setRearrFactor * np.max(completions)):
             completions.append(plateCompletion)
             goodArrangements.append(fixBadSets(sets))
 
         # Every 10% of the permutations.
         if (nn + 1) * 100. / nPermutations % 10 == 0:
-            logMode('{0:d}% completed'
-                    .format(int((nn + 1) * 100. / nPermutations)))
+            logMode('{0:d}% completed'.format(int((nn + 1) * 100. / nPermutations)))
 
     logMode('{0} permutations tested.'.format(nPermutations))
 
@@ -426,8 +418,7 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False,
         completions += plateCompletion
 
     # From the good arrangements already selected, find the optimal one.
-    optimalArrangement = selectOptimalArrangement(goodArrangements,
-                                                  completions, LST=LST)
+    optimalArrangement = selectOptimalArrangement(goodArrangements, completions, LST=LST)
 
     # If the scope is 'incomplete', adds the good sets to the optimal
     # arrangement.
@@ -509,8 +500,8 @@ def applyArrangement(plate, arrangement):
     if not any(expMock):
 
         # Selects only new sets and skips overridden sets
-        arrangement = [ss for ss in arrangement if ss.status is None or
-                       'Override' not in ss.status.label]
+        arrangement = [ss for ss in arrangement
+                       if ss.status is None or 'Override' not in ss.status.label]
 
         # Removes sets and exposure-set assignment from the DB
         with session.begin():
@@ -534,16 +525,14 @@ def applyArrangement(plate, arrangement):
         # Now creates the new sets and assigns the exposures
         with session.begin():
             for ii, ss in enumerate(arrangement):
-                newSet = db.mangaDB.Set(pk=pks[ii])
+                newSet = db.mangaDB.Set(pk=int(pks[ii]))
                 session.add(newSet)
                 session.flush()
                 for exp in ss.totoroExposures:
                     exp.mangadbExposure[0].set_pk = newSet.pk
 
                     log.debug('plate_id={0}: exposure_no={1} assigned '
-                              'to set pk={2}'
-                              .format(plate.plate_id, exp.exposure_no,
-                                      newSet.pk))
+                              'to set pk={2}'.format(plate.plate_id, exp.exposure_no, newSet.pk))
 
         # Finally, reloads the exposures and sets into plate.
         plate.sets = []
@@ -566,8 +555,7 @@ def calculatePermutations(inputList):
     pairs = [(nn, inputList[nn]) for nn in range(len(inputList))]
     pairs = sorted(pairs, key=lambda value: value[1])
 
-    splitPairs = [list(bb) for aa, bb in itertools.groupby(
-                  pairs, lambda value: value[1])]
+    splitPairs = [list(bb) for aa, bb in itertools.groupby(pairs, lambda value: value[1])]
     sortedPairs = sorted(splitPairs, key=lambda xx: len(xx))[::-1]
 
     indicesSeed = [[element[0] for element in sP] for sP in sortedPairs]
@@ -578,14 +566,13 @@ def calculatePermutations(inputList):
 
     if len(indicesSeed) > 0:
         indices = [[tuple(indicesSeed[0])]]
-        indices += [list(itertools.permutations(idx))
-                    for idx in indicesSeed[1:]]
+        indices += [list(itertools.permutations(idx)) for idx in indicesSeed[1:]]
     else:
         indices = []
 
     cartesianProduct = itertools.product(*indices)
     for prod in cartesianProduct:
-        yield list(itertools.izip_longest(*prod))
+        yield list(itertools.zip_longest(*prod))
 
 
 def getNumberPermutations(ditherPositions):
@@ -599,11 +586,11 @@ def getNumberPermutations(ditherPositions):
         repDict[cc] += 1
 
     maxNDither = 0
-    for key in repDict.keys():
+    for key in list(repDict.keys()):
         if repDict[key] > maxNDither:
             maxNDither = repDict[key]
 
-    return int(factorial(maxNDither) ** (len(repDict.keys()) - 1))
+    return int(factorial(maxNDither)**(len(list(repDict.keys())) - 1))
 
 
 def fixBadSets(sets):
@@ -632,8 +619,7 @@ def fixBadSets(sets):
             # of them is a valid set.
             validSets = []
             for ii, jj in [[0, 1], [0, 2], [1, 2]]:
-                testSet = Set.fromExposures(
-                    [ss.totoroExposures[ii], ss.totoroExposures[jj]])
+                testSet = Set.fromExposures([ss.totoroExposures[ii], ss.totoroExposures[jj]])
                 if testSet.getStatus(silent=True)[0] != 'Bad':
                     validSets.append(testSet)
 
@@ -643,14 +629,14 @@ def fixBadSets(sets):
             else:
                 # Otherwise, selects the combination that produces an
                 # incomplete set with maximum SN2.
-                signalToNoise = [np.nansum(xx.getSN2Array())
-                                 for xx in validSets]
+                signalToNoise = [np.nansum(xx.getSN2Array()) for xx in validSets]
 
                 maxSet = validSets[np.argmax(signalToNoise)]
 
                 toAdd.append(maxSet)
-                missingExposure = [exp for exp in ss.totoroExposures
-                                   if exp not in maxSet.totoroExposures]
+                missingExposure = [
+                    exp for exp in ss.totoroExposures if exp not in maxSet.totoroExposures
+                ]
 
                 toAdd.append(Set.fromExposures(missingExposure))
 
@@ -676,12 +662,10 @@ def getConsecutiveSets(nSets=1):
     # Creates a list of unused set pks
     setPKs = np.array(setPKs).squeeze().tolist()
     setPKs = sorted(setPKs)
-    candidatePKs = np.array([ii for ii in range(1, setPKs[-1] + 1)
-                             if ii not in setPKs])
+    candidatePKs = np.array([ii for ii in range(1, setPKs[-1] + 1) if ii not in setPKs])
 
     # Splits the pks into groups of consecutive values
-    candidatePKsSplit = np.split(
-        candidatePKs, np.where(np.diff(candidatePKs) != 1)[0] + 1)
+    candidatePKsSplit = np.split(candidatePKs, np.where(np.diff(candidatePKs) != 1)[0] + 1)
 
     # If there is a groups with at least as many values as nSets, uses it.
     pks = None
@@ -692,7 +676,7 @@ def getConsecutiveSets(nSets=1):
 
     # If no consecutive range of pks exists, just continues from the last pk
     if pks is None:
-        pks = range(setPKs[-1] + 1, setPKs[-1] + 1 + nSets)
+        pks = list(range(setPKs[-1] + 1, setPKs[-1] + 1 + nSets))
 
     return pks
 

@@ -12,8 +12,8 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
+
 import os
 
 
@@ -29,9 +29,7 @@ def readPath(path):
     """
 
     if path[0] == '+':
-        return os.path.realpath(
-            os.path.join(
-                os.path.dirname(__file__), path[1:]))
+        return os.path.realpath(os.path.join(os.path.dirname(__file__), path[1:]))
 
     else:
         return os.path.realpath(os.path.expanduser(os.path.expandvars(path)))

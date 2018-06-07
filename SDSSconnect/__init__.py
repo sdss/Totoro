@@ -1,1 +1,2 @@
-from DatabaseConnection import DatabaseConnection
+from __future__ import absolute_import
+from .DatabaseConnection import DatabaseConnection

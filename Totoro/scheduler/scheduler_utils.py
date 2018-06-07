@@ -14,14 +14,15 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-import numpy as np
-from Totoro import utils
-from Totoro import config, site
-from Totoro.scheduler import observingPlan
-from numbers import Number
+from __future__ import division, print_function
+
 from collections import OrderedDict
+from numbers import Number
+
+import numpy as np
+
+from Totoro import config, site, utils
+from Totoro.scheduler import observingPlan
 
 
 expTime = config['exposure']['exposureTime']
@@ -58,8 +59,7 @@ def _addBookkeepingAttrs(plates):
         plate._before['completion'] = plate.getPlateCompletion(useMock=True)
         plate._before['completion+'] = plate.getPlateCompletion(
             useMock=True, includeIncompleteSets=True)
-        plate._before['nExposures'] = len(
-            plate.getTotoroExposures(onlySets=True))
+        plate._before['nExposures'] = len(plate.getTotoroExposures(onlySets=True))
 
 
 def getDictOfSchedulablePlates(plates, mode):
@@ -84,8 +84,8 @@ def getDictOfSchedulablePlates(plates, mode):
     assert mode in ['planner', 'plugger']
 
     if mode == 'plugger':
-        schPlates = OrderedDict([('plugged', []), ('platesWithSignal', []),
-                                 ('incomplete', []), ('backup', [])])
+        schPlates = OrderedDict([('plugged', []), ('platesWithSignal', []), ('incomplete', []),
+                                 ('backup', [])])
         for plate in plates:
             if plate.isPlugged:
                 schPlates['plugged'].append(plate)
@@ -97,14 +97,11 @@ def getDictOfSchedulablePlates(plates, mode):
                 schPlates['backup'].append(plate)
 
     elif mode == 'planner':
-        schPlates = OrderedDict([('platesWithSignal', []), ('drilled', []),
-                                 ('backup', []),
-                                 ('fieldsInFootprint', []),
-                                 ('fieldsOutsideFootprint', [])])
+        schPlates = OrderedDict([('platesWithSignal', []), ('drilled', []), ('backup', []),
+                                 ('fieldsInFootprint', []), ('fieldsOutsideFootprint', [])])
         for plate in plates:
             isPlate = isinstance(plate, Plate) and not isinstance(plate, Field)
-            isBackup = (hasattr(plate, 'statuses') and
-                        len(plate.statuses) > 0 and
+            isBackup = (hasattr(plate, 'statuses') and len(plate.statuses) > 0 and
                         plate.statuses[0].label.lower() == 'backup')
             isInFootPrint = plate.inFootprint
             if plate.getPlateCompletion(includeIncompleteSets=True) > 0:
@@ -130,8 +127,7 @@ def getDictOfSchedulablePlates(plates, mode):
     return schPlates
 
 
-def getOptimalPlate(plates, jdRange, mode='plugger', prioritiseAPO=None,
-                    **kwargs):
+def getOptimalPlate(plates, jdRange, mode='plugger', prioritiseAPO=None, **kwargs):
     """Gets the optimal plate to observe in a range of JDs."""
 
     assert len(jdRange) == 2
@@ -142,15 +138,14 @@ def getOptimalPlate(plates, jdRange, mode='plugger', prioritiseAPO=None,
     optimalPlate = None
 
     # Makes sure we are not dealing with any completed plates.
-    incompletePlates = [plate for plate in plates
-                        if not utils.isPlateComplete(plate,
-                                                     write_apocomplete=False,
-                                                     mark_complete=False)]
+    incompletePlates = [
+        plate for plate in plates
+        if not utils.isPlateComplete(plate, write_apocomplete=False, mark_complete=False)
+    ]
 
     # Selects plates that intersect with the observing window for at least
     # one exposure.
-    observablePlates = [plate for plate in incompletePlates
-                        if isObservable(plate, jdRange)]
+    observablePlates = [plate for plate in incompletePlates if isObservable(plate, jdRange)]
 
     # If there are no plates that meet those requirements, uses all the
     # incomplete plates
@@ -184,8 +179,7 @@ def getOptimalPlate(plates, jdRange, mode='plugger', prioritiseAPO=None,
         if not prioritiseAPO:
 
             optimalPlate, newExposures = runSimulation(
-                platesToSchedule, jdRange, mode=mode,
-                scope=scope, normalise=normalise)
+                platesToSchedule, jdRange, mode=mode, scope=scope, normalise=normalise)
 
             if optimalPlate is not None:
                 return optimalPlate, newExposures
@@ -194,8 +188,7 @@ def getOptimalPlate(plates, jdRange, mode='plugger', prioritiseAPO=None,
 
             for locPlates in _getPlatesAtAPO(platesToSchedule):
                 optimalPlate, newExposures = runSimulation(
-                    locPlates, jdRange, mode=mode,
-                    scope=scope, normalise=normalise)
+                    locPlates, jdRange, mode=mode, scope=scope, normalise=normalise)
 
                 if optimalPlate is not None:
                     return optimalPlate, newExposures
@@ -219,16 +212,14 @@ def _getPlatesAtAPO(plates):
     return atAPO, notAtAPO
 
 
-def runSimulation(plates, jdRange, mode='plugger', scope='all',
-                  normalise=True, **kwargs):
+def runSimulation(plates, jdRange, mode='plugger', scope='all', normalise=True, **kwargs):
     """Runs the simulation for a subset of plates."""
 
     # Adss bookkeeping information
     _addBookkeepingAttrs(plates)
 
     simulatePlates(plates, jdRange, mode, **kwargs)
-    optimalPlate = selectPlate(plates, jdRange,
-                               scope=scope, normalise=normalise)
+    optimalPlate = selectPlate(plates, jdRange, scope=scope, normalise=normalise)
 
     if optimalPlate:
         newExps = cleanupPlates(plates, optimalPlate, jdRange)
@@ -243,9 +234,9 @@ def _normaliseWindowLength(plates, jdRange, factor=1.0, apply=True):
 
     lstRange = site.localSiderealTime(jdRange)
     plateWindowLength = np.array([
-        utils.getIntervalIntersectionLength(plate.getLSTRange(), lstRange,
-                                            wrapAt=24.)
-        for plate in plates])
+        utils.getIntervalIntersectionLength(plate.getLSTRange(), lstRange, wrapAt=24.)
+        for plate in plates
+    ])
 
     if len(plateWindowLength[plateWindowLength > 0]) == 0:
         return
@@ -256,8 +247,7 @@ def _normaliseWindowLength(plates, jdRange, factor=1.0, apply=True):
 
     plateWindowLenghtNormalised = np.array((plateWindowLength / minLength))
 
-    plateWindowLenghtNormalisedFactor = (
-        factor * (plateWindowLenghtNormalised - 1.) + 1)
+    plateWindowLenghtNormalisedFactor = (factor * (plateWindowLenghtNormalised - 1.) + 1)
 
     # We restore the original factor for plates with window length 0.
     # To be improved at some point.
@@ -276,12 +266,10 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
     nextNightJDrange = _getNextNightRange(jdRange)
 
     # First we exclude plates without new exposures
-    plates = [plate for plate in plates
-              if plate._after['nNewExposures'] > 0]
+    plates = [plate for plate in plates if plate._after['nNewExposures'] > 0]
 
     # Sorts plates by inverse plate completion.
-    plates = sorted(plates, reverse=True,
-                    key=lambda plate: plate.getPlateCompletion())
+    plates = sorted(plates, reverse=True, key=lambda plate: plate.getPlateCompletion())
 
     if len(plates) == 0:
         return None
@@ -289,15 +277,13 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
     # If we are scheduling only plugged plates, we rather plug a new plate
     # unless we can observe a plugged plate at least for a whole set.
     availableTime = (jdRange[1] - jdRange[0]) * 24.
-    completionIncrease = np.array([plate._after['completion'] -
-                                   plate._before['completion']
-                                   for plate in plates])
+    completionIncrease = np.array(
+        [plate._after['completion'] - plate._before['completion'] for plate in plates])
 
     # minSchedulingTime ensures that if the remaining time < length of a set,
     # we still use the plugged plates, if any.
     if scope == 'plugged':
-        if (availableTime > minSchedulingTime and
-                np.all(completionIncrease == 0)):
+        if (availableTime > minSchedulingTime and np.all(completionIncrease == 0)):
             return None
     else:
         # If no plate has been observed for a whole set, we try to use first
@@ -313,16 +299,15 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
         plates = platesAtAPO
 
     # Now tries to select only plates that have been marked.
-    markedPlates = [plate for plate in plates
-                    if 'Accepted' in [status.label
-                                      for status in plate.statuses]]
+    markedPlates = [
+        plate for plate in plates if 'Accepted' in [status.label for status in plate.statuses]
+    ]
     if len(markedPlates) > 0:
         plates = markedPlates
 
     # We check if any of the plate is complete after the simulation.
     # If so, we return the one with fewer new exposures.
-    completePlates = [plate for plate in plates
-                      if plate._after['completion'] > 1]
+    completePlates = [plate for plate in plates if plate._after['completion'] > 1]
     nNewExposures = [plate._after['nNewExposures'] for plate in completePlates]
     if len(completePlates) > 0:
         return completePlates[np.argmin(nNewExposures)]
@@ -353,8 +338,7 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
 
         # We also normalise using the following night, if possible.
         if nextNightJDrange is not None:
-            _normaliseWindowLength(plates, nextNightJDrange,
-                                   factor=nextNightFactor, apply=True)
+            _normaliseWindowLength(plates, nextNightJDrange, factor=nextNightFactor, apply=True)
 
         # Now we normalise plate completion using a metric that gives higher
         # priority to plates for which we have patched incomplete sets.
@@ -396,8 +380,7 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
 
     # Selects the plates that have the largest increase in completion
     completionIncrease = np.array(
-        [plate._after['completion'] - plate._before['completion']
-         for plate in plates])
+        [plate._after['completion'] - plate._before['completion'] for plate in plates])
 
     plates = np.array(plates)
     maxCompletionIncrease = np.max(completionIncrease)
@@ -410,16 +393,14 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
     # observed for at least a set. In this case, if possible, we want to use
     # a plate that already has signal.
     if maxCompletionIncrease == 0:
-        platesWithSignal = [plate for plate in plates
-                            if plate._before['completion+'] > 0]
+        platesWithSignal = [plate for plate in plates if plate._before['completion+'] > 0]
         if len(platesWithSignal) > 0:
             plates = platesWithSignal
 
     # If several plates have maximum completion increase, use the incomplete
     # sets to break the tie.
     completionIncreasePlus = np.array(
-        [plate._after['completion+'] - plate._before['completion+']
-         for plate in plates])
+        [plate._after['completion+'] - plate._before['completion+'] for plate in plates])
 
     return plates[np.argmax(completionIncreasePlus)]
 
@@ -441,8 +422,13 @@ def _completionFactor(plates, factor):
     return plates
 
 
-def simulatePlates(plates, jdRange, mode, efficiency=None, SN2Factor=None,
-                   maxAltitude=None, **kwargs):
+def simulatePlates(plates,
+                   jdRange,
+                   mode,
+                   efficiency=None,
+                   SN2Factor=None,
+                   maxAltitude=None,
+                   **kwargs):
     """Simulates exposures for a list of plates within a range of JDs."""
 
     mode = mode.lower()
@@ -501,12 +487,14 @@ def simulatePlates(plates, jdRange, mode, efficiency=None, SN2Factor=None,
             #     # the exposure is not valid.
             #     break
             else:
-                result = plate.addMockExposure(set=None, startTime=jd,
-                                               expTime=expTimeEff,
-                                               plugging=plugging,
-                                               factor=SN2Factor,
-                                               rearrange=rearrange,
-                                               silent=True)
+                result = plate.addMockExposure(
+                    set=None,
+                    startTime=jd,
+                    expTime=expTimeEff,
+                    plugging=plugging,
+                    factor=SN2Factor,
+                    rearrange=rearrange,
+                    silent=True)
 
                 # If everything worked, we add a flag to mark this exposure
                 # as temporary.
@@ -525,9 +513,10 @@ def simulatePlates(plates, jdRange, mode, efficiency=None, SN2Factor=None,
         plate._after['completion'] = plate.getPlateCompletion(useMock=True)
         plate._after['completion+'] = plate.getPlateCompletion(
             useMock=True, includeIncompleteSets=True)
-        plate._after['nNewExposures'] = len(
-            [exp for exp in plate.getTotoroExposures(onlySets=True)
-             if hasattr(exp, '_tmp') and exp._tmp])
+        plate._after['nNewExposures'] = len([
+            exp for exp in plate.getTotoroExposures(onlySets=True)
+            if hasattr(exp, '_tmp') and exp._tmp
+        ])
 
     return success
 
@@ -539,8 +528,7 @@ def isObservable(plate, jdRange):
     plateLSTRange = plate.getLSTRange()
     lstRange = site.localSiderealTime(jdRange)
 
-    if not utils.intervals.isPointInInterval(lstRange[0], plateLSTRange,
-                                             wrapAt=24.):
+    if not utils.intervals.isPointInInterval(lstRange[0], plateLSTRange, wrapAt=24.):
         return False
 
     if utils.intervals.getIntervalIntersectionLength(
@@ -569,19 +557,18 @@ def cleanupPlates(plates, optimalPlate, jdRange):
                 delattr(plate, attr)
 
         for ss in plate.sets:
-            ss.totoroExposures = [exp for exp in ss.totoroExposures
-                                  if not hasattr(exp, '_tmp') or not exp._tmp]
+            ss.totoroExposures = [
+                exp for exp in ss.totoroExposures if not hasattr(exp, '_tmp') or not exp._tmp
+            ]
             ss._status = None
 
-        plate.sets = [ss for ss in plate.sets
-                      if not ss.isMock or len(ss.totoroExposures) > 0]
+        plate.sets = [ss for ss in plate.sets if not ss.isMock or len(ss.totoroExposures) > 0]
 
     if optimalPlate is None:
         return
 
     # Calculates change in completion rate in the optimal plate
-    completionChange = (optimalPlate._after['completion'] -
-                        optimalPlate._before['completion'])
+    completionChange = (optimalPlate._after['completion'] - optimalPlate._before['completion'])
 
     for attr in ['_before', '_after', '_tmp']:
         if hasattr(optimalPlate, attr):
@@ -589,9 +576,10 @@ def cleanupPlates(plates, optimalPlate, jdRange):
 
     # Calculates how much time we have actually scheduled with the
     # optimal plate
-    newExpJDs = np.array(
-        [exp.getJD() for exp in optimalPlate.getTotoroExposures()
-         if hasattr(exp, '_tmp') and exp._tmp])
+    newExpJDs = np.array([
+        exp.getJD() for exp in optimalPlate.getTotoroExposures()
+        if hasattr(exp, '_tmp') and exp._tmp
+    ])
     timeJDRange = np.sum(newExpJDs[:, 1] - newExpJDs[:, 0])
 
     # If the plate has a change in completion, we may want to exclude the new
@@ -608,19 +596,17 @@ def cleanupPlates(plates, optimalPlate, jdRange):
 
             # Finds new exposures in the last set and calculates the jd range
             # they cover.
-            exposuresToRemove = [exp for exp in lastSet.totoroExposures
-                                 if hasattr(exp, '_tmp') and exp._tmp]
+            exposuresToRemove = [
+                exp for exp in lastSet.totoroExposures if hasattr(exp, '_tmp') and exp._tmp
+            ]
 
             if len(exposuresToRemove) > 0:
-                exposuresToRemoveJD = np.array(
-                    [exp.getJD() for exp in exposuresToRemove])
-                timeToRemove = np.sum(exposuresToRemoveJD[:, 1] -
-                                      exposuresToRemoveJD[:, 0])
+                exposuresToRemoveJD = np.array([exp.getJD() for exp in exposuresToRemove])
+                timeToRemove = np.sum(exposuresToRemoveJD[:, 1] - exposuresToRemoveJD[:, 0])
 
                 # Calculates how much time unscheduled there is if we remove
                 # the exposures.
-                timeLeftAfterRemoval = (jdRange[1] - jdRange[0] - timeJDRange +
-                                        timeToRemove)
+                timeLeftAfterRemoval = (jdRange[1] - jdRange[0] - timeJDRange + timeToRemove)
 
                 # If the time is > 1 hour, it might be that we can do something
                 # more useful with that time, so we remove the exposures.

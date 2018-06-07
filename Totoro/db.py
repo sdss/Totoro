@@ -13,10 +13,10 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from Totoro import config
+from __future__ import division, print_function
+
 from SDSSconnect import DatabaseConnection
+from Totoro import config
 
 
 def getConfigurationProfiles():
@@ -52,7 +52,9 @@ def getConnection(profile=None):
             .format(**config['dbConnection']))
         dbConn = DatabaseConnection(
             databaseConnectionString=databaseConnectionString,
-            new=True, name=config['dbConnection']['name'], default=True)
+            new=True,
+            name=config['dbConnection']['name'],
+            default=True)
         checkOpenSession()
         return dbConn
     else:
@@ -60,14 +62,13 @@ def getConnection(profile=None):
             return DatabaseConnection.getConnection(profile.lower())
         else:
             if profile.lower() in configProfiles:
-                databaseConnectionString = (
-                    'postgresql+psycopg2://{user}:{password}@'
-                    '{host}:{port}/{database}'
-                    .format(**configProfiles[profile.lower()])
-                )
+                databaseConnectionString = ('postgresql+psycopg2://{user}:{password}@'
+                                            '{host}:{port}/{database}'
+                                            .format(**configProfiles[profile.lower()]))
                 dbConn = DatabaseConnection(
                     databaseConnectionString=databaseConnectionString,
-                    new=True, name=profile.lower())
+                    new=True,
+                    name=profile.lower())
                 checkOpenSession()
                 return dbConn
             else:

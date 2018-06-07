@@ -12,38 +12,23 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from Totoro.dbclasses import getAll
-from Totoro.db import getConnection
-import numpy as np
+from __future__ import division, print_function
+
 import argparse
 import os
 import sys
 
+import numpy as np
+
+from Totoro.db import getConnection
+from Totoro.dbclasses import getAll
+
 
 db = getConnection()
 
-points = np.array([[-15, 4],
-                   [-10, 4],
-                   [-5, 4],
-                   [0, 5],
-                   [5, 5],
-                   [10, 5],
-                   [15, 5],
-                   [20, 6],
-                   [25, 4],
-                   [30, 3],
-                   [32, 3],
-                   [35, 3],
-                   [40, 4],
-                   [43, 7],
-                   [45, 7],
-                   [50, 6],
-                   [55, 5],
-                   [60, 5],
-                   [65, 5],
-                   [70, 5]])
+points = np.array([[-15, 4], [-10, 4], [-5, 4], [0, 5], [5, 5], [10, 5], [15, 5], [20, 6], [25, 4],
+                   [30, 3], [32, 3], [35, 3], [40, 4], [43, 7], [45, 7], [50, 6], [55, 5], [60, 5],
+                   [65, 5], [70, 5]])
 
 pp = np.polyfit(points[:, 0], points[:, 1], 10)
 
@@ -80,17 +65,16 @@ def autoAssignPlatePriorities(dryRun=False):
             with db.session.begin():
                 plate.plate_pointings[0].priority = newPriority
         print('plate_id={0} (Dec={1:.2f}) assigned priority={2}'.format(
-              plate.plate_id, plate.dec, newPriority))
+            plate.plate_id, plate.dec, newPriority))
 
     return
 
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     prog=os.path.basename(sys.argv[0]))
-    parser.add_argument('--dry-run', action='store_true', dest='dryrun',
-                        help='Only tests changes.')
+    parser = argparse.ArgumentParser(description=__doc__, prog=os.path.basename(sys.argv[0]))
+    parser.add_argument(
+        '--dry-run', action='store_true', dest='dryrun', help='Only tests changes.')
 
     args = parser.parse_args()
 

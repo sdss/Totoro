@@ -12,40 +12,48 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
+import os
+import subprocess
+import warnings
+from builtins import range, str
 from collections import OrderedDict
 from itertools import combinations
 
-from sqlalchemy.exc import InvalidRequestError, ResourceClosedError
-from scipy.spatial.distance import pdist
-
 import numpy as np
-import warnings
-import os
-import subprocess
+from pydl.pydlutils.yanny import yanny
+from scipy.spatial.distance import pdist
+from sqlalchemy.exc import InvalidRequestError, ResourceClosedError
 
-from Totoro import log
-from Totoro import config
-from Totoro import exceptions
+from Totoro import config, exceptions, log
 from Totoro.db import getConnection
-
-from sdss.manga.mlhalimit import mlhalimit as mlhalimitHours
-from sdss.utilities.yanny import yanny
 
 
 _avoid_cart2_cahche = {}
 
 
 def mlhalimit(dec):
-    """Returns HA limits in degrees."""
+    """Returns HA limits in DEGREES.
 
-    return mlhalimitHours(dec) * 15.
+    Calculates the maximum HAs acceptable for a list of declinations.
+    Uses the polynomial fit by David Law and a omega limit of 0.5.
+    """
+
+    isIterable = hasattr(dec, '__iter__')
+
+    funcFit = np.array([1.78693, 0.0663050, -0.00174096, 2.62002e-05, -1.03959e-07,
+                        -1.49150e-09])[::-1]
+
+    dec = np.atleast_1d(dec)
+    halimit = np.abs(np.polyval(funcFit, dec)) * 15.
+
+    # halimit[np.where((dec < -10) | (dec > 80))] = 0.0
+
+    return halimit[0] if not isIterable else halimit
 
 
-def computeAirmass(dec, ha, lat=config['observatory']['latitude'],
-                   correct=[75., 10.]):
+def computeAirmass(dec, ha, lat=config['observatory']['latitude'], correct=[75., 10.]):
     """Calculates the airmass for a given declination and HA (in degrees).
 
     By default, assumes that the latitude of the observation is the one set
@@ -59,9 +67,9 @@ def computeAirmass(dec, ha, lat=config['observatory']['latitude'],
     if ha > 180:
         ha -= 360
 
-    airmass = (np.sin(lat * np.pi / 180.) * np.sin(dec * np.pi / 180.) +
-               np.cos(lat * np.pi / 180.) * np.cos(dec * np.pi / 180.) *
-               np.cos(ha * np.pi / 180.)) ** (-1)
+    airmass = (
+        np.sin(lat * np.pi / 180.) * np.sin(dec * np.pi / 180.) +
+        np.cos(lat * np.pi / 180.) * np.cos(dec * np.pi / 180.) * np.cos(ha * np.pi / 180.))**(-1)
 
     if correct is not None:
         airmass[np.abs(ha) > correct[0]] = correct[1]
@@ -83,22 +91,25 @@ def mark_plate_complete(plate):
     if 'Good' in plugging_status or len(plugging_status) == 0:
         return
 
-    sorted_plugging = sorted(plate.pluggings, key=lambda plug: (plug.fscan_mjd,
-                                                                plug.fscan_id))
+    sorted_plugging = sorted(plate.pluggings, key=lambda plug: (plug.fscan_mjd, plug.fscan_id))
 
     last_plugging = sorted_plugging[-1]
 
     with session.begin():
-        good_pk = session.query(plateDB.PluggingStatus.pk).filter(
-            plateDB.PluggingStatus.label == 'Good').scalar()
+        good_pk = session.query(
+            plateDB.PluggingStatus.pk).filter(plateDB.PluggingStatus.label == 'Good').scalar()
         last_plugging.plugging_status_pk = good_pk
 
     return True
 
 
-def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
-                    write_apocomplete=True, overwrite=False,
-                    mark_complete=True, **kwargs):
+def isPlateComplete(plate,
+                    format='plate_id',
+                    forceCheckCompletion=False,
+                    write_apocomplete=True,
+                    overwrite=False,
+                    mark_complete=True,
+                    **kwargs):
     """Returns True if a plate is complete using the MaNGA logic.
 
     If ``forceCheckCompletion`` is False and the plugging is marked as
@@ -150,20 +161,19 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
                 if n_sets >= field_config['complete_with_n_sets']:
                     plateComplete = True
 
-    if (plateComplete is True and
-            np.isnan(plate.getCumulatedSN2(includeIncomplete=False)).any()):
+    if (plateComplete is True and np.isnan(plate.getCumulatedSN2(includeIncomplete=False)).any()):
         log.debug('plate_id={0}: not all cameras have been correctly reduced. '
                   'Setting plateComplete=False.'.format(plate.plate_id))
         plateComplete = False
 
     if plugComplete is not None:
         if plugComplete is not plateComplete:
-            warnings.warn('plate={0}: plugging status is {1} but calculated '
-                          'status is {2}.'.format(
-                              plate.plate_id,
-                              'complete' if plugComplete else 'incomplete',
-                              'complete' if plateComplete else 'incomplete'),
-                          exceptions.TotoroUserWarning)
+            warnings.warn(
+                'plate={0}: plugging status is {1} but calculated '
+                'status is {2}.'.format(plate.plate_id, 'complete'
+                                        if plugComplete else 'incomplete', 'complete'
+                                        if plateComplete else 'incomplete'),
+                exceptions.TotoroUserWarning)
 
     completion_status = plugComplete or plateComplete
 
@@ -176,9 +186,14 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
     return completion_status
 
 
-def getAPOcomplete(plates, format='plate_id',
-                   SN2_blue=None, SN2_red=None, limitSN=False,
-                   func=np.max, createFile=False, reindex_sets=True,
+def getAPOcomplete(plates,
+                   format='plate_id',
+                   SN2_blue=None,
+                   SN2_red=None,
+                   limitSN=False,
+                   func=np.max,
+                   createFile=False,
+                   reindex_sets=True,
                    **kwargs):
     """Returns a dictionary with the APOcomplete output.
 
@@ -241,9 +256,9 @@ def getAPOcomplete(plates, format='plate_id',
             plate = Plate(plate, format=format.lower(), **kwargs)
 
         if isPlateComplete(plate, write_apocomplete=False) is False:
-            warnings.warn('plate_id={0} is not complete. APOcomplete output '
-                          'must not be used.'.format(plate.plate_id),
-                          exceptions.TotoroUserWarning)
+            warnings.warn(
+                'plate_id={0} is not complete. APOcomplete output '
+                'must not be used.'.format(plate.plate_id), exceptions.TotoroUserWarning)
 
         APOcomplete[plate.plate_id] = []
 
@@ -255,19 +270,17 @@ def getAPOcomplete(plates, format='plate_id',
                 combSets = list(combinations(validSets, nSets))
                 SN2 = np.array([_cumulatedSN2(sets) for sets in combSets])
 
-                overSN2 = [(combSets[ii], SN2[ii])
-                           for ii in range(len(combSets))
+                overSN2 = [(combSets[ii], SN2[ii]) for ii in range(len(combSets))
                            if SN2[ii][0] >= SN2_blue and SN2[ii][1] >= SN2_red]
 
                 if len(overSN2) > 0:
 
                     relativeSN2 = np.array(
-                        [(overSN2[ii][1][0] / SN2_blue) *
-                         (overSN2[ii][1][1] / SN2_red)
+                        [(overSN2[ii][1][0] / SN2_blue) * (overSN2[ii][1][1] / SN2_red)
                          for ii in range(len(overSN2))])
 
-                    setsToAPOcomplete = overSN2[
-                        np.where(relativeSN2 == func(relativeSN2))[0][0]][0]
+                    setsToAPOcomplete = overSN2[np.where(
+                        relativeSN2 == func(relativeSN2))[0][0]][0]
 
                     break
 
@@ -282,8 +295,7 @@ def getAPOcomplete(plates, format='plate_id',
                 dPos = exp.ditherPosition.upper()
                 nExp = exp.exposure_no
 
-                APOcomplete[plate.plate_id].append(
-                    [plate.plate_id, mjd, pk, dPos, nExp])
+                APOcomplete[plate.plate_id].append([plate.plate_id, mjd, pk, dPos, nExp])
 
         if len(setsToAPOcomplete) > 0:
             apoCompleteSN2 = _cumulatedSN2(setsToAPOcomplete)
@@ -292,13 +304,14 @@ def getAPOcomplete(plates, format='plate_id',
 
         if apoCompleteSN2[0] >= SN2_blue and apoCompleteSN2[1] >= SN2_red:
             log.info('APOcomplete for plate_id={0} returned with '
-                     'SN2_blue={1:.1f}, SN2_red={2:.1f}.'.format(
-                         plate.plate_id, apoCompleteSN2[0], apoCompleteSN2[1]))
+                     'SN2_blue={1:.1f}, SN2_red={2:.1f}.'.format(plate.plate_id, apoCompleteSN2[0],
+                                                                 apoCompleteSN2[1]))
         else:
-            warnings.warn('plate_id={0} has SN2_blue={1:.1f}, SN2_red={2:.1f},'
-                          ' which is lower than the thresholds.'.format(
-                              plate.plate_id, apoCompleteSN2[0],
-                              apoCompleteSN2[1]), exceptions.TotoroUserWarning)
+            warnings.warn(
+                'plate_id={0} has SN2_blue={1:.1f}, SN2_red={2:.1f},'
+                ' which is lower than the thresholds.'.format(plate.plate_id, apoCompleteSN2[0],
+                                                              apoCompleteSN2[1]),
+                exceptions.TotoroUserWarning)
 
     if createFile:
         createAPOcompleteFile(APOcomplete, **kwargs)
@@ -306,15 +319,13 @@ def getAPOcomplete(plates, format='plate_id',
     return APOcomplete
 
 
-def createAPOcompleteFile(APOcomplete, path=None, overwrite=False,
-                          svn_add=True):
+def createAPOcompleteFile(APOcomplete, path=None, overwrite=False, svn_add=True):
     """Writes the APOcomplete file in Yanny format."""
 
     for plate in APOcomplete:
 
         plateXX = '{:06d}'.format(plate)[0:4] + 'XX'
-        default_path = os.path.join(os.environ['MANGACORE_DIR'], 'apocomplete',
-                                    plateXX)
+        default_path = os.path.join(os.environ['MANGACORE_DIR'], 'apocomplete', plateXX)
 
         path = default_path if path is None else path
 
@@ -323,11 +334,9 @@ def createAPOcompleteFile(APOcomplete, path=None, overwrite=False,
         if os.path.exists(apocompPath):
             if overwrite:
                 warnings.warn('apocomplete path {} exists but '
-                              'overwriting it.'.format(path),
-                              exceptions.TotoroUserWarning)
+                              'overwriting it.'.format(path), exceptions.TotoroUserWarning)
             else:
-                log.debug('apocomplete path {} exists; not '
-                          'overwriting it.'.format(path))
+                log.debug('apocomplete path {} exists; not ' 'overwriting it.'.format(path))
                 return
 
         if not os.path.exists(path):
@@ -348,9 +357,8 @@ def createAPOcompleteFile(APOcomplete, path=None, overwrite=False,
         ff.write(strstruct)
 
         for ii in range(len(data)):
-            expstr = '{0} {1} {2} {3} {4} {5}\n'.format(
-                'APOCOMP', plateid[ii], mjd[ii], setno[ii],
-                dpos[ii], expno[ii])
+            expstr = '{0} {1} {2} {3} {4} {5}\n'.format('APOCOMP', plateid[ii], mjd[ii], setno[ii],
+                                                        dpos[ii], expno[ii])
             ff.write(expstr)
 
         ff.close()
@@ -358,16 +366,13 @@ def createAPOcompleteFile(APOcomplete, path=None, overwrite=False,
         if svn_add:
             try:
                 os.chdir(path)
-                result = subprocess.call('svn add {}'.format(apocompPath),
-                                         shell=True)
+                result = subprocess.call('svn add {}'.format(apocompPath), shell=True)
                 if result > 0:
-                    warnings.warn('svn add {} failed with error {}'
-                                  .format(apocompPath, result),
+                    warnings.warn('svn add {} failed with error {}'.format(apocompPath, result),
                                   exceptions.TotoroUserWarning)
                     return
             except Exception:
-                warnings.warn('svn add {} failed with unknown error'
-                              .format(apocompPath),
+                warnings.warn('svn add {} failed with unknown error'.format(apocompPath),
                               exceptions.TotoroUserWarning)
                 return
 
@@ -406,15 +411,13 @@ def isMaNGA_Led(plate):
     else:
         try:
             with session.begin():
-                plate = session.query(plateDB.Plate).filter(
-                    plateDB.Plate.plate_id == plate).one()
-        except:
+                plate = session.query(plateDB.Plate).filter(plateDB.Plate.plate_id == plate).one()
+        except Exception:
             return False
 
     for survey in plate.surveys:
         if (survey.label == 'MaNGA' and plate.currentSurveyMode is not None and
-                plate.currentSurveyMode.label in ['MaNGA dither',
-                                                  'MaNGA 10min']):
+                plate.currentSurveyMode.label in ['MaNGA dither', 'MaNGA 10min']):
             return True
 
     return False
@@ -438,12 +441,10 @@ def checkOpenSession():
                 'Please, modify your code to avoid this.')
         else:
             raise exceptions.TotoroSubtransactionError(
-                'Failed while checking session status. Error message is: {0}'
-                .format(str(ee)))
+                'Failed while checking session status. Error message is: {0}'.format(str(ee)))
     except Exception as ee:
         raise exceptions.TotoroSubtransactionError(
-            'Failed while checking session status. Error message is: {0}'
-            .format(str(ee)))
+            'Failed while checking session status. Error message is: {0}'.format(str(ee)))
 
 
 def get_closest_holes(plateid):
@@ -467,18 +468,15 @@ def get_closest_holes(plateid):
 
     plate6 = '{0:06d}'.format(plateid)
     short_platedir = plate6[0:4] + 'XX'
-    plateHoles_path = os.path.join(
-        os.environ['PLATELIST_DIR'], 'plates', short_platedir,
-        plate6, 'plateHoles-{0}.par'.format(plate6))
+    plateHoles_path = os.path.join(os.environ['PLATELIST_DIR'], 'plates', short_platedir, plate6,
+                                   'plateHoles-{0}.par'.format(plate6))
 
     if not os.path.exists(plateHoles_path):
-        plateHoles_path = plateHoles_path.replace('plateHoles',
-                                                  'plateHolesSorted')
+        plateHoles_path = plateHoles_path.replace('plateHoles', 'plateHolesSorted')
         if not os.path.exists(plateHoles_path):
-            raise ValueError('cannot find plateHoles for plate {0}'
-                             .format(plateid))
+            raise ValueError('cannot find plateHoles for plate {0}'.format(plateid))
 
-    plateHoles = yanny(plateHoles_path, np=True)['STRUCT1']
+    plateHoles = yanny(plateHoles_path)['STRUCT1']
 
     mask = np.in1d(plateHoles['holetype'], valid_holes)
     holes = plateHoles[mask]
@@ -488,21 +486,20 @@ def get_closest_holes(plateid):
     focal[:, 1] = holes['yfocal']
 
     distances = pdist(focal)
-    pdist_indices = list(combinations(range(focal.shape[0]), 2))
+    pdist_indices = list(combinations(list(range(focal.shape[0])), 2))
 
     for kk in np.argsort(distances):
         ii, jj = pdist_indices[kk]
         hole1_type = holes['holetype'][ii]
         hole2_type = holes['holetype'][jj]
         if hole1_type != 'OBJECT' or hole2_type != 'OBJECT':
-            return (distances[kk], focal[ii], focal[jj],
-                    hole1_type, hole2_type)
+            return (distances[kk], focal[ii], focal[jj], hole1_type, hole2_type)
 
 
 def avoid_cart_2(plate):
     """Finds closest pair of holes and decides whether to use cart 2.
 
-    This is beacuse cart 2 has heat shrinks around some of the fibres,
+    This is because cart 2 has heat shrinks around some of the fibres,
     which effectively increases their ferrule size. If the distance between
     holes is smaller than the enlarged ferrule sizes, we should avoid
     cart 2, if possible.
@@ -517,8 +514,7 @@ def avoid_cart_2(plate):
     distance, hole1_focal, hole2_focal, \
         hole1_type, hole2_type = get_closest_holes(plate)
 
-    min_distance = 0.5 * (config['ferruleSizes'][hole1_type] +
-                          config['ferruleSizes'][hole2_type])
+    min_distance = 0.5 * (config['ferruleSizes'][hole1_type] + config['ferruleSizes'][hole2_type])
 
     if distance <= min_distance:
         _avoid_cart2_cahche[plate] = True

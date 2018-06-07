@@ -12,13 +12,15 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
+
+import unittest
+from builtins import range
+
+from Totoro.bin.rearrangeSets import rearrageSets
 from Totoro.db import getConnection
 from Totoro.dbclasses import fromPlateID
 from Totoro.dbclasses.plate_utils import removeOrphanedSets
-from Totoro.bin.rearrangeSets import rearrageSets
-import unittest
 
 
 db = getConnection('test')
@@ -73,8 +75,7 @@ class TestSetArrangement(unittest.TestCase):
 
         self.assertEqual(len(plate.sets), 6)
 
-        setExposurePK = [exp._mangaExposure.pk
-                         for exp in plate.sets[4].totoroExposures]
+        setExposurePK = [exp._mangaExposure.pk for exp in plate.sets[4].totoroExposures]
         self.assertIn(1348, setExposurePK)
 
     # This test is disabled as we now don't rearrange exposures in incomplete
@@ -126,15 +127,10 @@ class TestSetArrangement(unittest.TestCase):
         plate = fromPlateID(7495)
         plate.rearrangeSets()
 
-        correctSetExposures = [[17, 20, 19],
-                               [18],
-                               [23, 21, 22],
-                               [24, 25],
-                               [27, 28, 26]]
+        correctSetExposures = [[17, 20, 19], [18], [23, 21, 22], [24, 25], [27, 28, 26]]
 
         for ii, ss in enumerate(plate.sets):
-            setExposures = [exp._mangaExposure.pk
-                            for exp in plate.sets[ii].totoroExposures]
+            setExposures = [exp._mangaExposure.pk for exp in plate.sets[ii].totoroExposures]
             self.assertItemsEqual(setExposures, correctSetExposures[ii])
 
     def testRearrangementWithBadExposure(self):
@@ -149,14 +145,10 @@ class TestSetArrangement(unittest.TestCase):
         plate = fromPlateID(7495)
         plate.rearrangeSets()
 
-        correctSetExposures = [[17, 19],
-                               [20, 21, 22],
-                               [23, 24, 25],
-                               [26, 27, 28]]
+        correctSetExposures = [[17, 19], [20, 21, 22], [23, 24, 25], [26, 27, 28]]
 
         for ii, ss in enumerate(plate.sets):
-            setExposures = [exp._mangaExposure.pk
-                            for exp in plate.sets[ii].totoroExposures]
+            setExposures = [exp._mangaExposure.pk for exp in plate.sets[ii].totoroExposures]
             self.assertItemsEqual(setExposures, correctSetExposures[ii])
 
     def testRearrangementScript(self):
@@ -170,9 +162,9 @@ class TestSetArrangement(unittest.TestCase):
 
         plate = fromPlateID(8484)
 
-        setExposurePK = [exp._mangaExposure.pk
-                         for exp in plate.sets[4].totoroExposures]
+        setExposurePK = [exp._mangaExposure.pk for exp in plate.sets[4].totoroExposures]
         self.assertIn(1348, setExposurePK)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -13,22 +13,28 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from sqlalchemy import create_engine, MetaData
+from __future__ import division, print_function
+
+import configparser
+import os
+import warnings
+from builtins import object, str
+
 import sqlalchemy
-from sqlalchemy.orm import sessionmaker, scoped_session
+from future import standard_library
+from past.builtins import basestring
+from sqlalchemy import MetaData, create_engine
 from sqlalchemy.event import listen
 from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import Pool
-from SDSSconnect.models import createRelationships
-from SDSSconnect.models.utils import ModelWrapper, cameliseClassname
-from SDSSconnect.exceptions import SDSSconnectUserWarning, SDSSconnectError
-from SDSSconnect.models import methods
 
-import warnings
-import ConfigParser
-import os
+from SDSSconnect.exceptions import SDSSconnectError, SDSSconnectUserWarning
+from SDSSconnect.models import createRelationships, methods
+from SDSSconnect.models.utils import ModelWrapper, cameliseClassname
+
+
+standard_library.install_aliases()
 
 
 __MODELS__ = ['plateDB', 'mangaDB']
@@ -43,7 +49,7 @@ def readProfile(profile=None, path=None):
     if not os.path.exists(profilesPath):
         raise RuntimeError('profile not found in {0}'.format(profilesPath))
 
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(profilesPath)
 
     # If no profile is defined, we try to return the DEFAULTS section and, if
@@ -53,16 +59,14 @@ def readProfile(profile=None, path=None):
             return (config.defaults(), 'DEFAULT')
         else:
             if len(config.sections()) == 0:
-                raise RuntimeError('no sections found in {0}'
-                                   .format(profilesPath))
+                raise RuntimeError('no sections found in {0}'.format(profilesPath))
             section = config.sections()[0]
-            warnings.warn('no default profile found. Using first profile: {}'
-                          .format(section), SDSSconnectUserWarning)
+            warnings.warn('no default profile found. Using first profile: {}'.format(section),
+                          SDSSconnectUserWarning)
             returnDict, returnProfile = dict(config.items(section)), section
     else:
         if not config.has_section(profile.lower()):
-            raise ValueError('profile {0} does not exist'
-                             .format(profile.lower()))
+            raise ValueError('profile {0} does not exist'.format(profile.lower()))
         returnDict = dict(config.items(profile.lower()))
         returnProfile = profile.lower()
 
@@ -113,23 +117,21 @@ class DatabaseConnection(object):
         if len(args) == 1:
             kwargs['profile'] = args[0]
         elif len(args) > 1:
-            raise ValueError('SDSSDatabaseConnection only '
-                             'accepts one argument')
+            raise ValueError('SDSSDatabaseConnection only ' 'accepts one argument')
 
         new = kwargs.get('new', False)
         default = kwargs.get('default', False)
         profile = kwargs.get('profile', None)
 
-        if len(cls._singletons.keys()) == 0 or new:
+        if len(list(cls._singletons.keys())) == 0 or new:
 
             newInstance = cls._createNewInstance(**kwargs)
             profile = newInstance.profile
 
             if profile in cls.listConnections():
-                warnings.warn('overwritting profile {0}'.format(profile),
-                              SDSSconnectUserWarning)
+                warnings.warn('overwritting profile {0}'.format(profile), SDSSconnectUserWarning)
 
-            if default or len(cls._singletons.keys()) == 0:
+            if default or len(list(cls._singletons.keys())) == 0:
                 cls._defaultConnectionProfile = newInstance.profile
 
             cls._singletons[newInstance.profile] = newInstance
@@ -146,15 +148,19 @@ class DatabaseConnection(object):
                 elif profile not in cls.listConnections():
                     raise SDSSconnectError('profile {0} not in the list of '
                                            'connections. Use new=True if you '
-                                           'want to create a new connection.'
-                                           .format(profile))
+                                           'want to create a new connection.'.format(profile))
                 else:
                     return cls._singletons[profile]
 
     @classmethod
-    def _createNewInstance(cls, profile=None, databaseConnectionString=None,
-                           expireOnCommit=True, models='all',
-                           profilePath=None, name=None, **kwargs):
+    def _createNewInstance(cls,
+                           profile=None,
+                           databaseConnectionString=None,
+                           expireOnCommit=True,
+                           models='all',
+                           profilePath=None,
+                           name=None,
+                           **kwargs):
         """Creates a new instance of the connection."""
 
         me = object.__new__(cls)
@@ -163,11 +169,9 @@ class DatabaseConnection(object):
             me.databaseConnectionString = databaseConnectionString
             me.profile = 'connection_string' if name is None else name
         else:
-            profileDict, profileName = readProfile(profile=profile,
-                                                   path=profilePath)
-            me.databaseConnectionString = (
-                'postgresql+psycopg2://{user}:{password}@'
-                '{host}:{port}/{database}'.format(**profileDict))
+            profileDict, profileName = readProfile(profile=profile, path=profilePath)
+            me.databaseConnectionString = ('postgresql+psycopg2://{user}:{password}@'
+                                           '{host}:{port}/{database}'.format(**profileDict))
 
             me.profile = profileName if name is None else name
 
@@ -175,8 +179,7 @@ class DatabaseConnection(object):
 
         me.metadata = MetaData()
         me.Session = scoped_session(
-            sessionmaker(bind=me.engine, autocommit=True,
-                         expire_on_commit=expireOnCommit))
+            sessionmaker(bind=me.engine, autocommit=True, expire_on_commit=expireOnCommit))
 
         me.addModels(models)
 
@@ -187,8 +190,7 @@ class DatabaseConnection(object):
         """Returns a named connection."""
 
         if connectionProfile not in cls._singletons:
-            raise KeyError('connection named {0} does not exist'
-                           .format(connectionProfile))
+            raise KeyError('connection named {0} does not exist'.format(connectionProfile))
 
         return cls._singletons[connectionProfile]
 
@@ -196,7 +198,7 @@ class DatabaseConnection(object):
     def listConnections(cls):
         """Returns a list of all available connections."""
 
-        return cls._singletons.keys()
+        return list(cls._singletons.keys())
 
     @classmethod
     def getDefaultConnectionName(cls):
@@ -221,8 +223,7 @@ class DatabaseConnection(object):
         """Sets the default connection."""
 
         if connectionProfile not in cls._singletons:
-            raise KeyError('connection profile {0} does not exist'
-                           .format(connectionProfile))
+            raise KeyError('connection profile {0} does not exist'.format(connectionProfile))
 
         cls._defaultConnectionProfile = connectionProfile
 
@@ -244,13 +245,12 @@ class DatabaseConnection(object):
             self.metadata.reflect(schema=model.lower())
 
         self.Base = automap_base(metadata=self.metadata)
-        self.Base.prepare(engine=self.engine,
-                          classname_for_table=cameliseClassname)
+        self.Base.prepare(engine=self.engine, classname_for_table=cameliseClassname)
 
         # We are going to create our own relationships, so we remove these.
         for model in self.Base.classes:
             if 'Platedb_' in model.__name__ or 'Mangadb_' in model.__name__:
-                for relationship in model.__mapper__.relationships.keys():
+                for relationship in list(model.__mapper__.relationships.keys()):
                     delattr(model, str(relationship))
 
         if models == __MODELS__:
@@ -269,6 +269,4 @@ class DatabaseConnection(object):
             elif model.lower() == 'mangadb':
                 self.mangaDB = ModelWrapper(self.Base, 'Mangadb_')
             else:
-                setattr(self, model,
-                        ModelWrapper(self.Base,
-                                     '{0}_'.format(model.capitalize())))
+                setattr(self, model, ModelWrapper(self.Base, '{0}_'.format(model.capitalize())))

@@ -12,23 +12,24 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
+
+import argparse
+import os
+import sys
+import warnings
+from builtins import map
+
+import numpy as np
+from sqlalchemy.orm.exc import NoResultFound
 
 from Totoro import log
 from Totoro.db import getConnection
-from Totoro.dbclasses.exposure import Exposure, setExposureStatus
-from Totoro.dbclasses.set import Set, checkSet, setErrorCodes
-from Totoro.dbclasses.plate_utils import getConsecutiveSets, removeOrphanedSets
 from Totoro.dbclasses import fromPlateID
-from Totoro.exceptions import TotoroUserWarning, TotoroError, EmptySet
-
-from sqlalchemy.orm.exc import NoResultFound
-import numpy as np
-import argparse
-import warnings
-import sys
-import os
+from Totoro.dbclasses.exposure import Exposure, setExposureStatus
+from Totoro.dbclasses.plate_utils import getConsecutiveSets, removeOrphanedSets
+from Totoro.dbclasses.set import Set, checkSet, setErrorCodes
+from Totoro.exceptions import EmptySet, TotoroError, TotoroUserWarning
 
 
 warnings.simplefilter('always')
@@ -47,8 +48,7 @@ def _getStatusPK(status):
         if st.label.lower() == status.lower():
             return st.pk
 
-    raise ValueError('set status {0} does not exist in the database'
-                     .format(status))
+    raise ValueError('set status {0} does not exist in the database'.format(status))
 
 
 def _checkExposures(exposures):
@@ -59,9 +59,9 @@ def _checkExposures(exposures):
     elif len(exposures) > 3:
         raise TotoroError('sets must consist of <= 3 exposures')
     elif len(exposures) < 3:
-        warnings.warn('you are creating an overridden set with only '
-                      '{0} exposures'.format(len(exposures)),
-                      TotoroUserWarning)
+        warnings.warn(
+            'you are creating an overridden set with only '
+            '{0} exposures'.format(len(exposures)), TotoroUserWarning)
 
     # Checks that exposures exist
     totExposures = []
@@ -71,12 +71,10 @@ def _checkExposures(exposures):
         try:
             totExp = Exposure(expNo, format='exposure_no', parent='plateDB')
         except NoResultFound:
-            raise TotoroError('exposure_no {0} does not exist in the database'
-                              .format(expNo))
+            raise TotoroError('exposure_no {0} does not exist in the database'.format(expNo))
 
         if totExp._mangaExposure.pk is None:
-            raise TotoroError('exposure_no {0} has no MaNGA counterpart.'
-                              .format(expNo))
+            raise TotoroError('exposure_no {0} has no MaNGA counterpart.'.format(expNo))
 
         totExposures.append(totExp)
         originalSetPKs.append(totExp._mangaExposure.set_pk)
@@ -124,15 +122,15 @@ def override(args):
     for totExp in totExposures:
         setExposureStatus(totExp, 'Override ' + mode)
         if verbose:
-            log.info('changing exposure_no={0} mangaDB status to Override {1}'
-                     .format(totExp.exposure_no, mode))
+            log.info('changing exposure_no={0} mangaDB status to Override {1}'.format(
+                totExp.exposure_no, mode))
 
         if totExp._mangaExposure.set_pk != overridenSetPK:
             with session.begin():
                 totExp._mangaExposure.set_pk = overridenSetPK
             if verbose:
-                log.info('changing set_pk for exposure_no={0} to {1}'
-                         .format(totExp.exposure_no, overridenSetPK))
+                log.info('changing set_pk for exposure_no={0} to {1}'.format(
+                    totExp.exposure_no, overridenSetPK))
 
     # Overrides the set good/bad.
     with session.begin():
@@ -153,8 +151,8 @@ def override(args):
                 ss = Set(setPK, format='pk')
                 newStatus = None if ss.status is None else ss.status.label
                 if newStatus != origStatus:
-                    log.info('set pk={0} status changed from {1} to {2}'
-                             .format(setPK, origStatus, newStatus))
+                    log.info('set pk={0} status changed from {1} to {2}'.format(
+                        setPK, origStatus, newStatus))
 
         except EmptySet:
 
@@ -171,18 +169,17 @@ def override(args):
     postCompletion = plate.getPlateCompletion()
 
     if ((preCompletion < 1. and postCompletion > 1.) or
-            (preCompletion > 1. and postCompletion < 1.)):
-        warnings.warn('plate completion has changed from {0:.2f} to {1:.2f}. '
-                      'Remember to check if the plate status is correct after '
-                      'overriding sets.'.format(preCompletion, postCompletion),
-                      TotoroUserWarning)
+        (preCompletion > 1. and postCompletion < 1.)):
+        warnings.warn(
+            'plate completion has changed from {0:.2f} to {1:.2f}. '
+            'Remember to check if the plate status is correct after '
+            'overriding sets.'.format(preCompletion, postCompletion), TotoroUserWarning)
     else:
         warnings.warn('Remember to check if the plate status is correct after '
                       'overriding sets.', TotoroUserWarning)
 
     if verbose:
-        log.info('changing status of set {0} to Override {1}'
-                 .format(overridenSetPK, mode))
+        log.info('changing status of set {0} to Override {1}'.format(overridenSetPK, mode))
         log.info('override was successful')
 
     removeOrphanedSets()
@@ -264,8 +261,7 @@ def getInfo(args):
         raise TotoroError('exposures belong to different plates.')
 
     if len(np.unique(originalSetPKs)) == 1 and originalSetPKs[0] is not None:
-        log.important('exposures belong to real set pk={0}'
-                      .format(originalSetPKs[0]))
+        log.important('exposures belong to real set pk={0}'.format(originalSetPKs[0]))
         ss = Set(originalSetPKs[0])
     else:
         log.important('creating mock set for input exposures')
@@ -293,11 +289,9 @@ def getInfo(args):
                 exp._mangaExposure.exposure_status_pk = None
 
         ss = Set.fromExposures(totExposures)
-        statusMock, codeMock = ss.getStatus(flag=False, force=True,
-                                            flagExposures=False)
+        statusMock, codeMock = ss.getStatus(flag=False, force=True, flagExposures=False)
         log.important('mock set status is {0}'.format(statusMock))
-        log.important('error code is {0:d}: {1}'
-                      .format(codeMock, setErrorCodes[codeMock]))
+        log.important('error code is {0:d}: {1}'.format(codeMock, setErrorCodes[codeMock]))
 
         # Just in case, let's restore the exposure statuses
         if 'Override' in status:
@@ -308,10 +302,10 @@ def getInfo(args):
         codeMock = statusMock = None
 
     if code not in [0, 9, 10] or codeMock not in [0, 9, 10]:
-        warnings.warn('this is not a comprehensive list of reasons why the '
-                      'set is invalid. Other conditions may be failing for '
-                      'this set apart from the specified here.',
-                      TotoroUserWarning)
+        warnings.warn(
+            'this is not a comprehensive list of reasons why the '
+            'set is invalid. Other conditions may be failing for '
+            'this set apart from the specified here.', TotoroUserWarning)
 
     return (status, code, statusMock, codeMock)
 
@@ -320,16 +314,20 @@ def main(argv=None):
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
 
-    parser.add_argument('--verbose', '-v', dest='verbose', action='store_true',
-                        help='Prints extra information.')
+    parser.add_argument(
+        '--verbose', '-v', dest='verbose', action='store_true', help='Prints extra information.')
 
     subparsers = parser.add_subparsers(title='actions')
 
-    parserGood = subparsers.add_parser('good', help='overrides set as good.',
-                                       description='Overrides set as good.')
-    parserGood.add_argument('EXPOSURE_NO', metavar='EXPOSURE_NO', type=int,
-                            nargs='*', help='The list of exposure_no(s) to be '
-                            'overridden as a new good set.')
+    parserGood = subparsers.add_parser(
+        'good', help='overrides set as good.', description='Overrides set as good.')
+    parserGood.add_argument(
+        'EXPOSURE_NO',
+        metavar='EXPOSURE_NO',
+        type=int,
+        nargs='*',
+        help='The list of exposure_no(s) to be '
+        'overridden as a new good set.')
     parserGood.set_defaults(func=override, mode='good')
 
     # parserBad = subparsers.add_parser('bad', help='overrides set as bad.',
@@ -340,25 +338,34 @@ def main(argv=None):
     # parserBad.set_defaults(func=override, mode='bad')
 
     parserInfo = subparsers.add_parser(
-        'info', help='gets information about a set.',
+        'info',
+        help='gets information about a set.',
         description='If the set exists it returns its real status. Otherwise, '
         'it returns status of the mock set and, if invalid, why it is so.')
-    parserInfo.add_argument('EXPOSURE_NO', metavar='EXPOSURE_NO',
-                            type=int, nargs='*',
-                            help='The list of exposure_no(s) to be tested.')
+    parserInfo.add_argument(
+        'EXPOSURE_NO',
+        metavar='EXPOSURE_NO',
+        type=int,
+        nargs='*',
+        help='The list of exposure_no(s) to be tested.')
     parserInfo.set_defaults(func=getInfo)
 
-    parserRemove = subparsers.add_parser('remove',
-                                         help='removes set status.',
-                                         description='Removes set status.')
-    parserRemove.add_argument('SET_PK', metavar='SET_PK', type=int,
-                              help='The list of set_pk(s) of the sets for '
-                              'which the set status will be removed.')
-    parserRemove.add_argument('--reload', '-reload', action='store_true',
-                              help='If true, load the plate at which the set '
-                              'belongs after removing the set. '
-                              'This will force a new set arrangement of the '
-                              'exposures in the removed set.')
+    parserRemove = subparsers.add_parser(
+        'remove', help='removes set status.', description='Removes set status.')
+    parserRemove.add_argument(
+        'SET_PK',
+        metavar='SET_PK',
+        type=int,
+        help='The list of set_pk(s) of the sets for '
+        'which the set status will be removed.')
+    parserRemove.add_argument(
+        '--reload',
+        '-reload',
+        action='store_true',
+        help='If true, load the plate at which the set '
+        'belongs after removing the set. '
+        'This will force a new set arrangement of the '
+        'exposures in the removed set.')
     parserRemove.set_defaults(func=removeStatus)
 
     if argv is not None:

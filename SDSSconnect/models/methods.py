@@ -13,8 +13,8 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
+
 from sqlalchemy.orm.session import Session
 
 
@@ -24,9 +24,9 @@ def addFunctionsPlateDB(plateDB):
         """Returns a list of science exposures for a plugging."""
         session = Session.object_session(self)
         exps = session.query(plateDB.Exposure).join(
-            plateDB.Observation, plateDB.ExposureFlavor).filter(
-                plateDB.Observation.plugging_pk == self.pk).filter(
-                    plateDB.ExposureFlavor.label == 'Science').all()
+            plateDB.Observation,
+            plateDB.ExposureFlavor).filter(plateDB.Observation.plugging_pk == self.pk).filter(
+                plateDB.ExposureFlavor.label == 'Science').all()
         return exps
 
     def scienceExposuresPlate(self):

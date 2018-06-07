@@ -12,13 +12,16 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from Totoro.scheduler import Plugger
+from __future__ import division, print_function
+
+import unittest
+from builtins import range
+from collections import OrderedDict
+
 from Totoro import config
 from Totoro.db import getConnection
-from collections import OrderedDict
-import unittest
+from Totoro.scheduler import Plugger
+
 
 db = getConnection('test')
 session = db.Session()
@@ -40,12 +43,12 @@ class TestPlugger(unittest.TestCase):
         with session.begin():
 
             # Restores priorities
-            plate8550 = session.query(db.plateDB.Plate).filter(
-                db.plateDB.Plate.plate_id == 8550).one()
+            plate8550 = session.query(
+                db.plateDB.Plate).filter(db.plateDB.Plate.plate_id == 8550).one()
             plate8550.plate_pointings[0].priority = 5
 
-            plate7443 = session.query(db.plateDB.Plate).filter(
-                db.plateDB.Plate.plate_id == 7443).one()
+            plate7443 = session.query(
+                db.plateDB.Plate).filter(db.plateDB.Plate.plate_id == 7443).one()
             plate7443.plate_pointings[0].priority = 1
 
     def tearDown(self):
@@ -54,16 +57,16 @@ class TestPlugger(unittest.TestCase):
         with session.begin():
 
             # Restores priorities
-            plate8550 = session.query(db.plateDB.Plate).filter(
-                db.plateDB.Plate.plate_id == 8550).one()
+            plate8550 = session.query(
+                db.plateDB.Plate).filter(db.plateDB.Plate.plate_id == 8550).one()
             plate8550.plate_pointings[0].priority = 5
 
-            plate7443 = session.query(db.plateDB.Plate).filter(
-                db.plateDB.Plate.plate_id == 7443).one()
+            plate7443 = session.query(
+                db.plateDB.Plate).filter(db.plateDB.Plate.plate_id == 7443).one()
             plate7443.plate_pointings[0].priority = 1
 
-            plate8081 = session.query(db.plateDB.Plate).filter(
-                db.plateDB.Plate.plate_id == 8081).one()
+            plate8081 = session.query(
+                db.plateDB.Plate).filter(db.plateDB.Plate.plate_id == 8081).one()
             plate8081.plate_location_pk = 28
 
         self._restoreActivePluggings()
@@ -88,12 +91,10 @@ class TestPlugger(unittest.TestCase):
     def test57157(self):
         """Tests Plugger with MJD=57157."""
 
-        plugger = Plugger(startDate=2457157.76042, endDate=2457157.95,
-                          useInitialBuffer=False)
+        plugger = Plugger(startDate=2457157.76042, endDate=2457157.95, useInitialBuffer=False)
 
-        validResult = OrderedDict([(1, 8482), (3, 8486), (4, 8550),
-                                   ('cart_order',
-                                    [9, 8, 7, 5, 6, 2, 3, 4, 1])])
+        validResult = OrderedDict([(1, 8482), (3, 8486), (4, 8550), ('cart_order',
+                                                                     [9, 8, 7, 5, 6, 2, 3, 4, 1])])
 
         self.assertEqual(validResult, plugger.getASOutput())
 
@@ -102,16 +103,14 @@ class TestPlugger(unittest.TestCase):
 
         # Moves plate 8081 to APO
         with session.begin():
-            plate8081 = session.query(db.plateDB.Plate).filter(
-                db.plateDB.Plate.plate_id == 8081).one()
+            plate8081 = session.query(
+                db.plateDB.Plate).filter(db.plateDB.Plate.plate_id == 8081).one()
             plate8081.plate_location_pk = 23
 
-        plugger = Plugger(startDate=2457307.806736, endDate=2457307.998611,
-                          useInitialBuffer=False)
+        plugger = Plugger(startDate=2457307.806736, endDate=2457307.998611, useInitialBuffer=False)
 
-        validResult = OrderedDict(
-            [(1, 8570), (2, 8081), (3, 8486), (4, 8239),
-             ('cart_order', [9, 8, 7, 5, 6, 3, 1, 2, 4])])
+        validResult = OrderedDict([(1, 8570), (2, 8081), (3, 8486), (4, 8239),
+                                   ('cart_order', [9, 8, 7, 5, 6, 3, 1, 2, 4])])
 
         self.assertEqual(validResult, plugger.getASOutput())
 
@@ -121,23 +120,21 @@ class TestPlugger(unittest.TestCase):
         # Changes the priority of plates 8550 and 7443 to 10
         with session.begin():
 
-            plate8550 = session.query(db.plateDB.Plate).filter(
-                db.plateDB.Plate.plate_id == 8550).one()
+            plate8550 = session.query(
+                db.plateDB.Plate).filter(db.plateDB.Plate.plate_id == 8550).one()
             plate8550.plate_pointings[0].priority = 10
 
-            plate7443 = session.query(db.plateDB.Plate).filter(
-                db.plateDB.Plate.plate_id == 7443).one()
+            plate7443 = session.query(
+                db.plateDB.Plate).filter(db.plateDB.Plate.plate_id == 7443).one()
             plate7443.plate_pointings[0].priority = 10
 
         # Now we run the plugger
-        plugger = Plugger(startDate=2457185.64931, endDate=2457185.82347,
-                          useInitialBuffer=False)
+        plugger = Plugger(startDate=2457185.64931, endDate=2457185.82347, useInitialBuffer=False)
 
         # We expect the same result as before but with 8550 and 7443 assigned
         # first.
-        validResult = OrderedDict(
-            [(1, 8550), (2, 7443), (3, 8486), (4, 8546), (5, 8482),
-             ('cart_order', [9, 8, 7, 6, 3, 4, 5, 1, 2])])
+        validResult = OrderedDict([(1, 8550), (2, 7443), (3, 8486), (4, 8546), (5, 8482),
+                                   ('cart_order', [9, 8, 7, 6, 3, 4, 5, 1, 2])])
 
         self.assertEqual(validResult, plugger.getASOutput())
 
@@ -148,8 +145,7 @@ class TestPlugger(unittest.TestCase):
         with session.begin():
 
             for ii in range(1, 4):
-                session.delete(
-                    session.query(db.plateDB.ActivePlugging).get(ii))
+                session.delete(session.query(db.plateDB.ActivePlugging).get(ii))
 
             session.add(db.plateDB.ActivePlugging(plugging_pk=70003, pk=1))
             session.add(db.plateDB.ActivePlugging(plugging_pk=68904, pk=2))
@@ -158,8 +154,7 @@ class TestPlugger(unittest.TestCase):
         # Calls the Plugger without dates
         plugger = Plugger(startDate=None, endDate=None)
 
-        self.assertEqual(plugger.getASOutput()['cart_order'],
-                         [9, 8, 7, 4, 5, 6, 3, 2, 1])
+        self.assertEqual(plugger.getASOutput()['cart_order'], [9, 8, 7, 4, 5, 6, 3, 2, 1])
 
         # Now we want to test if cart 2 (unplugged) is returned with high
         # cart order (but still fewer than cart 1, which has incomplete sets)
@@ -175,8 +170,7 @@ class TestPlugger(unittest.TestCase):
 
         # We run the plugger for a non-MaNGA night
         pluggerNoMaNGA = Plugger(startDate=None, endDate=None)
-        self.assertEqual(pluggerNoMaNGA.getASOutput()['cart_order'],
-                         [9, 8, 7, 4, 5, 6, 3, 2, 1])
+        self.assertEqual(pluggerNoMaNGA.getASOutput()['cart_order'], [9, 8, 7, 4, 5, 6, 3, 2, 1])
 
     def testOfflineCarts(self):
         """Tests if Plugger works if a plate is plugged in an offline cart."""
@@ -186,14 +180,13 @@ class TestPlugger(unittest.TestCase):
         config['mangaCarts'] = [1, 2, 3, 4, 5, 6]
 
         # Runs Plugger
-        plugger = Plugger(startDate=2457182.64792, endDate=2457182.79097,
-                          useInitialBuffer=False)
+        plugger = Plugger(startDate=2457182.64792, endDate=2457182.79097, useInitialBuffer=False)
         output = plugger.getASOutput()
 
-        self.assertEqual(output,
-                         OrderedDict([(1, 8482), (3, 8486), (4, 8546),
-                                      ('cart_order',
-                                       [9, 8, 7, 2, 5, 6, 4, 3, 1])]))
+        self.assertEqual(
+            output,
+            OrderedDict([(1, 8482), (3, 8486), (4, 8546), ('cart_order',
+                                                           [9, 8, 7, 2, 5, 6, 4, 3, 1])]))
 
 
 if __name__ == '__main__':

@@ -12,11 +12,13 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-import numpy as np
-from Totoro.exceptions import TotoroError
+from __future__ import division, print_function
+
 import itertools
+
+import numpy as np
+
+from Totoro.exceptions import TotoroError
 
 
 def getIntervalIntersectionLength(aa, bb, wrapAt=360):
@@ -129,8 +131,7 @@ def getMinMaxIntervalSequence(intervals, wrapAt=360):
     if rest.shape[0] == 0:
         return newInterval
     else:
-        return getMinMaxIntervalSequence(
-            np.append([newInterval], rest, axis=0))
+        return getMinMaxIntervalSequence(np.append([newInterval], rest, axis=0))
 
 
 def calculateMean(interval, wrapAt=360.):
@@ -139,8 +140,7 @@ def calculateMean(interval, wrapAt=360.):
     if wrapAt is None:
         return (interval[0] + (interval[1] - interval[0]) / 2.)
     else:
-        return ((interval[0] + ((interval[1] - interval[0]) % wrapAt) / 2.) %
-                wrapAt)
+        return ((interval[0] + ((interval[1] - interval[0]) % wrapAt) / 2.) % wrapAt)
 
 
 def getIntervalFromPoints(points, wrapAt=360.):
@@ -163,8 +163,7 @@ def getIntervalFromPoints(points, wrapAt=360.):
         if isValid:
             validExtremes.append(permutation)
 
-    lengths = np.array(
-        [intervalLength(interval) for interval in validExtremes])
+    lengths = np.array([intervalLength(interval) for interval in validExtremes])
 
     return validExtremes[np.argmin(lengths)]
 
@@ -184,8 +183,7 @@ def removeInterval(master, interToRemove, wrapAt=360.):
     newMaster = []
     for interval in master:
 
-        intersection = getIntervalIntersection(interval, interToRemove,
-                                               wrapAt=wrapAt)
+        intersection = getIntervalIntersection(interval, interToRemove, wrapAt=wrapAt)
 
         if intersection is False:
             newMaster.append(interval)

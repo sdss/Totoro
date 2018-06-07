@@ -9,14 +9,17 @@ Licensed under a 3-clause BSD license.
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from astropy import table, time
-from Totoro import exceptions
-import warnings
-from Totoro import config, log, readPath
-import numpy as np
+from __future__ import division, print_function
+
 import os
+import warnings
+from builtins import object
+
+import numpy as np
+from astropy import table, time
+from past.builtins import basestring
+
+from Totoro import config, exceptions, log, readPath
 
 
 def getScheduleFile():
@@ -25,15 +28,14 @@ def getScheduleFile():
         # Gets the master scheduler schedule file
         import autoscheduler
         autoschedulerDir = os.path.dirname(autoscheduler.__file__)
-        schedule = os.path.join(autoschedulerDir, '../../schedules',
-                                'Sch_base.6yrs.txt.frm.dat')
-    except:
+        schedule = os.path.join(autoschedulerDir, '../../schedules', 'Sch_base.6yrs.txt.frm.dat')
+    except Exception:
         # If the autoscheduler is not available, uses the local schedule file
         schedule = readPath(config['observingPlan']['fallBackSchedule'])
-        warnings.warn('The master autoscheduler could not be found. '
-                      'Using a local copy of the schedule. BE CAREFUL! '
-                      'THIS FILE MIGHT BE OUTDATED!',
-                      exceptions.TotoroUserWarning)
+        warnings.warn(
+            'The master autoscheduler could not be found. '
+            'Using a local copy of the schedule. BE CAREFUL! '
+            'THIS FILE MIGHT BE OUTDATED!', exceptions.TotoroUserWarning)
 
     return schedule
 
@@ -62,8 +64,7 @@ class ObservingPlan(object):
 
     """
 
-    def __init__(self, schedule=config['observingPlan']['schedule'],
-                 **kwargs):
+    def __init__(self, schedule=config['observingPlan']['schedule'], **kwargs):
 
         if isinstance(schedule, basestring) and schedule.lower() == 'none':
             schedule = getScheduleFile()
@@ -76,11 +77,9 @@ class ObservingPlan(object):
             self.scheduleFile
 
         if not os.path.exists(self.scheduleFile):
-            raise exceptions.TotoroError('schedule {0} not found'.format(
-                                         scheduleToPrint))
+            raise exceptions.TotoroError('schedule {0} not found'.format(scheduleToPrint))
 
-        plan = table.Table.read(self.scheduleFile,
-                                format='ascii.no_header')
+        plan = table.Table.read(self.scheduleFile, format='ascii.no_header')
 
         self.plan = plan.copy()
         self.plan.keep_columns(['col1', 'col11', 'col12'])
@@ -88,8 +87,7 @@ class ObservingPlan(object):
         self.plan.rename_column('col11', 'JD0')
         self.plan.rename_column('col12', 'JD1')
 
-        self.plan.add_column(
-            table.Column(np.zeros(len(self.plan)), name='Position', dtype=int))
+        self.plan.add_column(table.Column(np.zeros(len(self.plan)), name='Position', dtype=int))
         for ii, row in enumerate(plan):
             if row['col11'] == 0:
                 continue
@@ -162,8 +160,7 @@ class ObservingPlan(object):
         jd = int(jd)
 
         if jd not in self.plan['JD']:
-            warnings.warn('JD={0} not found in schedule'.format(jd),
-                          exceptions.TotoroUserWarning)
+            warnings.warn('JD={0} not found in schedule'.format(jd), exceptions.TotoroUserWarning)
             return (None, None)
 
         night = self.plan[self.plan['JD'] == jd]
@@ -174,10 +171,8 @@ class ObservingPlan(object):
         """Returns an astropy table with the observation dates
         for each night between startDate and endDate."""
 
-        validDates = self.plan[(self.plan['JD1'] >= startDate) &
-                               (self.plan['JD0'] <= endDate) &
-                               (self.plan['JD0'] > 0.0) &
-                               (self.plan['JD1'] > 0.0)]
+        validDates = self.plan[(self.plan['JD1'] >= startDate) & (self.plan['JD0'] <= endDate) &
+                               (self.plan['JD0'] > 0.0) & (self.plan['JD1'] > 0.0)]
 
         if (startDate is None and endDate is None) or (len(validDates) == 0):
             log.info('no observing blocks selected.')
@@ -189,12 +184,10 @@ class ObservingPlan(object):
         if endDate < validDates['JD1'][-1]:
             validDates['JD1'][-1] = endDate
 
-        totalTime = np.sum([row['JD1'] -
-                            row['JD0'] for row in validDates]) * 24
+        totalTime = np.sum([row['JD1'] - row['JD0'] for row in validDates]) * 24
 
         log.info(('{0} blocks (days) selected, '
-                  'making a total of {1:.2f} hours').format(len(validDates),
-                                                            totalTime))
+                  'making a total of {1:.2f} hours').format(len(validDates), totalTime))
 
         return validDates
 
@@ -206,8 +199,7 @@ class ObservingPlan(object):
         tmpPlan.add_row((int(startDate), startDate, endDate, -1, -1))
 
         totalTime = (endDate - startDate) * 24.
-        log.info(('1 block (days) selected, '
-                  'making a total of {0:.2f} hours').format(totalTime))
+        log.info(('1 block (days) selected, ' 'making a total of {0:.2f} hours').format(totalTime))
 
         return table.Table(tmpPlan[len(tmpPlan) - 1])
 
@@ -216,8 +208,7 @@ class ObservingPlan(object):
         jd = int(startDate if startDate is not None else time.Time.now().jd)
 
         if jd not in self.plan['JD']:
-            raise exceptions.TotoroError(
-                'JD={0} not found in schedule'.format(jd))
+            raise exceptions.TotoroError('JD={0} not found in schedule'.format(jd))
 
         firstDay = self.plan[self.plan['JD'] == jd]
         runNumber = firstDay['RUN']
@@ -242,7 +233,7 @@ class ObservingPlan(object):
 
         try:
             pos = int(self.getClosest(jd)['Position'])
-        except:
+        except Exception:
             warnings.warn('Cannot found block position for JD={0}'.format(jd),
                           exceptions.TotoroUserWarning)
             pos = None

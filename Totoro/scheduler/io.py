@@ -13,23 +13,26 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from Totoro.dbclasses import Field, Set, Exposure
-from astropy import table
-import numpy as np
+from __future__ import division, print_function
+
 import os
+
+import numpy as np
+from astropy import table
+
+from Totoro.dbclasses import Exposure, Field, Set
 
 
 def saveExposures(plates, outfile, startDate=None):
     """Writes information about simulated plates to a FITS file."""
 
     template = table.Table(
-        None, names=['plate_id', 'manga_tileid', 'set_pk', 'real_set',
-                     'start_jd', 'exposure_time', 'dither_position', 'ra',
-                     'dec', 'sn2values'],
-        dtype=[int, int, int, int, float, float, 'S1', float, float,
-               (float, 4)])
+        None,
+        names=[
+            'plate_id', 'manga_tileid', 'set_pk', 'real_set', 'start_jd', 'exposure_time',
+            'dither_position', 'ra', 'dec', 'sn2values'
+        ],
+        dtype=[int, int, int, int, float, float, 'S1', float, float, (float, 4)])
 
     for plate in plates:
         setID = 1
@@ -50,18 +53,16 @@ def saveExposures(plates, outfile, startDate=None):
             ra = plate.ra
             dec = plate.dec
 
-            manga_tileid = (plate.manga_tileid
-                            if plate.manga_tileid is not None else -999)
+            manga_tileid = (plate.manga_tileid if plate.manga_tileid is not None else -999)
 
             for exp in ss.totoroExposures:
 
                 if not exp.isMock:
                     continue
 
-                template.add_row(
-                    (plate_id, manga_tileid, set_pk, real_set, exp.getJD()[0],
-                     exp.exposure_time, exp.ditherPosition, ra, dec,
-                     exp.getSN2Array()))
+                template.add_row((plate_id, manga_tileid, set_pk, real_set,
+                                  exp.getJD()[0], exp.exposure_time, exp.ditherPosition, ra, dec,
+                                  exp.getSN2Array()))
 
     # Records the start date
     if startDate:
@@ -79,9 +80,13 @@ def createExposure(row):
     """Returns a mock exposure."""
 
     exp = Exposure.createMockExposure(
-        startTime=row['start_jd'], expTime=row['exposure_time'],
-        ditherPosition=row['dither_position'], ra=row['ra'], dec=row['dec'],
-        sn2values=row['sn2values'], seeing=1.0)
+        startTime=row['start_jd'],
+        expTime=row['exposure_time'],
+        ditherPosition=row['dither_position'],
+        ra=row['ra'],
+        dec=row['dec'],
+        sn2values=row['sn2values'],
+        seeing=1.0)
 
     return exp
 
@@ -92,8 +97,7 @@ def removeExposures(plates, startDate):
     for plate in plates:
         for ss in plate.sets:
             ss.isMock = True
-            validExps = [exp for exp in ss.totoroExposures
-                         if exp.getJD()[0] < startDate]
+            validExps = [exp for exp in ss.totoroExposures if exp.getJD()[0] < startDate]
             if len(validExps) != len(ss.totoroExposures):
                 plate._modified = True
                 plate._useOnlyCompletion = True
@@ -127,8 +131,7 @@ def restoreExposures(exposureFile, plates=[]):
         mockSetExps = exps[exps['real_set'] == 0]
         uniqueSets = np.unique(mockSetExps['set_pk'])
         for ss in uniqueSets:
-            setExps = [createExposure(exp)
-                       for exp in mockSetExps[mockSetExps['set_pk'] == ss]]
+            setExps = [createExposure(exp) for exp in mockSetExps[mockSetExps['set_pk'] == ss]]
             newSet = Set.fromExposures(setExps)
             plate.sets.append(newSet)
 
@@ -140,8 +143,7 @@ def restoreExposures(exposureFile, plates=[]):
         newPlate.manga_tileid = mangaTileID
         uniqueSets = np.unique(exps['set_pk'])
         for ss in uniqueSets:
-            setExps = [createExposure(exp)
-                       for exp in exps[exps['set_pk'] == ss]]
+            setExps = [createExposure(exp) for exp in exps[exps['set_pk'] == ss]]
             newSet = Set.fromExposures(setExps)
             newPlate.sets.append(newSet)
         plates.append(newPlate)

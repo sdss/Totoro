@@ -1,9 +1,18 @@
 # Change Log
 
-## [1.8.5] - unreleased
+## [1.9.0] - unreleased
+
+## Refactored
+- Totoro is now Python 2/3 compatible after applying futurize to all files.
+- Applied ``isort``, ``yapf``, and ``unify`` to all files.
+- Removed dependencies from ``sdss_python_module`` by moving the necessary files to Totoro.
+- Totoro now uses ``pydl.pydlutils.yanny`` for all Yanny files reading.
 
 ## Modified
 - Changed colour of backup plates in log.
+
+## Fixes
+- In ``footprint``, copies the list of vertices of the patch to plot before applying the origin value (e.g., for Mollweide projection). This prevents incorrect wrapping of regions if the function is called more than once.
 
 
 ## [1.8.4] - 2018-05-13

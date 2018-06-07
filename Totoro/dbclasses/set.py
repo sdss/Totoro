@@ -12,17 +12,19 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from exposure import Exposure
-from Totoro.db import getConnectionFull
-from Totoro import log, config, site
-from Totoro import exceptions
-from Totoro import utils
-import numpy as np
+from __future__ import absolute_import, division, print_function
+
 import warnings
+from builtins import object, range
 from copy import copy
+
+import numpy as np
 from astropy import time
+
+from Totoro import config, exceptions, log, site, utils
+from Totoro.db import getConnectionFull
+
+from .exposure import Exposure
 
 
 __all__ = ['Set', 'checkSet']
@@ -35,13 +37,10 @@ def getPlateSets(inp, format='plate_id', **kwargs):
     session = Session()
 
     with session.begin():
-        sets = session.query(mangaDB.Set).join(
-            mangaDB.Exposure,
-            plateDB.Exposure,
-            plateDB.Observation,
-            plateDB.PlatePointing,
-            plateDB.Plate).filter(
-                eval('plateDB.Plate.{0} == {1}'.format(format, inp))).all()
+        sets = session.query(
+            mangaDB.Set).join(mangaDB.Exposure, plateDB.Exposure, plateDB.Observation,
+                              plateDB.PlatePointing, plateDB.Plate).filter(
+                                  eval('plateDB.Plate.{0} == {1}'.format(format, inp))).all()
 
     return [Set(set, **kwargs) for set in sets]
 
@@ -97,8 +96,7 @@ class Set(object):
             self._checkHasExposures()
 
     def __repr__(self):
-        return '<Totoro Set (pk={0}, status={1})>'.format(
-            self.pk, self.getQuality(flag=False)[0])
+        return '<Totoro Set (pk={0}, status={1})>'.format(self.pk, self.getQuality(flag=False)[0])
 
     def _initFromData(self, input):
         """Init a new Set instance from a DB query."""
@@ -106,8 +104,7 @@ class Set(object):
         with self.session.begin():
             ss = self.session.query(self.db.mangaDB.Set).get(input)
             if ss is None:
-                raise exceptions.TotoroError(
-                    'no set found for pk={0}'.format(input))
+                raise exceptions.TotoroError('no set found for pk={0}'.format(input))
 
         return ss
 
@@ -130,12 +127,10 @@ class Set(object):
     def update(self, **kwargs):
         """Reloads the set."""
 
-        newSelf = Set(self.pk, fromat='pk', mock=self.isMock,
-                      mjd=self.mjd, **self._kwargs)
+        newSelf = Set(self.pk, fromat='pk', mock=self.isMock, mjd=self.mjd, **self._kwargs)
         self = newSelf
 
-        log.debug('Set pk={0} has been reloaded'.format(
-                  self.pk))
+        log.debug('Set pk={0} has been reloaded'.format(self.pk))
 
     @staticmethod
     def fromExposures(exposures, **kwargs):
@@ -156,15 +151,14 @@ class Set(object):
     def loadExposures(self):
 
         exposures = self.session.query(self.db.plateDB.Exposure).join(
-            self.db.mangaDB.Exposure, self.db.mangaDB.Set).filter(
-                self.db.mangaDB.Set.pk == self.pk).all()
+            self.db.mangaDB.Exposure,
+            self.db.mangaDB.Set).filter(self.db.mangaDB.Set.pk == self.pk).all()
 
         return [Exposure(exp) for exp in exposures]
 
     def _checkHasExposures(self):
         if len(self.totoroExposures) == 0:
-            raise exceptions.EmptySet(
-                'set pk={0} has no exposures.'.format(self.pk))
+            raise exceptions.EmptySet('set pk={0} has no exposures.'.format(self.pk))
 
     @classmethod
     def createMockSet(cls, ra=None, dec=None, **kwargs):
@@ -179,8 +173,7 @@ class Set(object):
     def addMockExposure(self, **kwargs):
 
         if self.complete is True:
-            raise exceptions.TotoroError(
-                'set is complete; not exposures can be added.')
+            raise exceptions.TotoroError('set is complete; not exposures can be added.')
 
         if 'ditherPosition' not in kwargs or kwargs['ditherPosition'] is None:
             kwargs['ditherPosition'] = self.getMissingDitherPositions()[0]
@@ -193,8 +186,7 @@ class Set(object):
         """Returns the plateDB.Plate object for this set."""
 
         self._checkHasExposures()
-        return (self.exposures[0].platedbExposure.observation.
-                plate_pointing.plate)
+        return (self.exposures[0].platedbExposure.observation.plate_pointing.plate)
 
     @property
     def ra(self):
@@ -207,10 +199,8 @@ class Set(object):
     def getCoordinates(self):
 
         if 'ra' in self._kwargs and 'dec' in self._kwargs:
-            if (self._kwargs['ra'] is not None and
-                    self._kwargs['dec'] is not None):
-                return np.array(
-                    [self._kwargs['ra'], self._kwargs['dec']], np.float)
+            if (self._kwargs['ra'] is not None and self._kwargs['dec'] is not None):
+                return np.array([self._kwargs['ra'], self._kwargs['dec']], np.float)
         else:
             self._checkHasExposures()
             return self.totoroExposures[0].getCoordinates()
@@ -231,13 +221,15 @@ class Set(object):
         HA[HA > 180] -= 360
         return HA
 
-    def getHARange(self, intersect=False, mjd=None,
-                   maxHARange=config['set']['maxHARange'], **kwargs):
+    def getHARange(self,
+                   intersect=False,
+                   mjd=None,
+                   maxHARange=config['set']['maxHARange'],
+                   **kwargs):
         """Returns the HA limits to add more exposures to the set."""
 
         ha = self.getHA()
-        haRange = np.array([np.max(ha) - maxHARange,
-                            np.min(ha) + maxHARange]) % 360.
+        haRange = np.array([np.max(ha) - maxHARange, np.min(ha) + maxHARange]) % 360.
 
         plateHALimit = utils.mlhalimit(self.dec)
 
@@ -269,8 +261,7 @@ class Set(object):
         if len(self.totoroExposures) == 0:
             return np.array([0.0, 0.0, 0.0, 0.0])
         else:
-            return np.nansum([exp.getSN2Array()
-                              for exp in self.totoroExposures], axis=0)
+            return np.nansum([exp.getSN2Array() for exp in self.totoroExposures], axis=0)
 
     def getSN2Range(self):
         """Returns the SN2 range in which new exposures may be taken."""
@@ -278,8 +269,7 @@ class Set(object):
         maxSN2Factor = config['set']['maxSN2Factor']
 
         sn2 = np.array([exp.getSN2Array() for exp in self.totoroExposures])
-        sn2Average = np.array(
-            [(np.nanmean(ss[0:2]), np.nanmean(ss[2:4])) for ss in sn2])
+        sn2Average = np.array([(np.nanmean(ss[0:2]), np.nanmean(ss[2:4])) for ss in sn2])
 
         minSN2Blue = np.max(sn2Average[:, 0]) / maxSN2Factor
         maxSN2Blue = np.min(sn2Average[:, 0]) * maxSN2Factor
@@ -391,12 +381,10 @@ class Set(object):
         date = time.Time(mjd, format='mjd', scale='tai')
 
         date0 = site.localSiderealTimeToDate(lst0, date=date)
-        date1 = date0 + time.TimeDelta(
-            (lst1 - lst0) % 24. * 3600., format='sec')
+        date1 = date0 + time.TimeDelta((lst1 - lst0) % 24. * 3600., format='sec')
 
         if returnType == 'str':
-            return ('{0:%H:%M}'.format(date0.datetime),
-                    '{0:%H:%M}'.format(date1.datetime))
+            return ('{0:%H:%M}'.format(date0.datetime), '{0:%H:%M}'.format(date1.datetime))
         else:
             return (date0.datetime, date1.datetime)
 
@@ -408,8 +396,7 @@ class Set(object):
             return False
 
 
-def flagSet(set, statusLabel, errorCode, flag=True, message=None,
-            silent=False, **kwargs):
+def flagSet(set, statusLabel, errorCode, flag=True, message=None, silent=False, **kwargs):
     """Helper function to log and flag sets."""
 
     if message is not None and not silent:
@@ -417,8 +404,7 @@ def flagSet(set, statusLabel, errorCode, flag=True, message=None,
 
     if flag:
         # Avoids calling setSetStatus if there is nothing to flag
-        if (statusLabel in ['Incomplete', 'Unplugged', 'Bad'] and
-                set.set_status_pk is None):
+        if (statusLabel in ['Incomplete', 'Unplugged', 'Bad'] and set.set_status_pk is None):
             pass
         else:
             setSetStatus(set, statusLabel)
@@ -455,19 +441,19 @@ def setSetStatus(set, status):
 
     with session.begin():
         try:
-            queryStatus = session.query(db.mangaDB.SetStatus).filter(
-                db.mangaDB.SetStatus.label == status).one()
+            queryStatus = session.query(
+                db.mangaDB.SetStatus).filter(db.mangaDB.SetStatus.label == status).one()
             statusPK = queryStatus.pk
-        except:
+        except Exception:
             # If the status is not found, we remove the status.
             statusPK = None
 
         ss = session.query(db.mangaDB.Set).get(pk)
 
         if ss.set_status_pk is not None and statusPK is None:
-            warnings.warn('changing set pk={0} from status {1} to None'
-                          .format(pk, ss.status.label),
-                          exceptions.TotoroUserWarning)
+            warnings.warn(
+                'changing set pk={0} from status {1} to None'.format(pk, ss.status.label),
+                exceptions.TotoroUserWarning)
 
         ss.set_status_pk = statusPK
 
@@ -491,8 +477,7 @@ setErrorCodes = {
 }
 
 
-def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
-             **kwargs):
+def checkSet(set, flag=True, flagExposures=None, force=False, silent=False, **kwargs):
     """Checks if a set meets MaNGA's quality criteria.
 
     Checks the input Totoro.dbclasses.Set objects to confirm that it meets all
@@ -542,8 +527,7 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
 
     """
 
-    assert isinstance(set, Set), ('input set is not an instance of '
-                                  'Totoro.dbclasses.Set')
+    assert isinstance(set, Set), ('input set is not an instance of ' 'Totoro.dbclasses.Set')
 
     if set.isMock or any([exp.isMock for exp in set.totoroExposures]):
         flag = False
@@ -561,8 +545,7 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
             return ('Good', 10)
         elif set.status.label == 'Override Bad':
             return ('Bad', 10)
-        elif ((set.status.label == 'Excellent' or
-               set.status.label == 'Good') and not force):
+        elif ((set.status.label == 'Excellent' or set.status.label == 'Good') and not force):
             return ('Good', 10)
         elif set.status.label == 'Poor' and not force:
             return ('Bad', 10)
@@ -577,29 +560,23 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
     for exposure in set.totoroExposures:
         exposureCheck = exposure.checkExposure(flag=flagExposures, force=force)
         if exposureCheck[0] is False:
-            message = ('set pk={0}: one or more exposures are invalid.'
-                       .format(pk))
-            return flagSet(set, 'Bad', 1, flag=flag, message=message,
-                           silent=silent)
+            message = ('set pk={0}: one or more exposures are invalid.'.format(pk))
+            return flagSet(set, 'Bad', 1, flag=flag, message=message, silent=silent)
 
     # Checks range of observations
     HA = set.getHA()
     HALength = (HA[1] - HA[0]) % 360.
     maxHARange = config['set']['maxHARange']
     if HALength > maxHARange:
-        message = ('set pk={0}: HA range is larger than {1} deg.'
-                   .format(pk, maxHARange))
-        return flagSet(set, 'Bad', 2, flag=flag, message=message,
-                       silent=silent)
+        message = ('set pk={0}: HA range is larger than {1} deg.'.format(pk, maxHARange))
+        return flagSet(set, 'Bad', 2, flag=flag, message=message, silent=silent)
 
     # Checks seeing
     seeing = np.array([exp.seeing for exp in set.totoroExposures])
     maxSeeingRange = config['set']['maxSeeingRange']
     if np.max(seeing) - np.min(seeing) > maxSeeingRange:
-        message = ('set pk={0} fails the seeing uniformity criteria'
-                   .format(pk))
-        return flagSet(set, 'Bad', 3, flag=flag, message=message,
-                       silent=silent)
+        message = ('set pk={0} fails the seeing uniformity criteria'.format(pk))
+        return flagSet(set, 'Bad', 3, flag=flag, message=message, silent=silent)
 
     # Checks SN2 uniformity
     sn2 = np.array([exp.getSN2Array() for exp in set.totoroExposures])
@@ -608,41 +585,32 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
         for jj in range(ii, len(sn2)):
             sn2Ratio = sn2[ii] / sn2[jj]
             sn2Ratio[np.isnan(sn2Ratio)] = config['set']['maxSN2Factor']
-            if (np.any(sn2Ratio > maxSN2Factor) or
-                    np.any(sn2Ratio < (1. / maxSN2Factor))):
-                message = ('set pk={0} fails the SN2 uniformity criteria'
-                           .format(pk))
-                return flagSet(set, 'Bad', 4, flag=flag, message=message,
-                               silent=silent)
+            if (np.any(sn2Ratio > maxSN2Factor) or np.any(sn2Ratio < (1. / maxSN2Factor))):
+                message = ('set pk={0} fails the SN2 uniformity criteria'.format(pk))
+                return flagSet(set, 'Bad', 4, flag=flag, message=message, silent=silent)
 
     # Checks dithers
     ditherPositions = config['set']['ditherPositions']
     setDitherPositions = np.array(set.getDitherPositions())
 
     if len(setDitherPositions) > len(ditherPositions):
-        message = ('set pk={0} has {1} exposures!'
-                   .format(pk, len(setDitherPositions)))
-        return flagSet(set, 'Bad', 5, flag=flag, message=message,
-                       silent=silent)
+        message = ('set pk={0} has {1} exposures!'.format(pk, len(setDitherPositions)))
+        return flagSet(set, 'Bad', 5, flag=flag, message=message, silent=silent)
 
     # Checks if exposure dithers are unique
     if np.unique(setDitherPositions).size < setDitherPositions.size:
-        message = ('set pk={0} has multiple exposures with '
-                   'the same dither position'.format(pk))
-        return flagSet(set, 'Bad', 6, flag=flag, message=message,
-                       silent=silent)
+        message = ('set pk={0} has multiple exposures with ' 'the same dither position'.format(pk))
+        return flagSet(set, 'Bad', 6, flag=flag, message=message, silent=silent)
 
     # Checks if all exposures belong to the same plugging.
-    expPluggings = np.array([exp.getPlugging().pk
-                             if exp.getPlugging() is not None else 0
-                             for exp in set.totoroExposures])
+    expPluggings = np.array([
+        exp.getPlugging().pk if exp.getPlugging() is not None else 0 for exp in set.totoroExposures
+    ])
 
     # Now compares the plugging pks.
     if len(expPluggings) > 0 and not np.all(expPluggings == expPluggings[0]):
-        message = ('set pk={0} has exposures from different pluggings.'
-                   .format(pk))
-        return flagSet(set, 'Bad', 8, flag=flag, message=message,
-                       silent=silent)
+        message = ('set pk={0} has exposures from different pluggings.'.format(pk))
+        return flagSet(set, 'Bad', 8, flag=flag, message=message, silent=silent)
 
     # Checks if set is incomplete.
     if len(setDitherPositions) < len(ditherPositions):
@@ -658,8 +626,7 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
 
         if not allMock and expPluggings[0] != activePlugging:
             message = 'set pk={0} is from an inactive plugging.'.format(pk)
-            return flagSet(set, 'Unplugged', 9, flag=flag, message=message,
-                           silent=silent)
+            return flagSet(set, 'Unplugged', 9, flag=flag, message=message, silent=silent)
 
         # Otherwise, the set is incomplete
         return flagSet(set, 'Incomplete', 0, flag=False, silent=silent)
@@ -668,10 +635,8 @@ def checkSet(set, flag=True, flagExposures=None, force=False, silent=False,
     goodSeeingLimit = config['set']['goodSeeing']
     # excellentSeeingLimit = config['set']['excellentSeeing']
     if np.mean(seeing) > goodSeeingLimit:
-        message = ('set pk={0} has average seeing > {1:.1f}'
-                   .format(pk, goodSeeingLimit))
-        return flagSet(set, 'Bad', 7, flag=flag, message=message,
-                       silent=silent)
+        message = ('set pk={0} has average seeing > {1:.1f}'.format(pk, goodSeeingLimit))
+        return flagSet(set, 'Bad', 7, flag=flag, message=message, silent=silent)
     # elif np.mean(seeing) <= excellentSeeingLimit:
     #     return flagHelper('Excellent', 0)
     else:

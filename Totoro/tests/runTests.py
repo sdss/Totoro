@@ -12,12 +12,13 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-from subprocess import Popen, PIPE
-from Totoro.core.colourPrint import _color_text
-import nose
+from __future__ import division, print_function
+
 import sys
+from subprocess import PIPE, Popen
+
+import nose
+from Totoro.core.colourPrint import _color_text
 
 
 if __name__ == '__main__':
@@ -37,11 +38,10 @@ if __name__ == '__main__':
         # still run the test suite.
         sys.stdout.write('Restoring test DB ... ')
         sys.stdout.flush()
-        command = Popen('restoreTestDB.sh', stdout=PIPE,
-                        stderr=PIPE, shell=True, close_fds=True)
+        command = Popen('restoreTestDB.sh', stdout=PIPE, stderr=PIPE, shell=True, close_fds=True)
         out, err = command.communicate()
 
-        if err != '':
+        if err.decode('utf-8') != '':
             print(_color_text('FAILED', 'red'))
         else:
             print('ok')

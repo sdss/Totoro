@@ -12,6 +12,7 @@ import re
 import shutil
 import sys
 import warnings
+from builtins import str
 from logging import FileHandler
 from logging.handlers import TimedRotatingFileHandler
 from textwrap import TextWrapper
@@ -60,8 +61,7 @@ class MyFormatter(logging.Formatter):
     info_fmt = '%(asctime)s - %(levelname)s - %(message)s [%(funcName)s @ ' + \
         '%(filename)s]'
 
-    def __init__(self, fmt='%(levelname)s - %(message)s [%(funcName)s @ ' +
-                 '%(filename)s]'):
+    def __init__(self, fmt='%(levelname)s - %(message)s [%(funcName)s @ ' + '%(filename)s]'):
         logging.Formatter.__init__(self, fmt, datefmt='%Y-%m-%d %H:%M:%S')
 
     def format(self, record):
@@ -132,7 +132,7 @@ class TotoroLogger(Logger):
 
         mod_name = None
         mod_path, __ = os.path.splitext(mod_path)
-        for __, mod in sys.modules.items():
+        for __, mod in list(sys.modules.items()):
             path = os.path.splitext(getattr(mod, '__file__', ''))[0]
             if path == mod_path:
                 mod_name = mod.__name__
@@ -148,26 +148,26 @@ class TotoroLogger(Logger):
 
         if record.levelno < logging.DEBUG:
             print(record.levelname, end='')
-        elif(record.levelno < logging.INFO):
+        elif (record.levelno < logging.INFO):
             colourPrint(record.levelname, 'green', end='')
-        elif(record.levelno < IMPORTANT):
+        elif (record.levelno < IMPORTANT):
             colourPrint(record.levelname, 'magenta', end='')
-        elif(record.levelno < logging.WARNING):
+        elif (record.levelno < logging.WARNING):
             colourPrint(record.levelname, 'lightblue', end='')
-        elif(record.levelno < logging.ERROR):
+        elif (record.levelno < logging.ERROR):
             colourPrint(record.levelname, 'brown', end='')
         else:
             colourPrint(record.levelname, 'red', end='')
 
         if record.levelno == logging.WARN:
-            message = '{0}'.format(record.msg[record.msg.find(':')+2:])
+            message = '{0}'.format(record.msg[record.msg.find(':') + 2:])
         else:
             message = record.getMessage()
 
         if len(message) > self.wrapperLength:
             tw = TextWrapper()
             tw.width = self.wrapperLength
-            tw.subsequent_indent = ' ' * (len(record.levelname)+2)
+            tw.subsequent_indent = ' ' * (len(record.levelname) + 2)
             tw.break_on_hyphens = False
             message = '\n'.join(tw.wrap(message))
 
@@ -207,15 +207,13 @@ class TotoroLogger(Logger):
             if mode.lower() == 'overwrite':
                 self.fh = FileHandler(logFilePath, mode='w')
             elif mode.lower() == 'append':
-                self.fh = TimedRotatingFileHandler(
-                    logFilePath, when='midnight', utc=True)
+                self.fh = TimedRotatingFileHandler(logFilePath, when='midnight', utc=True)
             else:
-                raise TotoroError('logger mode {0} not recognised'
-                                  .format(mode))
+                raise TotoroError('logger mode {0} not recognised'.format(mode))
         except (IOError, OSError) as e:
             warnings.warn(
                 'log file {0!r} could not be opened for writing: '
-                '{1}'.format(logFilePath, unicode(e)), RuntimeWarning)
+                '{1}'.format(logFilePath, str(e)), RuntimeWarning)
         else:
             self.fh.setFormatter(fmt)
             self.addHandler(self.fh)

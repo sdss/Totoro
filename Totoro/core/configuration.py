@@ -13,11 +13,12 @@ system.
 
 """
 
-import yaml
 import os
-from Totoro import exceptions
-from Totoro import __DEFAULT_CONFIG_FILE__
-from Totoro import __TOTORO_CONFIG_PATH__
+
+import yaml
+from past.builtins import basestring
+
+from Totoro import __DEFAULT_CONFIG_FILE__, __TOTORO_CONFIG_PATH__, exceptions
 
 
 def getConfiguration(default=None):
@@ -39,8 +40,7 @@ class TotoroConfig(dict):
     def __init__(self, configurationFile):
 
         if not os.path.exists(configurationFile):
-            raise exceptions.TotoroError(
-                'configuration file', configurationFile, 'not found.')
+            raise exceptions.TotoroError('configuration file', configurationFile, 'not found.')
 
         self._rawData = open(configurationFile).read()
         self._initFromRaw()
@@ -82,7 +82,7 @@ class TotoroConfig(dict):
     def merge(self, user, default):
         """Merges two dictionaries recursively."""
         if isinstance(user, dict) and isinstance(default, dict):
-            for kk, vv in default.iteritems():
+            for kk, vv in default.items():
                 if kk not in user:
                     user[kk] = vv
                 else:
@@ -92,8 +92,7 @@ class TotoroConfig(dict):
     def _checkDBConnection(self):
 
         if 'TOTORO_DB_CONNECTION' in os.environ:
-            result = self._assignDBConnection(
-                os.environ['TOTORO_DB_CONNECTION'])
+            result = self._assignDBConnection(os.environ['TOTORO_DB_CONNECTION'])
             if result is True:
                 self._fillPassword()
                 return
@@ -103,10 +102,9 @@ class TotoroConfig(dict):
         elif isinstance(self['dbConnection'], basestring):
             result = self._assignDBConnection(self['dbConnection'])
             if result is False:
-                raise exceptions.TotoroError(
-                    'dbConnection could not be configured. '
-                    'Please, check your totoro.yaml and '
-                    '$TOTORO_DB_CONNECTION')
+                raise exceptions.TotoroError('dbConnection could not be configured. '
+                                             'Please, check your totoro.yaml and '
+                                             '$TOTORO_DB_CONNECTION')
 
         self._fillPassword()
 

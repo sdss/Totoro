@@ -13,12 +13,14 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-import re
+from __future__ import division, print_function
+
 import os
+import re
 # import inflect
 import warnings
+from builtins import object
+
 from SDSSconnect.exceptions import SDSSconnectUserWarning
 
 
@@ -36,14 +38,11 @@ def scalarRelationship(base, local_cls, referred_cls, constraint):
     """Creates relationship name removing the schema prefix."""
 
     referred_name = referred_cls.__name__
-    if (str(referred_cls.__table__.schema) ==
-            str(local_cls.__table__.schema)):
+    if (str(referred_cls.__table__.schema) == str(local_cls.__table__.schema)):
         referred_name = referred_name.replace(
             str(referred_cls.__table__.schema).capitalize() + '_', '')
 
-    uncamelised = re.sub(r'[A-Z]',
-                         lambda m: "_%s" % m.group(0).lower(),
-                         referred_name)[1:]
+    uncamelised = re.sub(r'[A-Z]', lambda m: '_%s' % m.group(0).lower(), referred_name)[1:]
 
     return uncamelised
 
@@ -51,9 +50,8 @@ def scalarRelationship(base, local_cls, referred_cls, constraint):
 def cameliseClassname(base, tablename, table):
     """Produces a 'camelised' class name."""
 
-    camelised = (str(table.schema).capitalize() + '_' +
-                 str(tablename[0].upper() + re.sub(r'_([a-z])',
-                     lambda mm: mm.group(1).upper(), tablename[1:])))
+    camelised = (str(table.schema).capitalize() + '_' + str(
+        tablename[0].upper() + re.sub(r'_([a-z])', lambda mm: mm.group(1).upper(), tablename[1:])))
 
     if camelised in classConversions:
         return classConversions[camelised]
@@ -107,20 +105,16 @@ def modelRepr(self):
 
         try:
             reprSchema, reprTable, reprLabel, reprRef = line.strip().split()
-            if (schema.lower() == reprSchema.lower() and
-                    table.lower() == reprTable.lower()):
-                reprList.append('{0}={1}'
-                                .format(reprLabel,
-                                        eval('self.{0}'.format(reprRef))))
-        except:
-            warnings.warn('failed adding custom representation to {0}'
-                          .format(fullClassName), SDSSconnectUserWarning)
+            if (schema.lower() == reprSchema.lower() and table.lower() == reprTable.lower()):
+                reprList.append('{0}={1}'.format(reprLabel, eval('self.{0}'.format(reprRef))))
+        except Exception:
+            warnings.warn('failed adding custom representation to {0}'.format(fullClassName),
+                          SDSSconnectUserWarning)
 
     return '<{0}: {1}>'.format(fullClassName, ', '.join(reprList))
 
 
-def nullifyRelationship(base, direction, return_fn, attrname,
-                        local_cls, referred_cls, **kwargs):
+def nullifyRelationship(base, direction, return_fn, attrname, local_cls, referred_cls, **kwargs):
 
     return None
 
@@ -130,8 +124,7 @@ class ModelWrapper(object):
     def __init__(self, Base, prefix):
         """Creates a wrapper around Base.class names with a certain prefix."""
 
-        for key in Base.classes.keys():
+        for key in list(Base.classes.keys()):
             if prefix in key:
-                exec('self.{0} = Base.classes.{1}'
-                     .format(key[len(prefix):], key))
+                exec('self.{0} = Base.classes.{1}'.format(key[len(prefix):], key))
                 exec('self.{0}.__repr__ = modelRepr'.format(key[len(prefix):]))

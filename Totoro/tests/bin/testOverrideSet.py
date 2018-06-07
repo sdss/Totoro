@@ -12,16 +12,18 @@ Revision history:
 
 """
 
-from __future__ import division
-from __future__ import print_function
-import unittest
-import numpy as np
-import warnings
+from __future__ import division, print_function
 
-from Totoro.db import getConnectionFull
-from Totoro.dbclasses.plate_utils import removeOrphanedSets
+import unittest
+import warnings
+from builtins import map, range, str
+
+import numpy as np
+
 from Totoro.bin.overrideSet import main
+from Totoro.db import getConnectionFull
 from Totoro.dbclasses import Exposure, Set, fromPlateID
+from Totoro.dbclasses.plate_utils import removeOrphanedSets
 
 
 db, Session, plateDB, mangaDB = getConnectionFull('test')
@@ -58,9 +60,7 @@ class TestOverrideSet(unittest.TestCase):
             for ii, setPK in enumerate(plate8549_setPKs):
                 ss = session.query(db.mangaDB.Set).get(setPK)
                 if ss is None:
-                    session.add(
-                        db.mangaDB.Set(pk=setPK,
-                                       set_status_pk=plate8549_setStatus[ii]))
+                    session.add(db.mangaDB.Set(pk=setPK, set_status_pk=plate8549_setStatus[ii]))
                     session.flush()
                     continue
                 else:
@@ -70,10 +70,10 @@ class TestOverrideSet(unittest.TestCase):
                 for exp in ss.exposures:
                     exp.set_pk = None
 
-        plate8549_exposures = [84465, 84588, 84667, 84468, 84462, 84664, 84670,
-                               84658, 84661, 84591, 84672, 84675]
-        plate8549_exposure_set = [268, 268, 268, 269, 276, 276, 276, 280, 280,
-                                  281, 281, 281]
+        plate8549_exposures = [
+            84465, 84588, 84667, 84468, 84462, 84664, 84670, 84658, 84661, 84591, 84672, 84675
+        ]
+        plate8549_exposure_set = [268, 268, 268, 269, 276, 276, 276, 280, 280, 281, 281, 281]
         with session.begin():
             for ii, expPK in enumerate(plate8549_exposures):
                 exp = session.query(db.plateDB.Exposure).get(expPK)
@@ -98,15 +98,13 @@ class TestOverrideSet(unittest.TestCase):
         """Test overriding all the exposures in a set to Override Good."""
 
         exps = [177773, 177774, 177775]
-        main(argv=['-v', 'good'] + map(str, exps))
+        main(argv=['-v', 'good'] + list(map(str, exps)))
 
         for exp in exps:
             totExp = Exposure(exp, format='exposure_no', parent='plateDB')
             self.assertEqual(totExp._mangaExposure.set_pk, 1)
-            self.assertEqual(totExp._mangaExposure.status.label,
-                             'Override Good')
-            self.assertEqual(totExp._mangaExposure.set.status.label,
-                             'Override Good')
+            self.assertEqual(totExp._mangaExposure.status.label, 'Override Good')
+            self.assertEqual(totExp._mangaExposure.set.status.label, 'Override Good')
 
         # Checks that the set is overriden good
         with session.begin():
@@ -119,7 +117,7 @@ class TestOverrideSet(unittest.TestCase):
         """Test overriding exposures from different sets into a good set."""
 
         exps = [177773, 177774, 177778]
-        main(argv=['-v', 'good'] + map(str, exps))
+        main(argv=['-v', 'good'] + list(map(str, exps)))
 
         setPKs = []
         for exp in exps:
@@ -127,10 +125,8 @@ class TestOverrideSet(unittest.TestCase):
             setPK = totExp._mangaExposure.set_pk
             self.assertIsNotNone(setPK)
             setPKs.append(setPK)
-            self.assertEqual(totExp._mangaExposure.status.label,
-                             'Override Good')
-            self.assertEqual(totExp._mangaExposure.set.status.label,
-                             'Override Good')
+            self.assertEqual(totExp._mangaExposure.status.label, 'Override Good')
+            self.assertEqual(totExp._mangaExposure.set.status.label, 'Override Good')
 
         self.assertEqual(len(np.unique(setPKs)), 1)
 
@@ -157,15 +153,13 @@ class TestOverrideSet(unittest.TestCase):
         """Test overriding all the exposures in a set to Override Bad."""
 
         exps = [177773, 177774, 177775]
-        main(argv=['-v', 'bad'] + map(str, exps))
+        main(argv=['-v', 'bad'] + list(map(str, exps)))
 
         for exp in exps:
             totExp = Exposure(exp, format='exposure_no', parent='plateDB')
             self.assertEqual(totExp._mangaExposure.set_pk, 1)
-            self.assertEqual(totExp._mangaExposure.status.label,
-                             'Override Bad')
-            self.assertEqual(totExp._mangaExposure.set.status.label,
-                             'Override Bad')
+            self.assertEqual(totExp._mangaExposure.status.label, 'Override Bad')
+            self.assertEqual(totExp._mangaExposure.set.status.label, 'Override Bad')
 
         # Checks that the set is overriden good
         with session.begin():
@@ -188,13 +182,11 @@ class TestOverrideSet(unittest.TestCase):
 
         with warnings.catch_warnings(record=True) as ww:
 
-            main(argv=['-v', 'bad'] + map(str, exps))
+            main(argv=['-v', 'bad'] + list(map(str, exps)))
 
-            warnMessages = '\n'.join([str(ww[ii].message)
-                                      for ii in range(len(ww))])
+            warnMessages = '\n'.join([str(ww[ii].message) for ii in range(len(ww))])
 
-            self.assertIn('plate completion has changed from 1.85 to 0.91.',
-                          warnMessages)
+            self.assertIn('plate completion has changed from 1.85 to 0.91.', warnMessages)
 
         setPKs = []
         for exp in exps:
@@ -202,10 +194,8 @@ class TestOverrideSet(unittest.TestCase):
             setPK = totExp._mangaExposure.set_pk
             self.assertIsNotNone(setPK)
             setPKs.append(setPK)
-            self.assertEqual(totExp._mangaExposure.status.label,
-                             'Override Bad')
-            self.assertEqual(totExp._mangaExposure.set.status.label,
-                             'Override Bad')
+            self.assertEqual(totExp._mangaExposure.status.label, 'Override Bad')
+            self.assertEqual(totExp._mangaExposure.set.status.label, 'Override Bad')
 
         self.assertEqual(len(np.unique(setPKs)), 1)
 
@@ -235,7 +225,7 @@ class TestOverrideSet(unittest.TestCase):
 
         # We override a set as bad
         exps = [177773, 177774, 177778]
-        overridenSetPK = main(argv=['-v', 'bad'] + map(str, exps))
+        overridenSetPK = main(argv=['-v', 'bad'] + list(map(str, exps)))
 
         # Checks that the new overridden set is 297
         with session.begin():
@@ -256,15 +246,15 @@ class TestOverrideSet(unittest.TestCase):
         # Checks that all exposures don't have exposure status or set_pk
         with session.begin():
             for exp in exps:
-                ee = session.query(db.plateDB.Exposure).filter(
-                    db.plateDB.Exposure.exposure_no == exp).one()
+                ee = session.query(
+                    db.plateDB.Exposure).filter(db.plateDB.Exposure.exposure_no == exp).one()
                 mangaDBexp = ee.mangadbExposure[0]
                 self.assertIsNone(mangaDBexp.set_pk)
                 self.assertIsNone(mangaDBexp.exposure_status_pk)
 
         # Now we repeat the test but using --reload. The plate should be left
         # in the original state but with sets 1 and 2 exchanged.
-        overridenSetPK = main(argv=['-v', 'bad'] + map(str, exps))
+        overridenSetPK = main(argv=['-v', 'bad'] + list(map(str, exps)))
 
         # Now we remove the set
         main(argv=['-v', 'remove', '--reload', str(overridenSetPK)])
@@ -273,8 +263,8 @@ class TestOverrideSet(unittest.TestCase):
         expSetPKs = [1, 1, 2]
         with session.begin():
             for ii, exp in enumerate(exps):
-                ee = session.query(db.plateDB.Exposure).filter(
-                    db.plateDB.Exposure.exposure_no == exp).one()
+                ee = session.query(
+                    db.plateDB.Exposure).filter(db.plateDB.Exposure.exposure_no == exp).one()
                 mangaDBexp = ee.mangadbExposure[0]
                 self.assertEqual(mangaDBexp.set_pk, expSetPKs[ii])
                 self.assertEqual(mangaDBexp.exposure_status_pk, 4)
@@ -290,8 +280,7 @@ class TestOverrideSet(unittest.TestCase):
 
         # Checks a fake set
         exps = [177773, 177774, 177778]
-        (status, code,
-         statusMock, codeMock) = main(argv=['-v', 'info'] + map(str, exps))
+        (status, code, statusMock, codeMock) = main(argv=['-v', 'info'] + list(map(str, exps)))
 
         self.assertEqual(status, 'Bad')
         self.assertEqual(code, 2)
@@ -300,8 +289,7 @@ class TestOverrideSet(unittest.TestCase):
 
         # Now we check a real good one
         exps = [177773, 177774, 177775]
-        (status, code,
-         statusMock, codeMock) = main(argv=['-v', 'info'] + map(str, exps))
+        (status, code, statusMock, codeMock) = main(argv=['-v', 'info'] + list(map(str, exps)))
 
         self.assertEqual(status, 'Excellent')
         self.assertEqual(code, 10)
@@ -310,9 +298,8 @@ class TestOverrideSet(unittest.TestCase):
 
         # Lets override the first example as bad
         exps = [177773, 177774, 177778]
-        main(argv=['-v', 'bad'] + map(str, exps))
-        (status, code,
-         statusMock, codeMock) = main(argv=['-v', 'info'] + map(str, exps))
+        main(argv=['-v', 'bad'] + list(map(str, exps)))
+        (status, code, statusMock, codeMock) = main(argv=['-v', 'info'] + list(map(str, exps)))
 
         self.assertEqual(status, 'Override Bad')
         self.assertEqual(code, 10)
@@ -324,24 +311,22 @@ class TestOverrideSet(unittest.TestCase):
         # check.
         for exp in exps:
             totExp = Exposure(exp, format='exposure_no')
-            self.assertEqual(totExp._mangaExposure.status.label,
-                             'Override Bad')
+            self.assertEqual(totExp._mangaExposure.status.label, 'Override Bad')
 
     def testEmptySet(self):
         """Tests when one of the original sets in empty after overriding."""
 
         exps = [198371, 198447, 198258]
-        main(argv=['-v', 'good'] + map(str, exps))
+        main(argv=['-v', 'good'] + list(map(str, exps)))
 
         with session.begin():
-            exp198371 = session.query(db.plateDB.Exposure).filter(
-                db.plateDB.Exposure.exposure_no == 198371).one()
+            exp198371 = session.query(
+                db.plateDB.Exposure).filter(db.plateDB.Exposure.exposure_no == 198371).one()
             ss = exp198371.mangadbExposure[0].set
 
         self.assertIsNotNone(ss)
         self.assertEqual(ss.status.label, 'Override Good')
-        self.assertItemsEqual([exp.platedbExposure.exposure_no
-                               for exp in ss.exposures], exps)
+        self.assertItemsEqual([exp.platedbExposure.exposure_no for exp in ss.exposures], exps)
 
 
 if __name__ == '__main__':

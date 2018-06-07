@@ -1,33 +1,28 @@
 #!/usr/bin/env python
-# encoding: utf-8
-"""
+# -*- coding:utf-8 -*-
 
-footprint.py
+# @Author: José Sánchez-Gallego (gallegoj@uw.edu)
+# @Date: 2016-05-01
+# @Filename: footprint.py
+# @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
+# @Copyright: José Sánchez-Gallego
 
-Created by José Sánchez-Gallego on 1 Mar 2016.
-Licensed under a 3-clause BSD license.
+from __future__ import division, print_function
 
-Revision history:
-    1 Mar 2016 J. Sánchez-Gallego
-      Initial version
+from builtins import range
 
-"""
-
-from __future__ import division
-from __future__ import print_function
-
-import numpy as np
 import matplotlib as mpl
-from matplotlib import pyplot as plt
-from matplotlib.patches import Ellipse
-from matplotlib.legend_handler import HandlerPatch
+import numpy as np
 from matplotlib import path
-from matplotlib.patches import PathPatch
+from matplotlib import pyplot as plt
+from matplotlib.legend_handler import HandlerPatch
+from matplotlib.patches import Ellipse, PathPatch
 
 
-__all__ = ['HSC', 'UKIDSS', 'ATLAS', 'ALFALFA', 'ApertifMedDeep', 'GAMA',
-           'CVn', 'HETDEX', 'PerseusPisces', 'getPlatesInFootprint']
-
+__all__ = [
+    'HSC', 'UKIDSS', 'ATLAS', 'ALFALFA', 'ApertifMedDeep', 'GAMA', 'CVn', 'HETDEX',
+    'PerseusPisces', 'getPlatesInFootprint'
+]
 
 defaultColours = {
     'GAMA': 'DarkOrchid',
@@ -59,8 +54,7 @@ def getAxes(projection='rect'):
         ax = fig.add_subplot(111, projection='mollweide')
         org = 120
 
-        tick_labels = np.array([150., 120, 90, 60, 30, 0,
-                                330, 300, 270, 240, 210])
+        tick_labels = np.array([150., 120, 90, 60, 30, 0, 330, 300, 270, 240, 210])
         tick_labels = np.remainder(tick_labels + 360 + org, 360)
         tick_labels = np.array(tick_labels / 15., int)
 
@@ -81,26 +75,28 @@ def getAxes(projection='rect'):
 def addLegend(ax, handles, labels, **kwargs):
     """Add a legend using ellipses for the scatter plots."""
 
-    ax.legend(handles=handles, labels=labels,
-              handler_map={Ellipse: HandlerPatch(
-                           patch_func=make_legend_ellipse)}, **kwargs)
+    ax.legend(
+        handles=handles,
+        labels=labels,
+        handler_map={Ellipse: HandlerPatch(patch_func=make_legend_ellipse)},
+        **kwargs)
 
     return ax
 
 
-def make_legend_ellipse(legend, orig_handle, xdescent, ydescent,
-                        width, height, fontsize):
+def make_legend_ellipse(legend, orig_handle, xdescent, ydescent, width, height, fontsize):
 
-    pp = Ellipse(xy=(0.5 * width - 0.5 * xdescent,
-                     0.5 * height - 0.5 * ydescent),
-                 width=(height + ydescent),
-                 height=(height + ydescent), edgecolor='None', lw=0.0)
+    pp = Ellipse(
+        xy=(0.5 * width - 0.5 * xdescent, 0.5 * height - 0.5 * ydescent),
+        width=(height + ydescent),
+        height=(height + ydescent),
+        edgecolor='None',
+        lw=0.0)
 
     return pp
 
 
-def plotEllipse(ax, RA, Dec, org=None, size=3.0, bgcolor='b',
-                zorder=0, alpha=0.8):
+def plotEllipse(ax, RA, Dec, org=None, size=3.0, bgcolor='b', zorder=0, alpha=0.8):
 
     if org:
         RA = np.remainder(RA + 360 - org, 360)  # shift RA values
@@ -109,10 +105,15 @@ def plotEllipse(ax, RA, Dec, org=None, size=3.0, bgcolor='b',
         RA = -RA  # reverse the scale: East to the left
 
     for ii in range(len(RA)):
-        ell = Ellipse(xy=(RA[ii], Dec[ii]),
-                      width=size / np.cos(np.radians(Dec[ii])),
-                      height=size, edgecolor='None', facecolor=bgcolor,
-                      zorder=zorder, alpha=alpha, lw=0.0)
+        ell = Ellipse(
+            xy=(RA[ii], Dec[ii]),
+            width=size / np.cos(np.radians(Dec[ii])),
+            height=size,
+            edgecolor='None',
+            facecolor=bgcolor,
+            zorder=zorder,
+            alpha=alpha,
+            lw=0.0)
         ax.add_patch(ell)
 
     return ell
@@ -127,8 +128,7 @@ def etalambda2radec(eta, lambd):
 
     coslambda = np.cos(lambd * d2r)
     dec = r2d * np.arcsin(coslambda * np.sin((eta + deccen) * d2r))
-    ra = r2d * np.arctan2(np.sin(lambd * d2r),
-                          coslambda * np.cos((eta + deccen) * d2r)) + racen
+    ra = r2d * np.arctan2(np.sin(lambd * d2r), coslambda * np.cos((eta + deccen) * d2r)) + racen
 
     return np.hstack((ra[np.newaxis].T, dec[np.newaxis].T))
 
@@ -142,8 +142,7 @@ def getSDSSRegion(vertices):
     coords = etalambda2radec(eta, vertices[2])
     coords = np.concatenate((coords, etalambda2radec(vertices[1], lambd)))
     coords = np.concatenate((coords, etalambda2radec(eta[::-1], vertices[3])))
-    coords = np.concatenate((coords, etalambda2radec(vertices[0],
-                                                     lambd[::-1])))
+    coords = np.concatenate((coords, etalambda2radec(vertices[0], lambd[::-1])))
 
     regPath = path.Path(coords, closed=True)
     regPatch = PathPatch(regPath)
@@ -168,11 +167,7 @@ def getRectangle(vertices, angle=0.0):
     dec0 = np.min(vertices[2:])
     dec1 = np.max(vertices[2:])
 
-    coords = np.array([[ra0, dec0],
-                       [ra0, dec1],
-                       [ra1, dec1],
-                       [ra1, dec0],
-                       [ra0, dec0]])
+    coords = np.array([[ra0, dec0], [ra0, dec1], [ra1, dec1], [ra1, dec0], [ra0, dec0]])
     regPath = path.Path(coords, closed=True)
 
     recPatch = PathPatch(regPath)
@@ -180,9 +175,7 @@ def getRectangle(vertices, angle=0.0):
     if angle != 0.0:
         xCentre = 0.5 * (ra0 + ra1)
         yCentre = 0.5 * (dec0 + dec1)
-        tt = mpl.transforms.Affine2D().rotate_deg_around(xCentre,
-                                                         yCentre,
-                                                         angle)
+        tt = mpl.transforms.Affine2D().rotate_deg_around(xCentre, yCentre, angle)
 
         trans = tt
         recPatch.set_transform(trans)
@@ -190,10 +183,9 @@ def getRectangle(vertices, angle=0.0):
     return recPatch
 
 
-def plotPatch(ax, regPatch, zorder=100, projection='rect',
-              useRadians=False, org=0, **kwargs):
+def plotPatch(ax, regPatch, zorder=100, projection='rect', useRadians=False, org=0, **kwargs):
 
-    vertices = regPatch.get_path().vertices
+    vertices = regPatch.get_path().vertices.copy()
 
     if projection != 'rect':
         RA = vertices[:, 0]
@@ -211,16 +203,29 @@ def plotPatch(ax, regPatch, zorder=100, projection='rect',
 
     lw = kwargs.get('lw', defaultLW)
 
-    pathPatch = PathPatch(transformedPath, edgecolor=kwargs['color'],
-                          lw=lw, facecolor='None', alpha=1., zorder=zorder)
+    pathPatch = PathPatch(
+        transformedPath,
+        edgecolor=kwargs['color'],
+        lw=lw,
+        facecolor='None',
+        alpha=1.,
+        zorder=zorder)
 
     ax.add_patch(pathPatch)
 
     return
 
 
-def addText(ax, xx, yy, text, ha='left', size=None, projection='rect',
-            useRadians=False, org=0, **kwargs):
+def addText(ax,
+            xx,
+            yy,
+            text,
+            ha='left',
+            size=None,
+            projection='rect',
+            useRadians=False,
+            org=0,
+            **kwargs):
 
     if projection != 'rect':
 
@@ -241,16 +246,30 @@ def addText(ax, xx, yy, text, ha='left', size=None, projection='rect',
         xx = xx * np.pi / 180.
         yy = yy * np.pi / 180.
 
-    ax.text(xx, yy, text, size=size, color=kwargs['color'],
-            fontdict={'family': 'sans-serif'}, alpha=1.0, zorder=200,
-            weight='heavy', ha=ha)
+    ax.text(
+        xx,
+        yy,
+        text,
+        size=size,
+        color=kwargs['color'],
+        fontdict={'family': 'sans-serif'},
+        alpha=1.0,
+        zorder=200,
+        weight='heavy',
+        ha=ha)
     mpl.rc(mpl.rcParamsOrig)
 
     return
 
 
-def plotRectangle(ax, regPatch, angle=0.0, zorder=100, projection='rect',
-                  useRadians=False, org=0, **kwargs):
+def plotRectangle(ax,
+                  regPatch,
+                  angle=0.0,
+                  zorder=100,
+                  projection='rect',
+                  useRadians=False,
+                  org=0,
+                  **kwargs):
 
     verts = regPatch.get_verts()
 
@@ -266,8 +285,7 @@ def plotRectangle(ax, regPatch, angle=0.0, zorder=100, projection='rect',
     if useRadians:
         verts = verts * np.pi / 180.
 
-    ax.plot(verts[:, 0], verts[:, 1], ls='-',
-            c=kwargs['color'], alpha=1, zorder=zorder)
+    ax.plot(verts[:, 0], verts[:, 1], ls='-', c=kwargs['color'], alpha=1, zorder=zorder)
 
     return regPatch
 
@@ -296,8 +314,7 @@ def plotUKIDSS(ax, **kwargs):
     if projection == 'rect':
         regsToPlot = UKIDSS
     else:
-        regsToPlot = [UKIDSS_SGC_Mollweide, UKIDSS[2], UKIDSS[3], UKIDSS[4],
-                      UKIDSS[5]]
+        regsToPlot = [UKIDSS_SGC_Mollweide, UKIDSS[2], UKIDSS[3], UKIDSS[4], UKIDSS[5]]
 
     for region in regsToPlot:
         plotPatch(ax, region, color=color, **kwargs)
@@ -311,7 +328,7 @@ def plotApertifMedDeep(ax, **kwargs):
 
     color = kwargs.get('color', defaultColours['Apertif'])
 
-    # plotRectangle(ax, PerseusPisces, **kwargs)
+    # plotRectangle(ax, Perseus-Pisces, **kwargs)
     plotPatch(ax, CVn, color=color, **kwargs)
     plotPatch(ax, HETDEX, color=color, **kwargs)
 
@@ -360,36 +377,20 @@ def plotGAMA(ax, **kwargs):
 
 # HSC regions
 HSC_1 = getRectangle((22 * 15, 360, -1, 7))
-HSC_2 = getPolygon(np.array([[0, -1],
-                             [1.83333 * 15, -1],
-                             [1.83333 * 15, -7],
-                             [2.66666 * 15, -7],
-                             [2.66666 * 15, 7],
-                             [0, 7],
-                             [0, -1]]))
+HSC_2 = getPolygon(
+    np.array([[0, -1], [1.83333 * 15, -1], [1.83333 * 15, -7], [2.66666 * 15, -7],
+              [2.66666 * 15, 7], [0, 7], [0, -1]]))
 
-HSC_SGC_Mollweide = getPolygon(np.array([[22 * 15, -1],
-                                         [1.83333 * 15, -1],
-                                         [1.83333 * 15, -7],
-                                         [2.66666 * 15, -7],
-                                         [2.66666 * 15, 7],
-                                         [22 * 15, 7],
-                                         [22 * 15, -1]]))
+HSC_SGC_Mollweide = getPolygon(
+    np.array([[22 * 15, -1], [1.83333 * 15, -1], [1.83333 * 15, -7], [2.66666 * 15, -7],
+              [2.66666 * 15, 7], [22 * 15, 7], [22 * 15, -1]]))
 
 HSC_3 = getRectangle((8.5 * 15, 15 * 15, -2, 5))
 HSC_4 = getRectangle((13.3 * 15, 16.6666 * 15, 42.5, 44))
 HSC = [HSC_1, HSC_2, HSC_3, HSC_4]
 
-HSC_S_Wide_vertices = np.array(
-    [[127.5, -2.5],
-     [127.5, 5.5],
-     [170., 5.5],
-     [170., 4.0],
-     [210., 4.0],
-     [210., 5.5],
-     [225., 5.5],
-     [225., -2.5],
-     [127.5, -2.5]])
+HSC_S_Wide_vertices = np.array([[127.5, -2.5], [127.5, 5.5], [170., 5.5], [170., 4.0], [210., 4.0],
+                                [210., 5.5], [225., 5.5], [225., -2.5], [127.5, -2.5]])
 
 HSC_S_Wide = getPolygon(HSC_S_Wide_vertices)
 
@@ -418,25 +419,12 @@ ALFALFA = [ALFALFA_1, ALFALFA_2, ALFALFA_3]
 ALFALFA_Mollweide = getRectangle((22 * 15, 3 * 15, 0, 36))
 
 # HETDEX field
-HETDEX_vertices = np.array(
-    [[164.0, 45.5],
-     [180.0, 48.9],
-     [196.0, 49.7],
-     [210.0, 48.8],
-     [226.0, 45.0],
-     [229.0, 51.0],
-     [210.0, 55.4],
-     [196.0, 56.2],
-     [180.0, 55.3],
-     [160.5, 51.0],
-     [164.0, 45.5]])
+HETDEX_vertices = np.array([[164.0, 45.5], [180.0, 48.9], [196.0, 49.7], [210.0, 48.8],
+                            [226.0, 45.0], [229.0, 51.0], [210.0, 55.4], [196.0, 56.2],
+                            [180.0, 55.3], [160.5, 51.0], [164.0, 45.5]])
 
-CVn_vertices = np.array(
-    [[184.98, 31.55],
-     [191.76, 31.55],
-     [192.51, 46.30],
-     [184.19, 46.30],
-     [184.98, 31.55]])
+CVn_vertices = np.array([[184.98, 31.55], [191.76, 31.55], [192.51, 46.30], [184.19, 46.30],
+                         [184.98, 31.55]])
 
 HETDEX = getPolygon(HETDEX_vertices)
 PerseusPisces = getRectangle((23.7, 33.3, 29.9, 37.9))
@@ -447,108 +435,43 @@ ApertifMedDeep = [HETDEX, PerseusPisces, CVn]
 
 # Latest UKIDSS footprint
 
-UKIDSS_Region1 = np.array([
-    [061.95838, +00.87955],
-    [054.13354, +06.28934],
-    [48.88450, +06.95682],
-    [046.32311, +08.43322],
-    [039.96898, +08.81795],
-    [035.20637, +13.01168],
-    [035.12406, +14.31154],
-    [030.93135, +17.09270],
-    [0.0000000, +17.00000],
-    [0.0000000, -02.00000],
-    [027.91088, -02.19216],
-    [047.03013, -02.55489],
-    [059.19465, -02.59425],
-    [062.08225, -00.05170],
-    [061.95838, +00.87955]])
+UKIDSS_Region1 = np.array([[061.95838, +00.87955], [054.13354, +06.28934], [48.88450, +06.95682],
+                           [046.32311, +08.43322], [039.96898, +08.81795], [035.20637, +13.01168],
+                           [035.12406, +14.31154], [030.93135, +17.09270], [0.0000000, +17.00000],
+                           [0.0000000, -02.00000], [027.91088, -02.19216], [047.03013, -02.55489],
+                           [059.19465, -02.59425], [062.08225, -00.05170], [061.95838, +00.87955]])
 
-UKIDSS_Region2 = np.array([
-    [360.00000, +17.00000],
-    [351.87501, +16.96904],
-    [349.93036, +17.04856],
-    [345.16645, +15.03193],
-    [339.41813, +11.29414],
-    [332.81999, +05.71610],
-    [326.77426, +02.16565],
-    [308.18905, +02.31217],
-    [308.04936, -02.10125],
-    [333.13159, -02.30051],
-    [359.89682, -02.32808],
-    [360.00000, +17.00000]])
+UKIDSS_Region2 = np.array([[360.00000, +17.00000], [351.87501, +16.96904], [349.93036, +17.04856],
+                           [345.16645, +15.03193], [339.41813, +11.29414], [332.81999, +05.71610],
+                           [326.77426, +02.16565], [308.18905, +02.31217], [308.04936, -02.10125],
+                           [333.13159, -02.30051], [359.89682, -02.32808], [360.00000, +17.00000]])
 
-UKIDSS_Region3 = np.array([
-    [239.36011, -02.72270],
-    [239.49965, +02.40468],
-    [240.41374, +09.81649],
-    [237.14271, +11.35246],
-    [220.12234, +15.07941],
-    [209.19142, +15.81317],
-    [206.64129, +17.20587],
-    [180.21959, +16.95451],
-    [178.98269, +17.89222],
-    [167.77638, +17.63917],
-    [166.22939, +16.14737],
-    [155.82172, +15.56455],
-    [148.06986, +14.87760],
-    [123.50277, +09.32339],
-    [124.93499, -02.63832],
-    [133.96699, -04.23402],
-    [169.63894, -03.19124],
-    [171.64508, -05.06182],
-    [186.01105, -04.97972],
-    [205.37750, -04.99526],
-    [207.43854, -03.45983],
-    [225.76219, -03.65258],
-    [232.18386, -03.77643],
-    [239.36011, -02.72270]])
+UKIDSS_Region3 = np.array(
+    [[239.36011, -02.72270], [239.49965, +02.40468], [240.41374, +09.81649],
+     [237.14271, +11.35246], [220.12234, +15.07941], [209.19142, +15.81317],
+     [206.64129, +17.20587], [180.21959, +16.95451], [178.98269, +17.89222],
+     [167.77638, +17.63917], [166.22939, +16.14737], [155.82172, +15.56455],
+     [148.06986, +14.87760], [123.50277, +09.32339], [124.93499, -02.63832],
+     [133.96699, -04.23402], [169.63894, -03.19124], [171.64508, -05.06182],
+     [186.01105, -04.97972], [205.37750, -04.99526], [207.43854, -03.45983],
+     [225.76219, -03.65258], [232.18386, -03.77643], [239.36011, -02.72270]])
 
-UKIDSS_Region4 = np.array([
-    [211.18558, +21.91363],
-    [211.38403, +37.05334],
-    [188.58584, +36.73161],
-    [189.76090, +21.58410],
-    [198.23781, +20.75589],
-    [211.18558, +21.91363]])
+UKIDSS_Region4 = np.array([[211.18558, +21.91363], [211.38403, +37.05334], [188.58584, +36.73161],
+                           [189.76090, +21.58410], [198.23781, +20.75589], [211.18558, +21.91363]])
 
-UKIDSS_Region5 = np.array([
-    [242.50593, +20.93451],
-    [230.69122, +27.35972],
-    [220.47165, +32.45357],
-    [222.59255, +35.00932],
-    [226.67155, +34.71249],
-    [232.46691, +32.07994],
-    [234.40908, +31.63117],
-    [238.06585, +28.74299],
-    [240.20232, +31.69502],
-    [244.57836, +32.74295],
-    [252.16101, +33.78028],
-    [255.60497, +30.72946],
-    [250.29212, +25.29416],
-    [245.53296, +21.25760],
-    [242.50593, +20.93451]])
+UKIDSS_Region5 = np.array([[242.50593, +20.93451], [230.69122, +27.35972], [220.47165, +32.45357],
+                           [222.59255, +35.00932], [226.67155, +34.71249], [232.46691, +32.07994],
+                           [234.40908, +31.63117], [238.06585, +28.74299], [240.20232, +31.69502],
+                           [244.57836, +32.74295], [252.16101, +33.78028], [255.60497, +30.72946],
+                           [250.29212, +25.29416], [245.53296, +21.25760], [242.50593, +20.93451]])
 
-UKIDSS_Region6 = np.array([
-    [120.38225, +17.00487],
-    [114.65075, +20.61480],
-    [110.51386, +25.41934],
-    [112.14745, +27.20383],
-    [111.99926, +28.35569],
-    [114.62997, +30.68592],
-    [132.00404, +30.98818],
-    [135.50603, +33.43509],
-    [136.85960, +34.49213],
-    [143.02820, +36.78138],
-    [147.04215, +36.75095],
-    [149.45191, +34.14314],
-    [147.78351, +31.55026],
-    [145.65717, +29.22833],
-    [138.61797, +26.43600],
-    [130.26806, +22.78999],
-    [125.86197, +19.94148],
-    [121.75807, +17.33957],
-    [120.38225, +17.00487]])
+UKIDSS_Region6 = np.array([[120.38225, +17.00487], [114.65075, +20.61480], [110.51386, +25.41934],
+                           [112.14745, +27.20383], [111.99926, +28.35569], [114.62997, +30.68592],
+                           [132.00404, +30.98818], [135.50603, +33.43509], [136.85960, +34.49213],
+                           [143.02820, +36.78138], [147.04215, +36.75095], [149.45191, +34.14314],
+                           [147.78351, +31.55026], [145.65717, +29.22833], [138.61797, +26.43600],
+                           [130.26806, +22.78999], [125.86197, +19.94148], [121.75807, +17.33957],
+                           [120.38225, +17.00487]])
 
 UKIDSS = [getPolygon(UKIDSS_Region1),
           getPolygon(UKIDSS_Region2),
@@ -558,35 +481,18 @@ UKIDSS = [getPolygon(UKIDSS_Region1),
           getPolygon(UKIDSS_Region6)]
 
 # Joined regs 1 and 2 for Mollweide projection
-UKIDSS_SGC_Mollweide_vertices = np.array([
-    [0.0000000, -02.32808],
-    [027.91088, -02.19216],
-    [047.03013, -02.55489],
-    [059.19465, -02.59425],
-    [062.08225, -00.05170],
-    [061.95838, +00.87955],
-    [054.13354, +06.28934],
-    [48.88450, +06.95682],
-    [046.32311, +08.43322],
-    [039.96898, +08.81795],
-    [035.20637, +13.01168],
-    [035.12406, +14.31154],
-    [030.93135, +17.09270],
-    [360.00000, +17.00000],
-    [351.87501, +16.96904],
-    [349.93036, +17.04856],
-    [345.16645, +15.03193],
-    [339.41813, +11.29414],
-    [332.81999, +05.71610],
-    [326.77426, +02.16565],
-    [308.18905, +02.31217],
-    [308.04936, -02.10125],
-    [333.13159, -02.30051],
-    [359.89682, -02.32808],
-    [360.00000, -02.32808]])
+UKIDSS_SGC_Mollweide_vertices = np.array(
+    [[0.0000000, -02.32808], [027.91088, -02.19216], [047.03013, -02.55489],
+     [059.19465, -02.59425], [062.08225, -00.05170], [061.95838, +00.87955],
+     [054.13354, +06.28934], [48.88450, +06.95682], [046.32311, +08.43322],
+     [039.96898, +08.81795], [035.20637, +13.01168], [035.12406, +14.31154],
+     [030.93135, +17.09270], [360.00000, +17.00000], [351.87501, +16.96904],
+     [349.93036, +17.04856], [345.16645, +15.03193], [339.41813, +11.29414],
+     [332.81999, +05.71610], [326.77426, +02.16565], [308.18905, +02.31217],
+     [308.04936, -02.10125], [333.13159, -02.30051], [359.89682, -02.32808],
+     [360.00000, -02.32808]])
 
 UKIDSS_SGC_Mollweide = getPolygon(UKIDSS_SGC_Mollweide_vertices)
-
 
 # Some renaming, for convenience
 UKIDSS_240 = UKIDSS[4]
@@ -603,8 +509,7 @@ def getPlatesInFootprint(plates, coords=False):
     plates = np.atleast_1d(plates)
 
     if coords:
-        tmpPlates = [Plate.createMockPlate(ra=plate[0], dec=plate[1])
-                     for plate in plates]
+        tmpPlates = [Plate.createMockPlate(ra=plate[0], dec=plate[1]) for plate in plates]
         plates = tmpPlates
 
     footprintPlates = []
@@ -616,17 +521,17 @@ def getPlatesInFootprint(plates, coords=False):
             continue
 
         if ((UKIDSS_120.get_path().contains_points([plate.coords])[0] and
-            ALFALFA_NGC.get_path().contains_points([plate.coords])[0]) or
-           (UKIDSS_240.get_path().contains_points([plate.coords])[0] and
-            ALFALFA_NGC.get_path().contains_points([plate.coords])[0]) or
-           ATLAS.get_path().contains_points([plate.coords])[0] or
-           SGC[0].get_path().contains_points([plate.coords])[0] or
-           SGC[1].get_path().contains_points([plate.coords])[0] or
-           HETDEX.get_path().contains_points([plate.coords])[0] or
-           PerseusPisces.get_path().contains_points([plate.coords])[0] or
-           CVn.get_path().contains_points([plate.coords])[0] or
-           HSC_S_Wide.get_path().contains_points([plate.coords])[0] or
-           HSC_N_Wide.get_path().contains_points([plate.coords])[0]):
+             ALFALFA_NGC.get_path().contains_points([plate.coords])[0]) or
+            (UKIDSS_240.get_path().contains_points([plate.coords])[0] and
+             ALFALFA_NGC.get_path().contains_points([plate.coords])[0]) or
+                ATLAS.get_path().contains_points([plate.coords])[0] or
+                SGC[0].get_path().contains_points([plate.coords])[0] or
+                SGC[1].get_path().contains_points([plate.coords])[0] or
+                HETDEX.get_path().contains_points([plate.coords])[0] or
+                PerseusPisces.get_path().contains_points([plate.coords])[0] or
+                CVn.get_path().contains_points([plate.coords])[0] or
+                HSC_S_Wide.get_path().contains_points([plate.coords])[0] or
+                HSC_N_Wide.get_path().contains_points([plate.coords])[0]):
 
             footprintPlates.append(plate)
 
@@ -662,15 +567,13 @@ def plotFootprint(ax, regions='all', projection='rect', org=0):
     """
 
     if not regions or regions == 'all':
-        plots = [plotGAMA, plotApertifMedDeep, plotATLAS, plotHSC, plotUKIDSS,
-                 plotALFALFA]
+        plots = [plotGAMA, plotApertifMedDeep, plotATLAS, plotHSC, plotUKIDSS, plotALFALFA]
     else:
         if isinstance(regions, str):
             regions = [regions]
         plots = []
         for reg in regions:
-            assert 'plot{0}'.format(reg) in globals(), \
-                '{0} is not defined'.format(reg)
+            assert 'plot{0}'.format(reg) in globals(), '{0} is not defined'.format(reg)
             plots.append(eval('plot{0}'.format(reg)))
 
     useRadians = True if projection != 'rect' else False
