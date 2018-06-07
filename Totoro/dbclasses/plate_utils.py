@@ -93,7 +93,7 @@ def assignExposureToOptimalSet(plate, exposure):
     optimalSet = getOptimalSet(plate, exposure)
 
     if optimalSet is None:
-        setPK = getConsecutiveSets(1)[0]
+        setPK = int(getConsecutiveSets(1)[0])
         with session.begin():
             if session.query(db.mangaDB.Set).get(setPK) is None:
                 newSet = db.mangaDB.Set(pk=setPK)
@@ -500,9 +500,8 @@ def applyArrangement(plate, arrangement):
     if not any(expMock):
 
         # Selects only new sets and skips overridden sets
-        arrangement = [
-            ss for ss in arrangement if ss.status is None or 'Override' not in ss.status.label
-        ]
+        arrangement = [ss for ss in arrangement
+                       if ss.status is None or 'Override' not in ss.status.label]
 
         # Removes sets and exposure-set assignment from the DB
         with session.begin():
@@ -526,7 +525,7 @@ def applyArrangement(plate, arrangement):
         # Now creates the new sets and assigns the exposures
         with session.begin():
             for ii, ss in enumerate(arrangement):
-                newSet = db.mangaDB.Set(pk=pks[ii])
+                newSet = db.mangaDB.Set(pk=int(pks[ii]))
                 session.add(newSet)
                 session.flush()
                 for exp in ss.totoroExposures:
