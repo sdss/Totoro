@@ -16,7 +16,6 @@ from __future__ import division, print_function
 
 import glob
 import os
-import sys
 
 from astropy import table
 from pydl.pydlutils.yanny import yanny
@@ -24,6 +23,12 @@ from pydl.pydlutils.yanny import yanny
 from Totoro import config, readPath
 from Totoro.db import getConnection
 from Totoro.exceptions import TotoroError
+
+
+try:
+    import tqdm
+except ImportError:
+    tqdm = None
 
 
 db = getConnection()
@@ -80,7 +85,12 @@ def loadMangaPlates():
 
     with session.begin():
 
-        for nn, plate in enumerate(allPlates):
+        if tqdm is not None:
+            iterator = tqdm.tqdm(allPlates)
+        else:
+            iterator = allPlates
+
+        for nn, plate in enumerate(iterator):
 
             try:
                 newPlate = session.query(
@@ -117,9 +127,6 @@ def loadMangaPlates():
 
             session.add(newPlate)
 
-            plate_nn = nn / float(len(allPlates)) * 100.
-            sys.stdout.write('\rLoading plates: {0:.0f}%'.format(plate_nn))
-            sys.stdout.flush()
     return
 
 
