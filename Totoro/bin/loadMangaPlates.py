@@ -89,7 +89,7 @@ def loadMangaPlates():
                 newPlate = db.mangaDB.Plate()
 
             if plate.plate_id in mangaTileIDs:
-                newPlate.manga_tileid = mangaTileIDs[plate.plate_id]
+                newPlate.manga_tileid = float(mangaTileIDs[plate.plate_id])
             else:
                 newPlate.manga_tileid = None
 
@@ -113,12 +113,12 @@ def loadMangaPlates():
             else:
                 newPlate.neverobserve = False
 
-            newPlate.platedb_plate_pk = plate.pk
+            newPlate.platedb_plate_pk = float(plate.pk)
 
             session.add(newPlate)
 
-            sys.stdout.write('\rLoading plates: {0:.0f}%'
-                             .format(nn / float(len(allPlates)) * 100.))
+            plate_nn = nn / float(len(allPlates)) * 100.
+            sys.stdout.write('\rLoading plates: {0:.0f}%'.format(plate_nn))
             sys.stdout.flush()
     return
 
