@@ -41,7 +41,7 @@ if __name__ == '__main__':
         command = Popen('restoreTestDB.sh', stdout=PIPE, stderr=PIPE, shell=True, close_fds=True)
         out, err = command.communicate()
 
-        if err != '':
+        if err.decode('utf-8') != '':
             print(_color_text('FAILED', 'red'))
         else:
             print('ok')
