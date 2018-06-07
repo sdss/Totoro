@@ -19,7 +19,7 @@ import os
 import re
 # import inflect
 import warnings
-from builtins import object, str
+from builtins import object
 
 from SDSSconnect.exceptions import SDSSconnectUserWarning
 
