@@ -25,27 +25,27 @@ from .ccm_unred import ccmUnred
 try:
     import fitsio
     fitsLib = 'fitsio'
-except:
+except Exception:
     try:
         from astropy.io import fits
         fitsLib = 'fits'
-    except:
+    except Exception:
         raise ImportError('either fitsio or astropy.io.fits are needed.')
 
 try:
     from astropysics import coords
     astropysicsLib = True
-except:
+except Exception:
     try:
         from astropy.coordinates import SkyCoord
         astropysicsLib = False
-    except:
+    except Exception:
         raise ImportError('either astropysics or astropy are needed.')
 
 try:
     __defaultMaps__ = glob.glob(
         os.path.join(os.environ['DUST_DIR'], 'maps', 'SFD_dust_4096_*.fits'))
-except:
+except Exception:
     __defaultMaps__ = None
 
 

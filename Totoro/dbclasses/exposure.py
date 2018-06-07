@@ -533,13 +533,13 @@ def setExposureStatus(exposure, status):
                 queryStatus = session.query(db.mangaDB.ExposureStatus).filter(
                     db.mangaDB.ExposureStatus.label == status).one()
                 statusPK = queryStatus.pk
-        except:
+        except Exception:
             raise TotoroError('status {0} not found in mangaDB.ExposureStatus'.format(status))
 
         try:
             exp = session.query(db.mangaDB.Exposure).get(pk)
             exp.exposure_status_pk = statusPK
-        except:
+        except Exception:
             raise TotoroError('failed while trying to set exposure_status for '
                               'mangaDB.Exposure={0}'.format(pk))
 

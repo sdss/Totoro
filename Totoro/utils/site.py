@@ -25,7 +25,7 @@ from astropy import time
 # if pyephem is not installed.
 try:
     import ephem
-except:
+except Exception:
     ephem = None
 
 
@@ -115,7 +115,7 @@ class Site(object):
             try:
                 inputDate = time.Time(inputDate, scale='tai', format=format)
                 inputDate.jd
-            except:
+            except Exception:
                 raise ValueError('inputDate format not recognised.')
 
         # inputDate.delta_ut1_utc = 0.
@@ -165,7 +165,7 @@ class Site(object):
         else:
             try:
                 date = time.Time(date, format=format, scale='tai')
-            except:
+            except Exception:
                 raise ValueError('date format not recognised.')
 
         LST0 = self.localSiderealTime(date)

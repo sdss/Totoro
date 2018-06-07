@@ -444,7 +444,7 @@ def setSetStatus(set, status):
             queryStatus = session.query(
                 db.mangaDB.SetStatus).filter(db.mangaDB.SetStatus.label == status).one()
             statusPK = queryStatus.pk
-        except:
+        except Exception:
             # If the status is not found, we remove the status.
             statusPK = None
 

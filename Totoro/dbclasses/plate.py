@@ -977,7 +977,7 @@ class Plate(object):
         try:
             self.getActiveCartNumber()
             return True
-        except:
+        except Exception:
             return False
 
     def getAPOcomplete(self, **kwargs):

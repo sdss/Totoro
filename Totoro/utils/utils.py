@@ -412,7 +412,7 @@ def isMaNGA_Led(plate):
         try:
             with session.begin():
                 plate = session.query(plateDB.Plate).filter(plateDB.Plate.plate_id == plate).one()
-        except:
+        except Exception:
             return False
 
     for survey in plate.surveys:

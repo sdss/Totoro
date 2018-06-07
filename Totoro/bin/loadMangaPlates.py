@@ -85,7 +85,7 @@ def loadMangaPlates():
             try:
                 newPlate = session.query(
                     db.mangaDB.Plate).filter(db.mangaDB.Plate.platedb_plate_pk == plate.pk).one()
-            except:
+            except Exception:
                 newPlate = db.mangaDB.Plate()
 
             if plate.plate_id in mangaTileIDs:

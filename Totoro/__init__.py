@@ -28,7 +28,7 @@ try:
 except (ImportError, ValueError):
     warnings.warn('no dust map found. No Galactic extinction ' 'will be applied', DustMapWarning)
     dustMap = None
-except:
+except Exception:
     raise TotoroError('something went wrong while importing the dust map.')
 
 from .utils.site import Site

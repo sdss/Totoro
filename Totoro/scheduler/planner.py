@@ -315,7 +315,7 @@ class Planner(object):
                 'PLANNER: tilesBeingDrilled could not be read although it '
                 'exists. Make sure the file is not empty.', exceptions.TotoroPlannerWarning)
             return []
-        except:
+        except Exception:
             raise exceptions.TotoroPlannerError(
                 'PLANNER: unknown error while reading tilesBeingDrilled')
 

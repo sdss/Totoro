@@ -107,7 +107,7 @@ def modelRepr(self):
             reprSchema, reprTable, reprLabel, reprRef = line.strip().split()
             if (schema.lower() == reprSchema.lower() and table.lower() == reprTable.lower()):
                 reprList.append('{0}={1}'.format(reprLabel, eval('self.{0}'.format(reprRef))))
-        except:
+        except Exception:
             warnings.warn('failed adding custom representation to {0}'.format(fullClassName),
                           SDSSconnectUserWarning)
 

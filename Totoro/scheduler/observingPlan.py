@@ -29,7 +29,7 @@ def getScheduleFile():
         import autoscheduler
         autoschedulerDir = os.path.dirname(autoscheduler.__file__)
         schedule = os.path.join(autoschedulerDir, '../../schedules', 'Sch_base.6yrs.txt.frm.dat')
-    except:
+    except Exception:
         # If the autoscheduler is not available, uses the local schedule file
         schedule = readPath(config['observingPlan']['fallBackSchedule'])
         warnings.warn(
@@ -233,7 +233,7 @@ class ObservingPlan(object):
 
         try:
             pos = int(self.getClosest(jd)['Position'])
-        except:
+        except Exception:
             warnings.warn('Cannot found block position for JD={0}'.format(jd),
                           exceptions.TotoroUserWarning)
             pos = None
