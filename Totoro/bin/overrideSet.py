@@ -169,7 +169,7 @@ def override(args):
     postCompletion = plate.getPlateCompletion()
 
     if ((preCompletion < 1. and postCompletion > 1.) or
-        (preCompletion > 1. and postCompletion < 1.)):
+            (preCompletion > 1. and postCompletion < 1.)):
         warnings.warn(
             'plate completion has changed from {0:.2f} to {1:.2f}. '
             'Remember to check if the plate status is correct after '
