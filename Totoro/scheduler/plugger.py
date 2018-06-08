@@ -613,8 +613,12 @@ class Plugger(object):
         carts = OrderedDict([(key, value) for key, value in list(self.carts.items())
                              if value is not None])
 
-        # First we add carts not used to cart_order, with lower priority
-        nonUsedCarts = [cartNo for cartNo in config['mangaCarts'] if cartNo not in cartOrder]
+        # First we add carts not used to cart_order, with lower priority. If this is an
+        # APOGEE-led part of the night we reverse the order so that APOGEE first uses
+        # plates with lower preference (those with broken fibres), leaving the good ones
+        # for future MaNGA pluggings.
+        cart_order = config['mangaCarts'] if mode == 'mangaLead' else config['mangaCarts'][::-1]
+        nonUsedCarts = [cartNo for cartNo in cart_order if cartNo not in cartOrder]
 
         cartOrder = nonUsedCarts + cartOrder
 
