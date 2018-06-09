@@ -83,13 +83,16 @@ def getActivePluggings():
     return activePluggings
 
 
-def getCartStatus(activePluggings, cartNumber):
+def getCartStatus(cartNumber, activePluggings=None):
     """Returns the status of the plate in a cart.
 
     The returned tuple is (cart_number, plate, status_code, completion)
     """
 
     from Totoro.dbclasses.plate import Plate
+
+    if activePluggings is None:
+        activePluggings = getActivePluggings()
 
     cartActivePluggings = [
         aP for aP in activePluggings if aP.plugging.cartridge.number == cartNumber
@@ -413,7 +416,7 @@ class Plugger(object):
 
         for cartNo, plate in self.carts.items():
 
-            cartStatus = getCartStatus(activePluggings, cartNo)
+            cartStatus = getCartStatus(cartNo, activePluggings)
             pluggedPlate = cartStatus[1]
             status = cartStatusCodes[cartStatus[2]]
 
@@ -494,7 +497,7 @@ class Plugger(object):
 
         # Gets the status of the plates in each cart.
         cartStatus = [
-            getCartStatus(activePluggings, cartNumber) for cartNumber in self.carts
+            getCartStatus(cartNumber, activePluggings) for cartNumber in self.carts
             if cartNumber not in offlineCarts
         ]
 
@@ -550,7 +553,15 @@ class Plugger(object):
             if lastCart is None or lastCart in offlineCarts:
                 continue
 
-            if self.carts[lastCart] is None:
+            # If the cart last plugged is empty or contains a MaNGA complete or not
+            # started plate, we can use it.
+            cart_status = getCartStatus(lastCart)[2]
+            if cart_status in [0, 2, 3]:
+                ok_to_plug = True
+            else:
+                ok_to_plug = False
+
+            if self.carts[lastCart] is None and ok_to_plug:
                 self.carts[lastCart] = plate
                 allocatedPlates.append(plate)
             else:
@@ -613,8 +624,12 @@ class Plugger(object):
         carts = OrderedDict([(key, value) for key, value in list(self.carts.items())
                              if value is not None])
 
-        # First we add carts not used to cart_order, with lower priority
-        nonUsedCarts = [cartNo for cartNo in config['mangaCarts'] if cartNo not in cartOrder]
+        # First we add carts not used to cart_order, with lower priority. If this is an
+        # APOGEE-led part of the night we reverse the order so that APOGEE first uses
+        # plates with lower preference (those with broken fibres), leaving the good ones
+        # for future MaNGA pluggings.
+        cart_order = config['mangaCarts'] if mode == 'mangaLead' else config['mangaCarts'][::-1]
+        nonUsedCarts = [cartNo for cartNo in cart_order if cartNo not in cartOrder]
 
         cartOrder = nonUsedCarts + cartOrder
 

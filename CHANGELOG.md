@@ -10,6 +10,8 @@
 
 ### Changed
 - Changed colour of backup plates in log.
+- In `Plugger`, a replug now only uses the cart of its previous plugging if the cart is empty or has a complete or not started MaNGA plate.
+- The preferred order of available carts passed to the master autoscheduler for APOGEE time is now reversed. This will make APOGEE use the carts with more broken fibres first, leaving the best ones for MaNGA-led plates.
 
 ### Fixes
 - In `footprint`, copies the list of vertices of the patch to plot before applying the origin value (e.g., for Mollweide projection). This prevents incorrect wrapping of regions if the function is called more than once.
