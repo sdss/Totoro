@@ -22,7 +22,7 @@ from builtins import object, str
 
 import sqlalchemy
 from future import standard_library
-from past.builtins import basestring
+from six import string_types
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.event import listen
 from sqlalchemy.ext.automap import automap_base
@@ -230,7 +230,7 @@ class DatabaseConnection(object):
     def addModels(self, models, overwrite=False):
         """Adds a list of model classes to the object."""
 
-        assert isinstance(models, (list, tuple, basestring)), \
+        assert isinstance(models, (list, tuple, string_types)), \
             ('models must be \'all\' or a list of strings.')
 
         self.metadata = MetaData(bind=self.engine)

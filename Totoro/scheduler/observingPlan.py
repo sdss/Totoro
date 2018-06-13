@@ -17,7 +17,7 @@ from builtins import object
 
 import numpy as np
 from astropy import table, time
-from past.builtins import basestring
+from six import string_types
 
 from Totoro import config, exceptions, log, readPath
 
@@ -66,7 +66,7 @@ class ObservingPlan(object):
 
     def __init__(self, schedule=config['observingPlan']['schedule'], **kwargs):
 
-        if isinstance(schedule, basestring) and schedule.lower() == 'none':
+        if isinstance(schedule, string_types) and schedule.lower() == 'none':
             schedule = getScheduleFile()
         else:
             schedule = readPath(schedule)

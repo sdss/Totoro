@@ -16,7 +16,7 @@ system.
 import os
 
 import yaml
-from past.builtins import basestring
+from six import string_types
 
 from Totoro import __DEFAULT_CONFIG_FILE__, __TOTORO_CONFIG_PATH__, exceptions
 
@@ -99,7 +99,7 @@ class TotoroConfig(dict):
 
         if isinstance(self['dbConnection'], dict):
             pass
-        elif isinstance(self['dbConnection'], basestring):
+        elif isinstance(self['dbConnection'], string_types):
             result = self._assignDBConnection(self['dbConnection'])
             if result is False:
                 raise exceptions.TotoroError('dbConnection could not be configured. '
