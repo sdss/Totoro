@@ -15,8 +15,8 @@ Revision history:
 
 from __future__ import division, print_function
 
-import configparser
 import os
+import sys
 import warnings
 from builtins import object, str
 
@@ -32,6 +32,12 @@ from sqlalchemy.pool import Pool
 from SDSSconnect.exceptions import SDSSconnectError, SDSSconnectUserWarning
 from SDSSconnect.models import createRelationships, methods
 from SDSSconnect.models.utils import ModelWrapper, cameliseClassname
+
+
+if sys.version_info.major == 3:
+    import configparser
+else:
+    import ConfigParser as configparser
 
 
 standard_library.install_aliases()
