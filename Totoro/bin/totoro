@@ -15,6 +15,7 @@ import click
 from astropy import time
 
 import Totoro
+import Totoro.utils.override
 from Totoro import log
 from Totoro.dbclasses.plate import fromPlateID
 from Totoro.exceptions import TotoroUserWarning
@@ -94,6 +95,7 @@ def plugging(mjd=None, marked=False, verbose=False):
     plugger = Plugger(jd0, jd1, onlyMarked=marked)
     log.info('returned dictionary: %r', plugger.getASOutput())
 
+
 @totoro.command()
 @click.argument('PLATE', type=int)
 @click.option('-f', '--force', is_flag=True,
@@ -118,6 +120,57 @@ def rearrange(plate, force=False, outputflush=False, nolst=True, lst=None):
 
     pp = fromPlateID(plate)
     pp.rearrangeSets(force=force, LST=lst)
+
+
+@totoro.group()
+def override():
+    """Overrides the status of a set of exposures."""
+
+    return
+
+
+@override.command()
+@click.argument('EXPOSURES', type=int, nargs=-1)
+def good(exposures):
+    """Overrides a set of exposures as a good set."""
+
+    if len(exposures) == 0 or len(exposures) > 3:
+        raise click.UsageError('invalid number of exposures')
+
+    Totoro.utils.override.override(exposures, 'Good')
+
+    return
+
+
+@override.command()
+@click.argument('SET_PK', type=int)
+@click.option('-r', '--reload', is_flag=True, default=False,
+              help='If true, load the plate at which the set belongs after removing the set. '
+                   'This will force a new set arrangement of the exposures in the removed set.')
+def remove(set_pk, reload=False):
+    """Returns the information about the set status."""
+
+    Totoro.utils.override.removeStatus(set_pk, reload=reload)
+
+    return
+
+
+@override.command()
+@click.argument('EXPOSURES', type=int, nargs=-1)
+def info(exposures):
+    """Returns information about a set.
+
+    If the set exists it returns its real status. Otherwise, it returns
+    status of the mock set and, if invalid, why it is so.
+
+    """
+
+    if len(exposures) == 0 or len(exposures) > 3:
+        raise click.UsageError('invalid number of exposures')
+
+    Totoro.utils.override.getInfo(exposures)
+
+    return
 
 
 if __name__ == '__main__':
