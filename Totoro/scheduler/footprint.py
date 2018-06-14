@@ -9,9 +9,8 @@
 
 from __future__ import division, print_function
 
-from builtins import range
-
 import matplotlib as mpl
+
 import numpy as np
 from matplotlib import path
 from matplotlib import pyplot as plt

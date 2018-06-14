@@ -18,7 +18,6 @@ from __future__ import division, print_function
 
 import collections
 import itertools
-from builtins import range
 
 import numpy as np
 from scipy.misc import factorial

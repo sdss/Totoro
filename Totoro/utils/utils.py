@@ -17,7 +17,6 @@ from __future__ import division, print_function
 import os
 import subprocess
 import warnings
-from builtins import range, str
 from collections import OrderedDict
 from itertools import combinations
 

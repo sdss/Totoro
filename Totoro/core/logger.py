@@ -12,7 +12,6 @@ import re
 import shutil
 import sys
 import warnings
-from builtins import str
 from logging import FileHandler
 from logging.handlers import TimedRotatingFileHandler
 from textwrap import TextWrapper

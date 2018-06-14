@@ -15,7 +15,6 @@ Revision history:
 from __future__ import division, print_function
 
 import warnings
-from builtins import map, object
 from copy import deepcopy
 
 import numpy as np
