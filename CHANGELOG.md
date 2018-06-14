@@ -2,6 +2,9 @@
 
 ## [1.9.0] - unreleased
 
+### Added
+- All scripts are now consolidated under the `totoro` CLI. `mangaPluggingRequest`, `overrideSet`, and `rearrangeSets` are still available but will be deprecated in the future. Also, cleaned some old, deprecated scripts that had been in the `bin` directory for a while.
+
 ### Refactored
 - Totoro is now Python 2/3 compatible after applying futurize to all files.
 - Applied `isort`, `yapf`, and `unify` to all files.
@@ -12,6 +15,7 @@
 - Changed colour of backup plates in log.
 - In `Plugger`, a replug now only uses the cart of its previous plugging if the cart is empty or has a complete or not started MaNGA plate.
 - The preferred order of available carts passed to the master autoscheduler for APOGEE time is now reversed. This will make APOGEE use the carts with more broken fibres first, leaving the best ones for MaNGA-led plates.
+- Updated the footprint for ALFALFA NGC.
 
 ### Fixes
 - In `footprint`, copies the list of vertices of the patch to plot before applying the origin value (e.g., for Mollweide projection). This prevents incorrect wrapping of regions if the function is called more than once.
