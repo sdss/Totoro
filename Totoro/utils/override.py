@@ -1,22 +1,13 @@
 #!/usr/bin/env python
-# encoding: utf-8
-"""
-overrideSet.py
+# -*- coding:utf-8 -*-
+#
+# @Author: José Sánchez-Gallego (gallegoj@uw.edu)
+# @Created: 2018-06-14
+# @LastModified: 2018-06-14
+# @Filename: override.py
+# @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
+# @Copyright: José Sánchez-Gallego
 
-Created by José Sánchez-Gallego on 25 Sep 2015.
-Licensed under a 3-clause BSD license.
-
-Revision history:
-    25 Sep 2015 J. Sánchez-Gallego
-      Initial version
-
-"""
-
-from __future__ import division, print_function
-
-import argparse
-import os
-import sys
 import warnings
 
 import numpy as np
@@ -29,9 +20,6 @@ from Totoro.dbclasses.exposure import Exposure, setExposureStatus
 from Totoro.dbclasses.plate_utils import getConsecutiveSets, removeOrphanedSets
 from Totoro.dbclasses.set import Set, checkSet, setErrorCodes
 from Totoro.exceptions import EmptySet, TotoroError, TotoroUserWarning
-
-
-warnings.simplefilter('always')
 
 
 def _getStatusPK(status):
@@ -82,15 +70,11 @@ def _checkExposures(exposures):
     return totExposures, originalSetPKs, plateIDs
 
 
-def override(args):
+def override(exposures, mode):
     """Overrides a set of exposures as good or bad."""
 
     db = getConnection()
     session = db.Session()
-
-    mode = args.mode.capitalize()
-    exposures = args.EXPOSURE_NO
-    verbose = args.verbose
 
     overriddenStatusPK = _getStatusPK('Override ' + mode)
 
@@ -112,24 +96,21 @@ def override(args):
         overridenSetPK = originalSetPKs[0]
     else:
         overridenSetPK = getConsecutiveSets(1)[0]
-        if verbose:
-            log.info('creating new set pk={0}'.format(overridenSetPK))
+        log.debug('creating new set pk={0}'.format(overridenSetPK))
         with session.begin():
             ss = db.mangaDB.Set(pk=overridenSetPK)
             session.add(ss)
 
     for totExp in totExposures:
         setExposureStatus(totExp, 'Override ' + mode)
-        if verbose:
-            log.info('changing exposure_no={0} mangaDB status to Override {1}'.format(
-                totExp.exposure_no, mode))
+        log.debug('changing exposure_no={0} mangaDB status to Override {1}'
+                  .format(totExp.exposure_no, mode))
 
         if totExp._mangaExposure.set_pk != overridenSetPK:
             with session.begin():
                 totExp._mangaExposure.set_pk = overridenSetPK
-            if verbose:
-                log.info('changing set_pk for exposure_no={0} to {1}'.format(
-                    totExp.exposure_no, overridenSetPK))
+            log.debug('changing set_pk for exposure_no={0} to {1}'
+                      .format(totExp.exposure_no, overridenSetPK))
 
     # Overrides the set good/bad.
     with session.begin():
@@ -146,17 +127,15 @@ def override(args):
             origStatus = None if ss.status is None else ss.status.label
             checkSet(ss, flag=True, force=True)
 
-            if verbose:
-                ss = Set(setPK, format='pk')
-                newStatus = None if ss.status is None else ss.status.label
-                if newStatus != origStatus:
-                    log.info('set pk={0} status changed from {1} to {2}'.format(
-                        setPK, origStatus, newStatus))
+            ss = Set(setPK, format='pk')
+            newStatus = None if ss.status is None else ss.status.label
+            if newStatus != origStatus:
+                log.debug('set pk={0} status changed from {1} to {2}'.format(
+                    setPK, origStatus, newStatus))
 
         except EmptySet:
 
-            if verbose:
-                log.info('set pk={0} is empty. Removing it.'.format(setPK))
+            log.debug('set pk={0} is empty. Removing it.'.format(setPK))
             with session.begin():
                 ss = session.query(db.mangaDB.Set).get(setPK)
                 session.delete(ss)
@@ -177,32 +156,27 @@ def override(args):
         warnings.warn('Remember to check if the plate status is correct after '
                       'overriding sets.', TotoroUserWarning)
 
-    if verbose:
-        log.info('changing status of set {0} to Override {1}'.format(overridenSetPK, mode))
-        log.info('override was successful')
+    log.debug('changing status of set {0} to Override {1}'.format(overridenSetPK, mode))
+    log.debug('override was successful')
 
     removeOrphanedSets()
 
     return overridenSetPK
 
 
-def removeStatus(args):
+def removeStatus(set_pk, reload=False):
     """Removes set status."""
 
     db = getConnection()
     session = db.Session()
 
-    setPK = args.SET_PK
-    assert isinstance(setPK, int), 'SET_PK must be an integer'
-
-    verbose = args.verbose
-    reload = args.reload
+    assert isinstance(set_pk, int), 'SET_PK must be an integer'
 
     # Checks that the set exists
     with session.begin():
-        ss = session.query(db.mangaDB.Set).get(setPK)
+        ss = session.query(db.mangaDB.Set).get(set_pk)
         if ss is None:
-            raise TotoroError('set_pk={0} does not exist'.format(setPK))
+            raise TotoroError('set_pk={0} does not exist'.format(set_pk))
 
         # Checks that all exposures belong to the same plate
         plateIDs = []
@@ -217,9 +191,8 @@ def removeStatus(args):
 
         # Removes the set assignment
         for exp in ss.exposures:
-            if verbose:
-                log.info('removing set_pk and status for exposure_no {0}'
-                         .format(exp.platedbExposure.exposure_no))
+            log.debug('removing set_pk and status for exposure_no {0}'
+                      .format(exp.platedbExposure.exposure_no))
             exp.set_pk = None
             exp.exposure_status_pk = None
 
@@ -227,32 +200,25 @@ def removeStatus(args):
         session.delete(ss)
 
     # We run a removeOrphanedSets just to be sure
-    if verbose:
-        log.info('removing orphaned sets.')
+    log.debug('removing orphaned sets.')
     removeOrphanedSets()
 
     if reload:
-        if verbose:
-            log.info('reloading plateid {0}'.format(plateID))
+        log.debug('reloading plateid {0}'.format(plateID))
         fromPlateID(plateID)
 
     warnings.warn('remember to check the set arrangement for plate_id={0} '
-                  'after removing overridden sets.'.format(plateID))
+                  'after removing overridden sets.'.format(plateID), TotoroUserWarning)
 
-    if verbose:
-        log.info('set_pk={0} removed successfully'.format(setPK))
+    log.debug('set_pk={0} removed successfully'.format(set_pk))
 
     return
 
 
-def getInfo(args):
+def getInfo(exposures):
     """Returns information about a set composed by a list of exposures."""
 
-    exposures = args.EXPOSURE_NO
-    verbose = args.verbose
-
-    if verbose:
-        log.info('checking exposures ' + ', '.join(map(str, exposures)))
+    log.debug('checking exposures ' + ', '.join(map(str, exposures)))
 
     totExposures, originalSetPKs, plateIDs = _checkExposures(exposures)
 
@@ -307,80 +273,3 @@ def getInfo(args):
             'this set apart from the specified here.', TotoroUserWarning)
 
     return (status, code, statusMock, codeMock)
-
-
-def main(argv=None):
-
-    parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
-
-    parser.add_argument(
-        '--verbose', '-v', dest='verbose', action='store_true', help='Prints extra information.')
-
-    subparsers = parser.add_subparsers(title='actions')
-
-    parserGood = subparsers.add_parser(
-        'good', help='overrides set as good.', description='Overrides set as good.')
-    parserGood.add_argument(
-        'EXPOSURE_NO',
-        metavar='EXPOSURE_NO',
-        type=int,
-        nargs='*',
-        help='The list of exposure_no(s) to be '
-        'overridden as a new good set.')
-    parserGood.set_defaults(func=override, mode='good')
-
-    # parserBad = subparsers.add_parser('bad', help='overrides set as bad.',
-    #                                   description='Overrides set as bad.')
-    # parserBad.add_argument('EXPOSURE_NO', metavar='EXPOSURE_NO', type=int,
-    #                        nargs='*', help='The list of exposure_no(s) to be '
-    #                        'overridden as a new bad set.')
-    # parserBad.set_defaults(func=override, mode='bad')
-
-    parserInfo = subparsers.add_parser(
-        'info',
-        help='gets information about a set.',
-        description='If the set exists it returns its real status. Otherwise, '
-        'it returns status of the mock set and, if invalid, why it is so.')
-    parserInfo.add_argument(
-        'EXPOSURE_NO',
-        metavar='EXPOSURE_NO',
-        type=int,
-        nargs='*',
-        help='The list of exposure_no(s) to be tested.')
-    parserInfo.set_defaults(func=getInfo)
-
-    parserRemove = subparsers.add_parser(
-        'remove', help='removes set status.', description='Removes set status.')
-    parserRemove.add_argument(
-        'SET_PK',
-        metavar='SET_PK',
-        type=int,
-        help='The list of set_pk(s) of the sets for '
-        'which the set status will be removed.')
-    parserRemove.add_argument(
-        '--reload',
-        '-reload',
-        action='store_true',
-        help='If true, load the plate at which the set '
-        'belongs after removing the set. '
-        'This will force a new set arrangement of the '
-        'exposures in the removed set.')
-    parserRemove.set_defaults(func=removeStatus)
-
-    if argv is not None:
-        args = parser.parse_args(argv)
-    else:
-        args = parser.parse_args()
-
-    return args.func(args)
-
-
-if __name__ == '__main__':
-
-    warnings.simplefilter('always', DeprecationWarning)
-    warnings.warn('this script is now deprecated an may be removed in a future '
-                  'version of Totoro. Please, use "totoro override" instead.',
-                  DeprecationWarning)
-    warnings.simplefilter('ignore', DeprecationWarning)
-
-    main()

@@ -17,6 +17,7 @@ from __future__ import division, print_function
 import argparse
 import os
 import sys
+import warnings
 
 
 TotoroPath = os.path.realpath(os.path.join(os.path.dirname(__file__), '../../'))
@@ -34,6 +35,12 @@ def rearrageSets(plateid, force=False, LST=None, **kwargs):
 
 
 if __name__ == '__main__':
+
+    warnings.simplefilter('always', DeprecationWarning)
+    warnings.warn('this script is now deprecated an may be removed in a future '
+                  'version of Totoro. Please, use "totoro rearrange" instead.',
+                  DeprecationWarning)
+    warnings.simplefilter('ignore', DeprecationWarning)
 
     parser = argparse.ArgumentParser(description=__doc__, prog=os.path.basename(sys.argv[0]))
     parser.add_argument(
