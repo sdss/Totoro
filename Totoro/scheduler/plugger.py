@@ -10,7 +10,6 @@
 from __future__ import division, print_function
 
 import warnings
-from builtins import object, range, str
 from collections import OrderedDict
 
 import numpy as np

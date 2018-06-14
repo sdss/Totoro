@@ -18,7 +18,6 @@ import locale
 import multiprocessing
 import sys
 import threading
-from builtins import range
 
 
 __ALL__ = ['colourPrint']

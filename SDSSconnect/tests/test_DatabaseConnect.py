@@ -20,7 +20,6 @@ import os
 import textwrap
 import unittest
 import warnings
-from builtins import str
 
 from future import standard_library
 

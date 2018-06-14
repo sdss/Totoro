@@ -15,7 +15,6 @@ Revision history:
 from __future__ import division, print_function
 
 import unittest
-from builtins import range
 from collections import OrderedDict
 
 from Totoro import config

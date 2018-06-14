@@ -15,7 +15,6 @@ Revision history:
 from __future__ import absolute_import, division, print_function
 
 import warnings
-from builtins import object, range
 from copy import copy
 
 import numpy as np

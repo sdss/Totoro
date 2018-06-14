@@ -15,7 +15,6 @@ Revision history:
 from __future__ import division, print_function
 
 import warnings
-from builtins import object, str
 
 import numpy as np
 

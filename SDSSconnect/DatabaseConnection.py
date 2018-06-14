@@ -18,7 +18,6 @@ from __future__ import division, print_function
 import os
 import sys
 import warnings
-from builtins import object, str
 
 import sqlalchemy
 from future import standard_library

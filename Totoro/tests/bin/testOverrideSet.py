@@ -16,7 +16,6 @@ from __future__ import division, print_function
 
 import unittest
 import warnings
-from builtins import map, range, str
 
 import numpy as np
 

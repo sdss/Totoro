@@ -18,7 +18,6 @@ import argparse
 import os
 import sys
 import warnings
-from builtins import map
 
 import numpy as np
 from sqlalchemy.orm.exc import NoResultFound

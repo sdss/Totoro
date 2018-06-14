@@ -16,7 +16,6 @@ from __future__ import division, print_function
 
 import os
 import warnings
-from builtins import object
 
 import numpy as np
 from astropy import table, time

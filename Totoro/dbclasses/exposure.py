@@ -15,7 +15,6 @@ Revision history:
 from __future__ import division, print_function
 
 import warnings
-from builtins import object
 
 import numpy as np
 from astropy import time

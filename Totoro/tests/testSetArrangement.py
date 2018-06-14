@@ -15,7 +15,6 @@ Revision history:
 from __future__ import division, print_function
 
 import unittest
-from builtins import range
 
 from Totoro.bin.rearrangeSets import rearrageSets
 from Totoro.db import getConnection
