@@ -17,6 +17,7 @@ from __future__ import division, print_function
 import argparse
 import os
 import sys
+import warnings
 
 from astropy import time
 
@@ -72,4 +73,10 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
+
+    warnings.simplefilter('always', DeprecationWarning)
+    warnings.warn('this script is now deprecated an may be removed in a future '
+                  'version of Totoro. Please, use "totoro plugging" instead.',
+                  DeprecationWarning)
+
     main()
