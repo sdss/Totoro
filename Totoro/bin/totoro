@@ -7,6 +7,8 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 # @Copyright: José Sánchez-Gallego
 
+import os
+import sys
 import warnings
 
 import click
@@ -14,6 +16,7 @@ from astropy import time
 
 import Totoro
 from Totoro import log
+from Totoro.dbclasses.plate import fromPlateID
 from Totoro.exceptions import TotoroUserWarning
 from Totoro.scheduler import Plugger, observingPlan
 from Totoro.scheduler.io import saveExposures
@@ -21,8 +24,14 @@ from Totoro.scheduler.planner import Planner
 
 
 @click.group()
+
 @click.version_option(version=Totoro.__version__, prog_name='Totoro')
-def totoro():
+@click.option('-v', '--verbose', is_flag=True, help='Print lots of extra output.')
+def totoro(verbose=False):
+
+    if verbose is True:
+        log.sh.setLevel('DEBUG')
+
     return
 
 
@@ -60,7 +69,6 @@ def simulate(end_date,
 @totoro.command()
 @click.option(
     '-k', '--marked', is_flag=True, help='If set, only marked plates will be considered.')
-@click.option('-v', '--verbose', is_flag=True, help='Print lots of extra output.')
 @click.argument('mjd', type=int, nargs=-1)
 def plugging(mjd=None, marked=False, verbose=False):
     """Creates a plugging request for a certain MJD."""
@@ -80,14 +88,36 @@ def plugging(mjd=None, marked=False, verbose=False):
 
     print_MJD = int(tt.mjd)
 
-    if verbose is True:
-        log.sh.setLevel('DEBUG')
-
     log.info('creating plugging request for MJD=%s', print_MJD)
     jd0, jd1 = observingPlan.getJD(jd=int(tt.jd))
 
     plugger = Plugger(jd0, jd1, onlyMarked=marked)
     log.info('returned dictionary: %r', plugger.getASOutput())
+
+@totoro.command()
+@click.argument('PLATE', type=int)
+@click.option('-f', '--force', is_flag=True,
+              help='forces the set rearrangement even if the number of '
+                   'exposures exceeds the limit.')
+@click.option('-o', '--outputflush', is_flag=True,
+              help='force sdtout writes to be immediately flushed. '
+                   'Used for unix redirection and file monitoring')
+@click.option('-n', '--nolst', is_flag=True, default=True,
+              help='does not use the current LST to rearrange the '
+                   'sets. If set, the incomplete sets will be moved '
+                   'at the beginning of the observing window, if '
+                   'possible.')
+@click.option('-l', '--lst', type=float,
+              help='tries to rearrange sets so that at least an '
+                   'incomplete set is available after that LST.')
+def rearrange(plate, force=False, outputflush=False, nolst=True, lst=None):
+    """Optimally rearranges the sets in a plate."""
+
+    if outputflush:
+        sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+
+    pp = fromPlateID(plate)
+    pp.rearrangeSets(force=force, LST=lst)
 
 
 if __name__ == '__main__':
