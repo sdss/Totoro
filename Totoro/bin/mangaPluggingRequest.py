@@ -78,5 +78,6 @@ if __name__ == '__main__':
     warnings.warn('this script is now deprecated an may be removed in a future '
                   'version of Totoro. Please, use "totoro plugging" instead.',
                   DeprecationWarning)
+    warnings.simplefilter('ignore', DeprecationWarning)
 
     main()

@@ -40,6 +40,7 @@ if __name__ == '__main__':
     warnings.warn('this script is now deprecated an may be removed in a future '
                   'version of Totoro. Please, use "totoro rearrange" instead.',
                   DeprecationWarning)
+    warnings.simplefilter('ignore', DeprecationWarning)
 
     parser = argparse.ArgumentParser(description=__doc__, prog=os.path.basename(sys.argv[0]))
     parser.add_argument(
