@@ -379,7 +379,7 @@ if __name__ == '__main__':
 
     warnings.simplefilter('always', DeprecationWarning)
     warnings.warn('this script is now deprecated an may be removed in a future '
-                  'version of Totoro. Please, use "totoro rearrange" instead.',
+                  'version of Totoro. Please, use "totoro override" instead.',
                   DeprecationWarning)
 
     main()
