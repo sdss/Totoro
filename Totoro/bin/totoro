@@ -61,6 +61,7 @@ def readSpecialPlates():
 
 
 @click.group()
+
 @click.version_option(version=Totoro.__version__, prog_name='Totoro')
 @click.option('-v', '--verbose', is_flag=True, help='Print lots of extra output.')
 def totoro(verbose=False):
@@ -129,6 +130,31 @@ def plugging(mjd=None, marked=False, verbose=False):
 
     plugger = Plugger(jd0, jd1, onlyMarked=marked)
     log.info('returned dictionary: %r', plugger.getASOutput())
+
+@totoro.command()
+@click.argument('PLATE', type=int)
+@click.option('-f', '--force', is_flag=True,
+              help='forces the set rearrangement even if the number of '
+                   'exposures exceeds the limit.')
+@click.option('-o', '--outputflush', is_flag=True,
+              help='force sdtout writes to be immediately flushed. '
+                   'Used for unix redirection and file monitoring')
+@click.option('-n', '--nolst', is_flag=True, default=True,
+              help='does not use the current LST to rearrange the '
+                   'sets. If set, the incomplete sets will be moved '
+                   'at the beginning of the observing window, if '
+                   'possible.')
+@click.option('-l', '--lst', type=float,
+              help='tries to rearrange sets so that at least an '
+                   'incomplete set is available after that LST.')
+def rearrange(plate, force=False, outputflush=False, nolst=True, lst=None):
+    """Optimally rearranges the sets in a plate."""
+
+    if outputflush:
+        sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+
+    pp = fromPlateID(plate)
+    pp.rearrangeSets(force=force, LST=lst)
 
 
 @totoro.command()
