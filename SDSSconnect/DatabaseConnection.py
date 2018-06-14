@@ -20,7 +20,6 @@ import sys
 import warnings
 
 import sqlalchemy
-from future import standard_library
 from six import string_types
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.event import listen
@@ -37,9 +36,6 @@ if sys.version_info.major == 3:
     import configparser
 else:
     import ConfigParser as configparser
-
-
-standard_library.install_aliases()
 
 
 __MODELS__ = ['plateDB', 'mangaDB']

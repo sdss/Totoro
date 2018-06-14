@@ -21,14 +21,9 @@ import textwrap
 import unittest
 import warnings
 
-from future import standard_library
-
 from SDSSconnect import DatabaseConnection
 from SDSSconnect.DatabaseConnection import readProfile
 from SDSSconnect.exceptions import SDSSconnectError
-
-
-standard_library.install_aliases()
 
 
 class TestDatabaseConnect(unittest.TestCase):

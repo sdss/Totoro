@@ -18,6 +18,7 @@ from __future__ import division, print_function
 
 import collections
 import itertools
+import sys
 
 import numpy as np
 from scipy.misc import factorial
@@ -571,7 +572,10 @@ def calculatePermutations(inputList):
 
     cartesianProduct = itertools.product(*indices)
     for prod in cartesianProduct:
-        yield list(itertools.zip_longest(*prod))
+        if sys.version_info.major == 3:
+            yield list(itertools.zip_longest(*prod))
+        else:
+            yield list(itertools.izip_longest(*prod))
 
 
 def getNumberPermutations(ditherPositions):
