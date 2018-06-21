@@ -43,4 +43,4 @@ except Exception:
 from .utils.site import Site  # noqa
 site = Site()
 
-__version__ = '2.0.0dev'
+__version__ = '2.0.0'
