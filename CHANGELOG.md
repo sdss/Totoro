@@ -1,6 +1,6 @@
 # Change Log
 
-## [1.9.0] - unreleased
+## [2.0.0] - 2018-06-20
 
 ### Added
 - All scripts are now consolidated under the `totoro` CLI. `mangaPluggingRequest`, `overrideSet`, and `rearrangeSets` are still available but will be deprecated in the future. Also, cleaned some old, deprecated scripts that had been in the `bin` directory for a while.
@@ -20,7 +20,7 @@
 ### Fixes
 - In `footprint`, copies the list of vertices of the patch to plot before applying the origin value (e.g., for Mollweide projection). This prevents incorrect wrapping of regions if the function is called more than once.
 
-[View changes](https://github.com/sdss/Totoro/compare/1.8.4...HEAD)
+[View changes](https://github.com/sdss/Totoro/compare/1.8.4...1.9.0)
 
 
 ## [1.8.4] - 2018-05-13
