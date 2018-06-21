@@ -20,7 +20,7 @@
 ### Fixes
 - In `footprint`, copies the list of vertices of the patch to plot before applying the origin value (e.g., for Mollweide projection). This prevents incorrect wrapping of regions if the function is called more than once.
 
-[View changes](https://github.com/sdss/Totoro/compare/1.8.4...1.9.0)
+[View changes](https://github.com/sdss/Totoro/compare/1.8.4...2.0.0)
 
 
 ## [1.8.4] - 2018-05-13
