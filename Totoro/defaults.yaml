@@ -51,7 +51,7 @@ fields:
     tilingCatalogue: $MANGA_TILING_CATALOGUE
     mangacore: $MANGACORE_DIR
     tilesBeingDrilled: ~/.totoro/tiles_drilling.dat
-    scienceCatalogue: $MANGAWORK_DIR/manga/target/current/MaNGA_targets_extNSA_tiled.fits
+    scienceCatalogue: $SAS_BASE_DIR/mangawork/manga/target/current/MaNGA_targets_extNSA_tiled.fits
     minTargetsInTile: 12
 
 observatory:
