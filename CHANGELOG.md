@@ -1,5 +1,14 @@
 # Change Log
 
+## [2.1.0] - unreleased
+
+### Refactored
+- Uses new logger file and `log.warning` instead of `warnings.warn`.
+
+### Fixes
+- Does not remove auto-reflected relationships in `DatabaseConnection` since it breaks with SQLA>=1.3. That should not affect anything since they were deleted mostly to keep the namespace tidy.
+
+
 ## [2.0.0] - 2018-06-20
 
 ### Added
