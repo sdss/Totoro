@@ -14,7 +14,6 @@ Revision history:
 
 from __future__ import absolute_import, division, print_function
 
-import warnings
 from copy import copy
 
 import numpy as np
@@ -450,7 +449,7 @@ def setSetStatus(set, status):
         ss = session.query(db.mangaDB.Set).get(pk)
 
         if ss.set_status_pk is not None and statusPK is None:
-            warnings.warn(
+            log.warning(
                 'changing set pk={0} from status {1} to None'.format(pk, ss.status.label),
                 exceptions.TotoroUserWarning)
 

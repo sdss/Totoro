@@ -150,9 +150,9 @@ def getOptimalPlate(plates, jdRange, mode='plugger', prioritiseAPO=None, **kwarg
     # If there are no plates that meet those requirements, uses all the
     # incomplete plates
     if len(observablePlates) == 0:
-        # warnings.warn('no plates found that intersect with the beginning of '
-        #               'the observing window. Scheduling all available plates.',
-        #               TotoroUserWarning)
+        # log.warning('no plates found that intersect with the beginning of '
+        #             'the observing window. Scheduling all available plates.',
+        #             TotoroUserWarning)
         observablePlates = incompletePlates
 
     # Creates the dictionary of scheduling categories

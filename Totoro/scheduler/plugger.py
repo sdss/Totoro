@@ -9,7 +9,6 @@
 
 from __future__ import division, print_function
 
-import warnings
 from collections import OrderedDict
 
 import numpy as np
@@ -247,7 +246,7 @@ class Plugger(object):
         self.startDate = None
         self.endDate = None
 
-        warnings.warn('PLUGGER: no JD1, JD2 values provided. Plugger will '
+        log.warning('PLUGGER: no JD1, JD2 values provided. Plugger will '
                       'only return plugged, on-completed plates.', TotoroPluggerWarning)
 
         # Get MaNGA plugged plates
@@ -281,17 +280,17 @@ class Plugger(object):
         if initialBufferMin > 0.:
             blockPosition = observingPlan.getPosition(jd0)
             if blockPosition is None:
-                warnings.warn(
+                log.warning(
                     'cannot find the position of the block. '
                     'Not applying buffer at the beginning of the window.', TotoroPluggerWarning)
             else:
                 if blockPosition == 1:
-                    warnings.warn(
+                    log.warning(
                         'observing window falls at the beginning of the night.'
                         ' Not applying buffer.', TotoroPluggerWarning)
                 elif blockPosition == 2:
                     jd0 -= initialBufferMin / 60. / 24.
-                    warnings.warn(
+                    log.warning(
                         'Applying buffer of {0} minutes at the beginning of '
                         'the window'.format(initialBufferMin), TotoroPluggerWarning)
 
@@ -463,7 +462,7 @@ class Plugger(object):
                         # If 2 is the last cartridge available, we use it
                         # but issue a warning indicating that we may want
                         # to manually redo the plugging request.
-                        warnings.warn(
+                        log.warning(
                             'Assigning plate {0} to cart {1} but '
                             'the plate may not be pluggable. '
                             'Probably you want to temporarily '
@@ -472,7 +471,7 @@ class Plugger(object):
                             'request.'.format(plate.plate_id, cart[0]), TotoroPluggerWarning)
                         return cart
                     else:
-                        warnings.warn(
+                        log.warning(
                             'Plate {0} holes are too close for '
                             'cart 2. Using another cart.'.format(plate.plate_id),
                             TotoroPluggerWarning)
@@ -485,7 +484,7 @@ class Plugger(object):
         forcePlugPriority = int(config['plugger']['forcePlugPriority'])
 
         if len(plates) > len(self.carts):
-            warnings.warn('PLUGGER: {0} plates to allocate but only {1} carts '
+            log.warning('PLUGGER: {0} plates to allocate but only {1} carts '
                           'available. Using the first {1} plates.'.format(len(plates),
                                                                           len(self.carts)),
                           TotoroPluggerWarning)
@@ -577,7 +576,7 @@ class Plugger(object):
             cartData = self._getCart(sortedCarts, plate)
 
             if cartData is None:
-                warnings.warn('cannot allocate a cart for plate {}. '
+                log.warning('cannot allocate a cart for plate {}. '
                               'There may be unallocated time as a result.'.format(plate.plate_id),
                               TotoroPluggerWarning)
                 continue
@@ -587,7 +586,7 @@ class Plugger(object):
             allocatedPlates.append(plate)
 
         if len(plates) > len(allocatedPlates):
-            warnings.warn(
+            log.warning(
                 'PLUGGER: {0} plates have not been allocated'
                 .format(len(plates) - len(allocatedPlates)), TotoroPluggerWarning)
 

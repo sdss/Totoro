@@ -14,8 +14,6 @@ Revision history:
 
 from __future__ import division, print_function
 
-import warnings
-
 import numpy as np
 from astropy import time
 from sqlalchemy.orm.exc import NoResultFound
@@ -109,7 +107,7 @@ class Exposure(object):
                                     self.db.mangaDB.Exposure())
 
             if self.__mangaExposure.pk is None and not self.isMock:
-                warnings.warn(
+                log.warning(
                     'plateDB.Exposure.pk={0} has no mangaDB.Exposure '
                     'counterpart.'.format(self.pk), NoMangaExposure)
 

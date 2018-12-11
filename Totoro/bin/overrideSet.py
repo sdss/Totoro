@@ -58,7 +58,7 @@ def _checkExposures(exposures):
     elif len(exposures) > 3:
         raise TotoroError('sets must consist of <= 3 exposures')
     elif len(exposures) < 3:
-        warnings.warn(
+        log.warning(
             'you are creating an overridden set with only '
             '{0} exposures'.format(len(exposures)), TotoroUserWarning)
 
@@ -169,12 +169,12 @@ def override(args):
 
     if ((preCompletion < 1. and postCompletion > 1.) or
             (preCompletion > 1. and postCompletion < 1.)):
-        warnings.warn(
+        log.warning(
             'plate completion has changed from {0:.2f} to {1:.2f}. '
             'Remember to check if the plate status is correct after '
             'overriding sets.'.format(preCompletion, postCompletion), TotoroUserWarning)
     else:
-        warnings.warn('Remember to check if the plate status is correct after '
+        log.warning('Remember to check if the plate status is correct after '
                       'overriding sets.', TotoroUserWarning)
 
     if verbose:
@@ -236,7 +236,7 @@ def removeStatus(args):
             log.info('reloading plateid {0}'.format(plateID))
         fromPlateID(plateID)
 
-    warnings.warn('remember to check the set arrangement for plate_id={0} '
+    log.warning('remember to check the set arrangement for plate_id={0} '
                   'after removing overridden sets.'.format(plateID))
 
     if verbose:
@@ -301,7 +301,7 @@ def getInfo(args):
         codeMock = statusMock = None
 
     if code not in [0, 9, 10] or codeMock not in [0, 9, 10]:
-        warnings.warn(
+        log.warning(
             'this is not a comprehensive list of reasons why the '
             'set is invalid. Other conditions may be failing for '
             'this set apart from the specified here.', TotoroUserWarning)
@@ -378,7 +378,7 @@ def main(argv=None):
 if __name__ == '__main__':
 
     warnings.simplefilter('always', DeprecationWarning)
-    warnings.warn('this script is now deprecated an may be removed in a future '
+    log.warning('this script is now deprecated an may be removed in a future '
                   'version of Totoro. Please, use "totoro override" instead.',
                   DeprecationWarning)
     warnings.simplefilter('ignore', DeprecationWarning)

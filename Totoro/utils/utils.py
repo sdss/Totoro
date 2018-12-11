@@ -16,7 +16,6 @@ from __future__ import division, print_function
 
 import os
 import subprocess
-import warnings
 from collections import OrderedDict
 from itertools import combinations
 
@@ -167,7 +166,7 @@ def isPlateComplete(plate,
 
     if plugComplete is not None:
         if plugComplete is not plateComplete:
-            warnings.warn(
+            log.warning(
                 'plate={0}: plugging status is {1} but calculated '
                 'status is {2}.'.format(plate.plate_id, 'complete'
                                         if plugComplete else 'incomplete', 'complete'
@@ -255,7 +254,7 @@ def getAPOcomplete(plates,
             plate = Plate(plate, format=format.lower(), **kwargs)
 
         if isPlateComplete(plate, write_apocomplete=False) is False:
-            warnings.warn(
+            log.warning(
                 'plate_id={0} is not complete. APOcomplete output '
                 'must not be used.'.format(plate.plate_id), exceptions.TotoroUserWarning)
 
@@ -306,7 +305,7 @@ def getAPOcomplete(plates,
                      'SN2_blue={1:.1f}, SN2_red={2:.1f}.'.format(plate.plate_id, apoCompleteSN2[0],
                                                                  apoCompleteSN2[1]))
         else:
-            warnings.warn(
+            log.warning(
                 'plate_id={0} has SN2_blue={1:.1f}, SN2_red={2:.1f},'
                 ' which is lower than the thresholds.'.format(plate.plate_id, apoCompleteSN2[0],
                                                               apoCompleteSN2[1]),
@@ -332,8 +331,8 @@ def createAPOcompleteFile(APOcomplete, path=None, overwrite=False, svn_add=True)
 
         if os.path.exists(apocompPath):
             if overwrite:
-                warnings.warn('apocomplete path {} exists but '
-                              'overwriting it.'.format(path), exceptions.TotoroUserWarning)
+                log.warning('apocomplete path {} exists but '
+                            'overwriting it.'.format(path), exceptions.TotoroUserWarning)
             else:
                 log.debug('apocomplete path {} exists; not ' 'overwriting it.'.format(path))
                 return
@@ -367,12 +366,12 @@ def createAPOcompleteFile(APOcomplete, path=None, overwrite=False, svn_add=True)
                 os.chdir(path)
                 result = subprocess.call('svn add {}'.format(apocompPath), shell=True)
                 if result > 0:
-                    warnings.warn('svn add {} failed with error {}'.format(apocompPath, result),
-                                  exceptions.TotoroUserWarning)
+                    log.warning('svn add {} failed with error {}'.format(apocompPath, result),
+                                exceptions.TotoroUserWarning)
                     return
             except Exception:
-                warnings.warn('svn add {} failed with unknown error'.format(apocompPath),
-                              exceptions.TotoroUserWarning)
+                log.warning('svn add {} failed with unknown error'.format(apocompPath),
+                            exceptions.TotoroUserWarning)
                 return
 
     return path

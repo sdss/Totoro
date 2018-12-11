@@ -35,7 +35,7 @@ try:
     from .utils.dust_map import DustMap
     dustMap = DustMap()
 except (ImportError, ValueError):
-    warnings.warn('no dust map found. No Galactic extinction ' 'will be applied', DustMapWarning)
+    log.warning('no dust map found. No Galactic extinction ' 'will be applied', DustMapWarning)
     dustMap = None
 except Exception:
     raise TotoroError('something went wrong while importing the dust map.')

@@ -15,7 +15,6 @@ Revision history:
 from __future__ import division, print_function
 
 import os
-import warnings
 
 import numpy as np
 from astropy import table, time
@@ -152,14 +151,14 @@ class Planner(object):
         try:
             scienceCatalogue = table.Table.read(readPath(config['fields']['scienceCatalogue']))
             if 'MANGA_TILEID' not in scienceCatalogue.columns:
-                warnings.warn(
+                log.warning(
                     'PLANNER: science catalogue does not contain '
                     'MANGA_TILEID. Will not check for number of '
                     'targets', exceptions.TotoroPlannerWarning)
                 scienceCatalogue = None
         except Exception:
             scienceCatalogue = None
-            warnings.warn(
+            log.warning(
                 'PLANNER: science catalogue cannot be found. '
                 'Will not check for number of targets', exceptions.TotoroPlannerWarning)
 
@@ -260,8 +259,8 @@ class Planner(object):
         if config['dateAtAPO'].lower() != 'none':
 
             if not os.path.exists(readPath(config['dateAtAPO'])):
-                warnings.warn('PLANNER: dateAtAPO file does not exists.',
-                              exceptions.TotoroPlannerWarning)
+                log.warning('PLANNER: dateAtAPO file does not exists.',
+                            exceptions.TotoroPlannerWarning)
 
             else:
                 try:
@@ -279,7 +278,7 @@ class Planner(object):
                             plate.dateAtAPO = 0.
 
                 except InconsistentTableError:
-                    warnings.warn(
+                    log.warning(
                         'PLANNER: dateAtAPO file exists but could not be read.'
                         ' It is probably empty.', exceptions.TotoroPlannerWarning)
 
@@ -303,14 +302,14 @@ class Planner(object):
 
         path = readPath(config['fields']['tilesBeingDrilled'].lower())
         if not os.path.exists(path):
-            warnings.warn('PLANNER: tilesBeingDrilled file does not exist.',
-                          exceptions.TotoroPlannerWarning)
+            log.warning('PLANNER: tilesBeingDrilled file does not exist.',
+                        exceptions.TotoroPlannerWarning)
             return []
 
         try:
             tilesBeingDrilled = table.Table.read(path, format='ascii', delimiter=',')
         except InconsistentTableError:
-            warnings.warn(
+            log.warning(
                 'PLANNER: tilesBeingDrilled could not be read although it '
                 'exists. Make sure the file is not empty.', exceptions.TotoroPlannerWarning)
             return []
@@ -325,7 +324,7 @@ class Planner(object):
         for manga_tileid, dateAtAPO in tilesBeingDrilled:
 
             if manga_tileid not in tiles['ID']:
-                warnings.warn(
+                log.warning(
                     'PLANNER: manga_tileid={0}: tile being drilled '
                     'not in tiling catalogue.'.format(manga_tileid),
                     exceptions.TotoroPlannerWarning)
@@ -426,7 +425,7 @@ class Planner(object):
 
             nCarts = len(config['mangaCarts']) - len(config['offlineCarts'])
             if len(timeline.scheduled) > nCarts:
-                warnings.warn(
+                log.warning(
                     'more plates ({0}) scheduled than carts available ({1})'.format(
                         len(timeline.scheduled), nCarts), exceptions.TotoroPlannerWarning)
 

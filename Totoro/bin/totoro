@@ -93,7 +93,7 @@ def simulate(end_date,
     """Simulates a range of MJDs."""
 
     if no_backup:
-        warnings.warn('Rejecting all backup plates.', TotoroUserWarning)
+        log.warning('Rejecting all backup plates.', TotoroUserWarning)
 
     planner = Planner(startDate=start_date, endDate=end_date, rejectBackup=no_backup)
     planner.schedule(goodWeatherFraction=weather_fraction, efficiency=efficiency, useFields=True)
@@ -117,7 +117,7 @@ def plugging(mjd=None, marked=False, verbose=False):
         raise ValueError('too many arguments')
 
     if mjd is None:
-        warnings.warn('Using current MJD.', TotoroUserWarning)
+        log.warning('Using current MJD.', TotoroUserWarning)
         tt = time.Time.now()
     else:
         tt = time.Time(int(mjd), format='mjd')
@@ -240,7 +240,7 @@ def load():
             if plate.plate_id in mangaTileIDs:
                 newPlate.manga_tileid = float(mangaTileIDs[plate.plate_id])
             else:
-                warnings.warn('cannot find a valid manga_tileid for plate {}'
+                log.warning('cannot find a valid manga_tileid for plate {}'
                               .format(plate.plate_id), TotoroUserWarning)
                 newPlate.manga_tileid = None
 

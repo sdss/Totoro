@@ -14,8 +14,6 @@ Revision history:
 
 from __future__ import division, print_function
 
-import warnings
-
 import numpy as np
 
 from Totoro import config, log, site, utils
@@ -228,7 +226,7 @@ class Timeline(object):
                      .format(plate.plate_id, nExps, completionPre, completionPost, flagsStr))
 
             if nOrphanedPost > 0 and mode == 'plugger':
-                warnings.warn(
+                log.warning(
                     '... plate_id={0} has {1} orphaned '
                     'exps after simulation'.format(plate.plate_id, nOrphanedPost),
                     TotoroUserWarning)

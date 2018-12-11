@@ -1,66 +1,95 @@
-# Licensed under a 3-clause BSD style license - see LICENSE.rst
-"""
-This module defines a logging class based on the built-in logging module.
-The module is heavily based on the astropy logging system.
-"""
+# encoding: utf-8
+#
+# @Author: José Sánchez-Gallego
+# @Filename: logger.py
+# @License: BSD 3-Clause
+# @Copyright: José Sánchez-Gallego
 
-from __future__ import print_function
+# Adapted from astropy's logging system.
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import collections
+import datetime
 import logging
 import os
 import re
 import shutil
 import sys
+import traceback
 import warnings
-from logging import FileHandler
 from logging.handlers import TimedRotatingFileHandler
-from textwrap import TextWrapper
 
-from Totoro.exceptions import TotoroError
+from pygments import highlight
+from pygments.formatters import TerminalFormatter
+from pygments.lexers import get_lexer_by_name
 
-from .colourPrint import colourPrint
+from .color_print import color_text
 
 
-# Initialize by calling initLog()
-log = None
-
-# Adds custom log level for important messages
+# Adds custom log level for print and twisted messages
 IMPORTANT = 25
 logging.addLevelName(IMPORTANT, 'IMPORTANT')
 
-ansi_escape = re.compile(r'\x1b[^m]*m')
 
-
-def important(self, message, *args, **kws):
+def important_log_level(self, message, *args, **kws):
     self._log(IMPORTANT, message, args, **kws)
 
 
-logging.Logger.important = important
+logging.Logger._important = important_log_level
 
 
-def initLog():
+def print_exception_formatted(type, value, tb):
+    """A custom hook for printing tracebacks with colours."""
 
-    from .. import config
+    tbtext = ''.join(traceback.format_exception(type, value, tb))
+    lexer = get_lexer_by_name('pytb', stripall=True)
+    formatter = TerminalFormatter()
+    sys.stderr.write(highlight(tbtext, lexer, formatter))
 
-    logging.setLoggerClass(TotoroLogger)
-    log = logging.getLogger('Totoro')
-    log._set_defaults(
-        logLevel=config['logging']['logLevel'].upper(),
-        logFileLevel=config['logging']['logFileLevel'].upper(),
-        logFilePath=config['logging']['logFilePath'],
-        mode=config['logging']['mode'],
-        wrapperLength=config['logging']['wrapperLength'])
 
-    return log
+def colored_formatter(record):
+    """Prints log messages with colours."""
+
+    colours = {'info': ('blue', 'normal'),
+               'debug': ('magenta', 'normal'),
+               'warning': ('yellow', 'normal'),
+               'print': ('green', 'normal'),
+               'error': ('red', 'bold')}
+
+    levelname = record.levelname.lower()
+
+    if levelname == 'error':
+        return
+
+    if levelname.lower() in colours:
+        levelname_color = colours[levelname][0]
+        header = color_text('[{}]: '.format(levelname.upper()),
+                            levelname_color)
+
+    message = record.getMessage()
+
+    if levelname == 'warning':
+        warning_category_groups = re.match(r'^\w*?(.+?Warning) (.*)', message)
+        if warning_category_groups is not None:
+            warning_category, warning_text = warning_category_groups.groups()
+
+            warning_category_colour = color_text('({})'.format(warning_category), 'cyan')
+            message = '{} {}'.format(color_text(warning_text, ''), warning_category_colour)
+
+    sys.__stdout__.write('{}{}\n'.format(header, message))
+    sys.__stdout__.flush()
+
+    return
 
 
 class MyFormatter(logging.Formatter):
 
-    warning_fmp = '%(asctime)s - %(levelname)s: %(message)s [%(origin)s]'
-    info_fmt = '%(asctime)s - %(levelname)s - %(message)s [%(funcName)s @ ' + \
-        '%(filename)s]'
+    base_fmt = '%(asctime)s - %(levelname)s - %(message)s [%(funcName)s @ %(filename)s]'
 
-    def __init__(self, fmt='%(levelname)s - %(message)s [%(funcName)s @ ' + '%(filename)s]'):
+    ansi_escape = re.compile(r'\x1b[^m]*m')
+
+    def __init__(self, fmt='%(levelname)s - %(message)s [%(funcName)s @ %(filename)s]'):
         logging.Formatter.__init__(self, fmt, datefmt='%Y-%m-%d %H:%M:%S')
 
     def format(self, record):
@@ -71,21 +100,21 @@ class MyFormatter(logging.Formatter):
 
         # Replace the original format with one customized by logging level
         if record.levelno == logging.DEBUG:
-            self._fmt = MyFormatter.info_fmt
+            self._fmt = MyFormatter.base_fmt
+
+        elif record.levelno == logging.getLevelName('IMPORTANT'):
+            self._fmt = MyFormatter.base_fmt
 
         elif record.levelno == logging.INFO:
-            self._fmt = MyFormatter.info_fmt
+            self._fmt = MyFormatter.base_fmt
 
         elif record.levelno == logging.ERROR:
-            self._fmt = MyFormatter.info_fmt
+            self._fmt = MyFormatter.base_fmt
 
         elif record.levelno == logging.WARNING:
-            self._fmt = MyFormatter.warning_fmp
+            self._fmt = MyFormatter.base_fmt
 
-        elif record.levelno == IMPORTANT:
-            self._fmt = MyFormatter.info_fmt
-
-        record.msg = ansi_escape.sub('', record.msg)
+        record.msg = self.ansi_escape.sub('', record.msg)
 
         # Call the original formatter class to do the grunt work
         result = logging.Formatter.format(self, record)
@@ -100,84 +129,93 @@ Logger = logging.getLoggerClass()
 fmt = MyFormatter()
 
 
-class TotoroLogger(Logger):
+class LoggerStdout(object):
+    """A pipe for stdout to a logger."""
+
+    def __init__(self, level):
+        self.level = level
+
+    def write(self, message):
+
+        if message != '\n':
+            self.level(message)
+
+    def flush(self):
+        pass
+
+
+class MyLogger(Logger):
     """This class is used to set up the logging system.
 
     The main functionality added by this class over the built-in
     logging.Logger class is the ability to keep track of the origin of the
-    messages, the ability to enable logging of warnings.warn calls and
-    exceptions, and the addition of colourised output and context managers to
+    messages, the ability to enable logging of log.warning calls and
+    exceptions, and the addition of colorized output and context managers to
     easily capture messages to a file or list.
+
+    It is adapted from the astropy logging system.
 
     """
 
-    def __init__(self, *args, **kwargs):
+    INFO = 15
 
-        self.fh = None
-        self.sh = None
-        self.wrapperLength = 99
-        self.logFilename = None
+    warning_registry = collections.defaultdict(dict)
 
-        super(TotoroLogger, self).__init__(*args, **kwargs)
+    def save_log(self, path):
+        shutil.copyfile(self.log_filename, os.path.expanduser(path))
 
-    def saveLog(self, path):
-        shutil.copyfile(self.logFilename, os.path.expanduser(path))
+    def _catch_exceptions(self, exctype, value, tb):
+        """Catches all exceptions and logs them."""
 
-    def _showwarning(self, *args):
+        # Now we log it.
+        self.error('Uncaught exception', exc_info=(exctype, value, tb))
 
-        warning = args[0]
-        message = '{0}: {1}'.format(warning.__class__.__name__, args[0])
-        mod_path = args[2]
+        # First, we print to stdout with some colouring.
+        print_exception_formatted(exctype, value, tb)
 
-        mod_name = None
-        mod_path, __ = os.path.splitext(mod_path)
-        for __, mod in list(sys.modules.items()):
-            path = os.path.splitext(getattr(mod, '__file__', ''))[0]
-            if path == mod_path:
-                mod_name = mod.__name__
-                break
+    def warning(self, msg, category=None, use_filters=True):
+        """Custom ``logging.warning``.
 
-        if mod_name is not None:
-            self.warning(message, extra={'origin': mod_name})
+        Behaves like the default ``logging.warning`` but accepts ``category``
+        and ``use_filters`` as arguments. ``category`` is the type of warning
+        we are issuing (defaults to `UserWarning`). If ``use_filters=True``,
+        checks whether there are global filters set for the message or the
+        warning category and behaves accordingly.
+
+        """
+
+        if category is None:
+            category = UserWarning
+
+        n_issued = 0
+        if category in self.warning_registry:
+            if msg in self.warning_registry[category]:
+                n_issued = self.warning_registry[category]
+
+        if use_filters:
+
+            category_filter = None
+            regex_filter = None
+            for warnings_filter in warnings.filters:
+                if issubclass(category, warnings_filter[2]):
+                    category_filter = warnings_filter[0]
+                    regex_filter = warnings_filter[1]
+
+            if (category_filter == 'ignore') or (category_filter == 'once' and n_issued >= 1):
+                if regex_filter is None or regex_filter.search(msg) is not None:
+                    return
+
+            if category_filter == 'error':
+                raise ValueError(msg)
+
+        super(MyLogger, self).warning(msg)
+
+        if msg in self.warning_registry[category]:
+            self.warning_registry[category][msg] += 1
         else:
-            self.warning(message)
+            self.warning_registry[category][msg] = 1
 
-    def _stream_formatter(self, record):
-        """The formatter for standard output."""
-
-        if record.levelno < logging.DEBUG:
-            print(record.levelname, end='')
-        elif (record.levelno < logging.INFO):
-            colourPrint(record.levelname, 'green', end='')
-        elif (record.levelno < IMPORTANT):
-            colourPrint(record.levelname, 'magenta', end='')
-        elif (record.levelno < logging.WARNING):
-            colourPrint(record.levelname, 'lightblue', end='')
-        elif (record.levelno < logging.ERROR):
-            colourPrint(record.levelname, 'brown', end='')
-        else:
-            colourPrint(record.levelname, 'red', end='')
-
-        if record.levelno == logging.WARN:
-            message = '{0}'.format(record.msg[record.msg.find(':') + 2:])
-        else:
-            message = record.getMessage()
-
-        if len(message) > self.wrapperLength:
-            tw = TextWrapper()
-            tw.width = self.wrapperLength
-            tw.subsequent_indent = ' ' * (len(record.levelname) + 2)
-            tw.break_on_hyphens = False
-            message = '\n'.join(tw.wrap(message))
-
-        print(': ' + message)
-
-    def _set_defaults(self,
-                      logLevel='WARNING',
-                      logFileLevel='INFO',
-                      logFilePath='~/.totoro/totoro.log',
-                      mode='append',
-                      wrapperLength=70):
+    def _set_defaults(self, log_level=logging.INFO, redirect_stdout=False):
         """Reset logger to its initial state."""
 
         # Remove all previous handlers
@@ -185,48 +223,61 @@ class TotoroLogger(Logger):
             self.removeHandler(handler)
 
         # Set levels
-        self.setLevel('DEBUG')
+        self.setLevel(logging.DEBUG)
 
         # Set up the stdout handler
+        self.fh = None
         self.sh = logging.StreamHandler()
-        self.sh.emit = self._stream_formatter
+        self.sh.emit = colored_formatter
         self.addHandler(self.sh)
 
-        self.wrapperLength = wrapperLength
+        self.sh.setLevel(log_level)
 
-        # Set up the main log file handler if requested (but this might fail if
-        # configuration directory or log file is not writeable).
+        # Redirects all stdout to the logger
+        if redirect_stdout:
+            sys.stdout = LoggerStdout(self._print)
 
-        logFilePath = os.path.expanduser(logFilePath)
-        logDir = os.path.dirname(logFilePath)
-        if not os.path.exists(logDir):
-            os.mkdir(logDir)
+        # Catches exceptions
+        sys.excepthook = self._catch_exceptions
+
+    def start_file_logger(self, path, log_file_level=logging.DEBUG):
+        """Start file logging."""
+
+        log_file_path = os.path.expanduser(path)
+        logdir = os.path.dirname(log_file_path)
 
         try:
-            if mode.lower() == 'overwrite':
-                self.fh = FileHandler(logFilePath, mode='w')
-            elif mode.lower() == 'append':
-                self.fh = TimedRotatingFileHandler(logFilePath, when='midnight', utc=True)
-            else:
-                raise TotoroError('logger mode {0} not recognised'.format(mode))
-        except (IOError, OSError) as e:
-            warnings.warn(
-                'log file {0!r} could not be opened for writing: '
-                '{1}'.format(logFilePath, str(e)), RuntimeWarning)
+
+            if not os.path.exists(logdir):
+                os.mkdir(logdir)
+
+            if os.path.exists(log_file_path):
+                strtime = datetime.datetime.utcnow().strftime(
+                    '%Y-%m-%d_%H:%M:%S')
+                shutil.move(log_file_path, log_file_path + '.' + strtime)
+
+            self.fh = TimedRotatingFileHandler(
+                str(log_file_path), when='midnight', utc=True)
+            self.fh.suffix = '%Y-%m-%d_%H:%M:%S'
+        except (IOError, OSError) as ee:
+            self.warning('log file {0!r} could not be opened for writing: {1}'.format(
+                log_file_path, ee), RuntimeWarning)
         else:
             self.fh.setFormatter(fmt)
             self.addHandler(self.fh)
+            self.fh.setLevel(log_file_level)
 
-        # Adds a header only to the file handler
-        self.sh.setLevel(logging.CRITICAL)
-        self.fh.setLevel(logging.DEBUG)
-        self.debug('')
-        self.debug('--------------------------------')
-        self.debug('----- Restarting logger. -------')
-        self.debug('--------------------------------')
+            self.log_filename = log_file_path
 
-        self.sh.setLevel(logLevel)
-        self.fh.setLevel(logFileLevel)
+    def set_level(self, level):
+        """Sets levels for both sh and (if initialised) fh."""
 
-        self.logFilename = logFilePath
-        warnings.showwarning = self._showwarning
+        self.sh.setLevel(level)
+
+        if self.fh:
+            self.fh.setLevel(level)
+
+
+logging.setLoggerClass(MyLogger)
+log = logging.getLogger(__name__)
+log._set_defaults()  # Inits sh handler

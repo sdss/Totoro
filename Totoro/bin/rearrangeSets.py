@@ -37,7 +37,7 @@ def rearrageSets(plateid, force=False, LST=None, **kwargs):
 if __name__ == '__main__':
 
     warnings.simplefilter('always', DeprecationWarning)
-    warnings.warn('this script is now deprecated an may be removed in a future '
+    log.warning('this script is now deprecated an may be removed in a future '
                   'version of Totoro. Please, use "totoro rearrange" instead.',
                   DeprecationWarning)
     warnings.simplefilter('ignore', DeprecationWarning)

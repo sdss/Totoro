@@ -14,7 +14,6 @@ Revision history:
 
 from __future__ import division, print_function
 
-import warnings
 from copy import deepcopy
 
 import numpy as np
@@ -100,9 +99,7 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False, raRange=None, **kwargs):
 
         _checkNumberPlatesAtAPO(plates)
 
-        if onlyMarked is False:
-            plates = plates
-        else:
+        if onlyMarked is True:
             plates = plates.join(
                 plateDB.PlateToPlateStatus,
                 plateDB.PlateStatus).filter(plateDB.PlateStatus.label == 'Accepted')
@@ -119,8 +116,7 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False, raRange=None, **kwargs):
                         and_(plateDB.Pointing.center_ra >= raRange[1][0],
                              plateDB.Pointing.center_ra <= raRange[1][1])))
             else:
-                warnings.warn('unrecognised format for raRange',
-                              TotoroExceptions.TotoroUserWarning)
+                log.warning('unrecognised format for raRange', TotoroExceptions.TotoroUserWarning)
 
         plates = plates.order_by(plateDB.Plate.plate_id).all()
 
@@ -218,7 +214,7 @@ def _checkNumberPlatesAtAPO(plates):
     nPlatesAPO = config['numberPlatesAllowedAtAPO']
     nPlates = plates.count()
     if nPlates >= 0.9 * nPlatesAPO:
-        warnings.warn(
+        log.warning(
             'MaNGA has {0} plates at APO when the maximum is {1}'.format(nPlates, nPlatesAPO),
             TotoroExceptions.TotoroUserWarning)
 
@@ -443,7 +439,7 @@ class Plate(object):
             nMaNGAExposures = len(self.getMangadbExposures())
             nScienceExposures = len(self.getScienceExposures())
             if nMaNGAExposures != nScienceExposures:
-                warnings.warn(
+                log.warning(
                     'plate_id={1}: {0} plateDB.Exposures found '
                     'but only {2} mangaDB.Exposures'.format(nScienceExposures, self.plate_id,
                                                             nMaNGAExposures),
@@ -524,7 +520,7 @@ class Plate(object):
         else:
 
             if len(self.plate_pointings) > 1:
-                warnings.warn(
+                log.warning(
                     'plate_id={0:d}: multiple plate pointings found.'
                     ' Using the first one.'.format(self.plate_id),
                     TotoroExceptions.MultiplePlatePointings)
@@ -758,7 +754,7 @@ class Plate(object):
         jdRange = observingPlan.getMJD(mjd)
 
         if jdRange is None:
-            warnings.warn(
+            log.warning(
                 'no observing block found for MJD={0:d}. '
                 'Observing windows will not be contrained.'.format(mjd),
                 TotoroExceptions.NoObservingBlock)
@@ -893,7 +889,7 @@ class Plate(object):
             if nExpIncompleteSets <= 5:
                 self.rearrangeSets(mode='optimal', scope='incomplete', silent=True)
             else:
-                warnings.warn(
+                log.warning(
                     'plate={0}: skipping incomplete set '
                     'rearrangement because plate has > 5 exposures '
                     'in incomplete sets'.format(self.plate_id), TotoroExceptions.TotoroUserWarning)

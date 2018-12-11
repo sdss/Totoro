@@ -12,7 +12,6 @@ Licensed under a 3-clause BSD license.
 from __future__ import division, print_function
 
 import os
-import warnings
 
 import numpy as np
 from astropy import table, time
@@ -31,7 +30,7 @@ def getScheduleFile():
     except Exception:
         # If the autoscheduler is not available, uses the local schedule file
         schedule = readPath(config['observingPlan']['fallBackSchedule'])
-        warnings.warn(
+        log.warning(
             'The master autoscheduler could not be found. '
             'Using a local copy of the schedule. BE CAREFUL! '
             'THIS FILE MIGHT BE OUTDATED!', exceptions.TotoroUserWarning)
@@ -159,7 +158,7 @@ class ObservingPlan(object):
         jd = int(jd)
 
         if jd not in self.plan['JD']:
-            warnings.warn('JD={0} not found in schedule'.format(jd), exceptions.TotoroUserWarning)
+            log.warning('JD={0} not found in schedule'.format(jd), exceptions.TotoroUserWarning)
             return (None, None)
 
         night = self.plan[self.plan['JD'] == jd]
@@ -233,8 +232,8 @@ class ObservingPlan(object):
         try:
             pos = int(self.getClosest(jd)['Position'])
         except Exception:
-            warnings.warn('Cannot found block position for JD={0}'.format(jd),
-                          exceptions.TotoroUserWarning)
+            log.warning('Cannot found block position for JD={0}'.format(jd),
+                        exceptions.TotoroUserWarning)
             pos = None
 
         return pos

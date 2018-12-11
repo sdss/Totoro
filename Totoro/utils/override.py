@@ -8,8 +8,6 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 # @Copyright: José Sánchez-Gallego
 
-import warnings
-
 import numpy as np
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -46,7 +44,7 @@ def _checkExposures(exposures):
     elif len(exposures) > 3:
         raise TotoroError('sets must consist of <= 3 exposures')
     elif len(exposures) < 3:
-        warnings.warn(
+        log.warning(
             'you are creating an overridden set with only '
             '{0} exposures'.format(len(exposures)), TotoroUserWarning)
 
@@ -148,13 +146,13 @@ def override(exposures, mode):
 
     if ((preCompletion < 1. and postCompletion > 1.) or
             (preCompletion > 1. and postCompletion < 1.)):
-        warnings.warn(
+        log.warning(
             'plate completion has changed from {0:.2f} to {1:.2f}. '
             'Remember to check if the plate status is correct after '
             'overriding sets.'.format(preCompletion, postCompletion), TotoroUserWarning)
     else:
-        warnings.warn('Remember to check if the plate status is correct after '
-                      'overriding sets.', TotoroUserWarning)
+        log.warning('Remember to check if the plate status is correct after '
+                    'overriding sets.', TotoroUserWarning)
 
     log.debug('changing status of set {0} to Override {1}'.format(overridenSetPK, mode))
     log.debug('override was successful')
@@ -207,8 +205,8 @@ def removeStatus(set_pk, reload=False):
         log.debug('reloading plateid {0}'.format(plateID))
         fromPlateID(plateID)
 
-    warnings.warn('remember to check the set arrangement for plate_id={0} '
-                  'after removing overridden sets.'.format(plateID), TotoroUserWarning)
+    log.warning('remember to check the set arrangement for plate_id={0} '
+                'after removing overridden sets.'.format(plateID), TotoroUserWarning)
 
     log.debug('set_pk={0} removed successfully'.format(set_pk))
 
@@ -267,7 +265,7 @@ def getInfo(exposures):
         codeMock = statusMock = None
 
     if code not in [0, 9, 10] or codeMock not in [0, 9, 10]:
-        warnings.warn(
+        log.warning(
             'this is not a comprehensive list of reasons why the '
             'set is invalid. Other conditions may be failing for '
             'this set apart from the specified here.', TotoroUserWarning)
