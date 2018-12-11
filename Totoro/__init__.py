@@ -26,8 +26,8 @@ from .core.configuration import getConfiguration  # noqa
 config = getConfiguration()
 
 # Creates the custom logging system
-from .core.logger import initLog  # noqa
-log = initLog()
+from .core.logger import log  # noqa
+log.start_file_logger(config['logging']['logFilePath'])
 log.debug('Logging starts now.')
 log.debug('Configuration file has been loaded.')
 
@@ -35,7 +35,7 @@ try:
     from .utils.dust_map import DustMap
     dustMap = DustMap()
 except (ImportError, ValueError):
-    log.warning('no dust map found. No Galactic extinction ' 'will be applied', DustMapWarning)
+    log.warning('no dust map found. No Galactic extinction will be applied', DustMapWarning)
     dustMap = None
 except Exception:
     raise TotoroError('something went wrong while importing the dust map.')
