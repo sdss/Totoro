@@ -24,7 +24,7 @@ from pygments import highlight
 from pygments.formatters import TerminalFormatter
 from pygments.lexers import get_lexer_by_name
 
-from .color_print import color_text
+from .colourPrint import colourPrint
 
 
 # Adds custom log level for print and twisted messages
@@ -64,8 +64,8 @@ def colored_formatter(record):
 
     if levelname.lower() in colours:
         levelname_color = colours[levelname][0]
-        header = color_text('[{}]: '.format(levelname.upper()),
-                            levelname_color)
+        header = colourPrint('[{}]: '.format(levelname.upper()),
+                             levelname_color)
 
     message = record.getMessage()
 
@@ -74,8 +74,8 @@ def colored_formatter(record):
         if warning_category_groups is not None:
             warning_category, warning_text = warning_category_groups.groups()
 
-            warning_category_colour = color_text('({})'.format(warning_category), 'cyan')
-            message = '{} {}'.format(color_text(warning_text, ''), warning_category_colour)
+            warning_category_colour = colourPrint('({})'.format(warning_category), 'cyan')
+            message = '{} {}'.format(colourPrint(warning_text, ''), warning_category_colour)
 
     sys.__stdout__.write('{}{}\n'.format(header, message))
     sys.__stdout__.flush()
