@@ -116,7 +116,8 @@ class Fields(list):
 
         plateMangaTileIds = np.unique([
             plate.mangadbPlate.manga_tileid for plate in plates
-            if plate is not None and plate.mangadbPlate is not None
+            if plate is not None and plate.mangadbPlate is not None and
+            plate.mangadbPlate.manga_tileid
         ])
 
         drilledFields = []
