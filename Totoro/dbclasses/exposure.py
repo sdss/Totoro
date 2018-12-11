@@ -710,10 +710,10 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     red = exposureSN2[2:]
 
     # If the exposure is partially reduced
-    if not np.all(exposureSN2 > 0):
+    if None in exposureSN2 or not np.all(exposureSN2 > 0):
         # If at least one camera in each spectrograph is reduced, does not flag
         # the exposure but returs True
-        if np.any(blue >= 0) and np.any(red >= 0):
+        if (np.any(blue >= 0) and np.any(red >= 0)):
             message = ('plateDB.Exposure.pk={0}: not completely reduced but '
                        'temporarily considering it valid'.format(pk))
             return flagExposure(exposure, True, 6, flag=flag, message=message)
