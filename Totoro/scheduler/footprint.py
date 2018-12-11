@@ -10,7 +10,6 @@
 from __future__ import division, print_function
 
 import matplotlib as mpl
-
 import numpy as np
 from matplotlib import path
 from matplotlib import pyplot as plt
@@ -20,7 +19,7 @@ from matplotlib.patches import Ellipse, PathPatch
 
 __all__ = [
     'HSC', 'UKIDSS', 'ATLAS', 'ALFALFA', 'ApertifMedDeep', 'GAMA', 'CVn', 'HETDEX',
-    'PerseusPisces', 'getPlatesInFootprint'
+    'PerseusPisces', 'getPlatesInFootprint', 'ALFALFA_Detailed'
 ]
 
 defaultColours = {
@@ -29,6 +28,7 @@ defaultColours = {
     'UKIDSS': 'SaddleBrown',
     'Apertif': 'OliveDrab',
     'ALFALFA': 'b',
+    'ALFALFA_Detailed': 'b',
     'ATLAS': 'MediumVioletRed'
 }
 
@@ -354,6 +354,24 @@ def plotALFALFA(ax, **kwargs):
     return
 
 
+def plotALFALFA_Detailed(ax, **kwargs):
+
+    color = kwargs.get('color', defaultColours['ALFALFA'])
+    projection = kwargs.get('projection', 'rect')
+
+    if projection == 'rect':
+        regsToPlot = ALFALFA_Detailed
+    else:
+        regsToPlot = [ALFALFA_1, ALFALFA_Mollweide]
+
+    for region in regsToPlot:
+        plotPatch(ax, region, color=color, **kwargs)
+
+    addText(ax, 100, 20, 'ALFALFA', color=color, **kwargs)
+
+    return
+
+
 def plotATLAS(ax, **kwargs):
 
     color = kwargs.get('color', defaultColours['ATLAS'])
@@ -419,6 +437,14 @@ ALFALFA_3 = getRectangle((22 * 15, 24 * 15, 0, 36))
 ALFALFA = [ALFALFA_1, ALFALFA_2, ALFALFA_3]
 
 ALFALFA_Mollweide = getRectangle((22 * 15, 3 * 15, 0, 36))
+
+# A more detailed footprint of the SGC
+ALFALFA_SGC_Detailed_1 = getPolygon(np.array([[324, 36.], [360, 36], [360, 0], [328, 0],
+                                              [328, 10], [324, 10], [324, 36]]))
+ALFALFA_SGC_Detailed_2 = getPolygon(np.array([[0, 36.], [48, 36], [48., 30], [46, 30],
+                                              [46, 22], [48, 22], [48, 14], [38, 14],
+                                              [38, 10], [48, 10], [48, 0], [0, 0], [0, 36]]))
+ALFALFA_Detailed = [ALFALFA_1, ALFALFA_SGC_Detailed_1, ALFALFA_SGC_Detailed_2]
 
 # HETDEX field
 HETDEX_vertices = np.array([[164.0, 45.5], [180.0, 48.9], [196.0, 49.7], [210.0, 48.8],
