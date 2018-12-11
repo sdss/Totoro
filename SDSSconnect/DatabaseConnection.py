@@ -249,10 +249,10 @@ class DatabaseConnection(object):
         self.Base.prepare(engine=self.engine, classname_for_table=cameliseClassname)
 
         # We are going to create our own relationships, so we remove these.
-        for model in self.Base.classes:
-            if 'Platedb_' in model.__name__ or 'Mangadb_' in model.__name__:
-                for relationship in list(model.__mapper__.relationships.keys()):
-                    delattr(model, str(relationship))
+        # for model in self.Base.classes:
+        #     if 'Platedb_' in model.__name__ or 'Mangadb_' in model.__name__:
+        #         for relationship in list(model.__mapper__.relationships.keys()):
+        #             delattr(model, str(relationship))
 
         if models == __MODELS__:
             createRelationships(self.Base)
