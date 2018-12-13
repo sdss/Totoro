@@ -133,7 +133,7 @@ setArrangement:
     factor: 0.9
 
 ferruleSizes:
-    MANGA: 8.5
+    MANGA: 9.0
     MANGA_SINGLE: 8.5
     OBJECT: 4.4
     GUIDE: 7.6

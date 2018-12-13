@@ -1,6 +1,9 @@
 # Change Log
 
-## [2.1.0] - unreleased
+## [2.1.0] - 2018-12-13
+
+### Changed
+- Use 9mm for the MaNGA ferrule size.
 
 ### Refactored
 - Uses new logger file and `log.warning` instead of `warnings.warn`.
