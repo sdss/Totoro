@@ -36,7 +36,7 @@ def important_log_level(self, message, *args, **kws):
     self._log(IMPORTANT, message, args, **kws)
 
 
-logging.Logger._important = important_log_level
+logging.Logger.important = important_log_level
 
 
 def print_exception_formatted(type, value, tb):
@@ -54,7 +54,7 @@ def colored_formatter(record):
     colours = {'info': ('blue', 'normal'),
                'debug': ('magenta', 'normal'),
                'warning': ('yellow', 'normal'),
-               'print': ('green', 'normal'),
+               'important': ('green', 'normal'),
                'error': ('red', 'bold')}
 
     levelname = record.levelname.lower()

@@ -1,5 +1,11 @@
 # Change Log
 
+## [2.1.1] - 2019-01-28
+
+### Fixed
+- Problem with logging important-level messages.
+
+
 ## [2.1.0] - 2018-12-13
 
 ### Changed
@@ -8,7 +14,7 @@
 ### Refactored
 - Uses new logger file and `log.warning` instead of `warnings.warn`.
 
-### Fixes
+### Fixed
 - Does not remove auto-reflected relationships in `DatabaseConnection` since it breaks with SQLA>=1.3. That should not affect anything since they were deleted mostly to keep the namespace tidy.
 
 
