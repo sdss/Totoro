@@ -1,5 +1,11 @@
 # Change Log
 
+## [2.1.2] - 2019-04-03
+
+### Fixed
+- Logger not imported in deprecated script ``rearrangeSets.py``.
+
+
 ## [2.1.1] - 2019-01-28
 
 ### Fixed

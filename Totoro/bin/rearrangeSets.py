@@ -36,6 +36,8 @@ def rearrageSets(plateid, force=False, LST=None, **kwargs):
 
 if __name__ == '__main__':
 
+    from Totoro import log
+
     warnings.simplefilter('always', DeprecationWarning)
     log.warning('this script is now deprecated an may be removed in a future '
                   'version of Totoro. Please, use "totoro rearrange" instead.',
