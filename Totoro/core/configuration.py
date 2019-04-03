@@ -47,7 +47,7 @@ class TotoroConfig(dict):
 
     def _initFromRaw(self):
 
-        yamlData = yaml.load(self._rawData)
+        yamlData = yaml.load(self._rawData, Loader=yaml.FullLoader)
 
         if yamlData is None:
             yamlData = {}
@@ -71,7 +71,7 @@ class TotoroConfig(dict):
         YAML file."""
 
         userRaw = self._rawData + open(file, 'r').read()
-        userData = yaml.load(userRaw)
+        userData = yaml.load(userRaw, Loader=yaml.FullLoader)
         if userData is None:
             userData = {}
 
