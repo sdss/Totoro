@@ -240,7 +240,7 @@ def load():
                 newPlate.manga_tileid = float(mangaTileIDs[plate.plate_id])
             else:
                 log.warning('cannot find a valid manga_tileid for plate {}'
-                              .format(plate.plate_id), TotoroUserWarning)
+                            .format(plate.plate_id), TotoroUserWarning)
                 newPlate.manga_tileid = None
 
             if plate.plate_id in specialPlates['plateid']:
