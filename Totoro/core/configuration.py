@@ -13,12 +13,16 @@ system.
 
 """
 
+import distutils.version
 import os
 
 import yaml
 from six import string_types
 
 from Totoro import __DEFAULT_CONFIG_FILE__, __TOTORO_CONFIG_PATH__, exceptions
+
+
+yaml_version = distutils.version.StrictVersion(yaml.__version__)
 
 
 def getConfiguration(default=None):
@@ -47,7 +51,10 @@ class TotoroConfig(dict):
 
     def _initFromRaw(self):
 
-        yamlData = yaml.load(self._rawData, Loader=yaml.FullLoader)
+        if yaml_version >= distutils.version.StrictVersion('5.1'):
+            yamlData = yaml.load(self._rawData, Loader=yaml.FullLoader)
+        else:
+            yamlData = yaml.load(self._rawData)
 
         if yamlData is None:
             yamlData = {}
@@ -71,7 +78,12 @@ class TotoroConfig(dict):
         YAML file."""
 
         userRaw = self._rawData + open(file, 'r').read()
-        userData = yaml.load(userRaw, Loader=yaml.FullLoader)
+
+        if yaml_version >= distutils.version.StrictVersion('5.1'):
+            userData = yaml.load(userRaw, Loader=yaml.FullLoader)
+        else:
+            userData = yaml.load(userRaw)
+
         if userData is None:
             userData = {}
 
