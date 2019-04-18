@@ -19,7 +19,7 @@ from matplotlib.patches import Ellipse, PathPatch
 
 __all__ = [
     'HSC', 'UKIDSS', 'ATLAS', 'ALFALFA', 'ApertifMedDeep', 'GAMA', 'CVn', 'HETDEX',
-    'PerseusPisces', 'getPlatesInFootprint', 'ALFALFA_Detailed'
+    'PerseusPisces', 'getPlatesInFootprint', 'ALFALFA_Detailed', 'Custom'
 ]
 
 defaultColours = {
@@ -29,7 +29,8 @@ defaultColours = {
     'Apertif': 'OliveDrab',
     'ALFALFA': 'b',
     'ALFALFA_Detailed': 'b',
-    'ATLAS': 'MediumVioletRed'
+    'ATLAS': 'MediumVioletRed',
+    'Custom': 'r'
 }
 
 defaultLW = 1.5
@@ -392,6 +393,16 @@ def plotGAMA(ax, **kwargs):
     addText(ax, 200, -9, 'GAMA (SAMI)', ha='center', color=color, **kwargs)
 
 
+def plotCustom(ax, **kwargs):
+
+    color = kwargs.get('color', defaultColours['Custom'])
+
+    for region in Custom:
+        plotPatch(ax, region, color=color, **kwargs)
+
+    addText(ax, 250, -7, 'Custom', ha='center', color=color, **kwargs)
+
+
 # HSC regions
 HSC_1 = getRectangle((22 * 15, 360, -1, 7))
 HSC_2 = getPolygon(
@@ -528,6 +539,11 @@ UKIDSS_120 = UKIDSS[5]
 UKIDSS_ATLAS = UKIDSS[3]
 ALFALFA_NGC = ALFALFA[0]
 
+# Custom
+Custom_1 = getRectangle((15 * 15, 240, -2, 11.5))
+Custom_2 = getRectangle((123.5, 127.5, -2, 9.5))
+Custom = [Custom_1, Custom_2]
+
 
 def getPlatesInFootprint(plates, coords=False):
     """Returns the list of plates that are within MaNGA footprint."""
@@ -559,7 +575,9 @@ def getPlatesInFootprint(plates, coords=False):
                 PerseusPisces.get_path().contains_points([plate.coords])[0] or
                 CVn.get_path().contains_points([plate.coords])[0] or
                 HSC_S_Wide.get_path().contains_points([plate.coords])[0] or
-                HSC_N_Wide.get_path().contains_points([plate.coords])[0]):
+                HSC_N_Wide.get_path().contains_points([plate.coords])[0] or
+                Custom_1.get_path().contains_points([plate.coords])[0] or
+                Custom_2.get_path().contains_points([plate.coords])[0]):
 
             footprintPlates.append(plate)
 
@@ -595,7 +613,8 @@ def plotFootprint(ax, regions='all', projection='rect', org=0):
     """
 
     if not regions or regions == 'all':
-        plots = [plotGAMA, plotApertifMedDeep, plotATLAS, plotHSC, plotUKIDSS, plotALFALFA]
+        plots = [plotGAMA, plotApertifMedDeep, plotATLAS, plotHSC, plotUKIDSS,
+                 plotALFALFA, plotCustom]
     else:
         if isinstance(regions, str):
             regions = [regions]
