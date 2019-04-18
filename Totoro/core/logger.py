@@ -44,7 +44,7 @@ logging.Logger.important = important_log_level
 
 
 def petunia_warning_log_level(self, message, *args, **kws):
-    self._log(PETUNIA_WARNING, message, args, **kws)
+    self._log(PETUNIA_WARNING, 'PETUNIA: ' + message, args, **kws)
 
 
 logging.Logger.petunia_warning = petunia_warning_log_level
