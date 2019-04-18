@@ -562,7 +562,11 @@ def getPlatesInFootprint(plates, coords=False):
         # Excludes the two most eastern GAMA fields
         if (GAMA_2.get_path().contains_points([plate.coords])[0] or
                 GAMA_3.get_path().contains_points([plate.coords])[0]):
-            continue
+
+            if coords:
+                footprintPlates.append(False)
+            else:
+                continue
 
         if ((UKIDSS_120.get_path().contains_points([plate.coords])[0] and
              ALFALFA_NGC.get_path().contains_points([plate.coords])[0]) or
@@ -579,7 +583,16 @@ def getPlatesInFootprint(plates, coords=False):
                 Custom_1.get_path().contains_points([plate.coords])[0] or
                 Custom_2.get_path().contains_points([plate.coords])[0]):
 
-            footprintPlates.append(plate)
+            if coords:
+                footprintPlates.append(True)
+            else:
+                footprintPlates.append(plate)
+
+        else:
+
+            if coords:
+                footprintPlates.append(False)
+
 
     if len(footprintPlates) == 1:
         return footprintPlates[0]
