@@ -225,6 +225,8 @@ class Plugger(object):
         self._nNewExposures = []
         self._platesToSchedule = []
 
+        log.petunia_warning('this is a test, please ignore.')
+
         # Runs init method depending on startDate and endDate.
         if startDate is None and endDate is None:
             self._initNoManga()
