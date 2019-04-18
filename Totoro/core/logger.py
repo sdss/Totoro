@@ -31,12 +31,23 @@ from .colourPrint import _color_text
 IMPORTANT = 25
 logging.addLevelName(IMPORTANT, 'IMPORTANT')
 
+# Adds custom log level for print and twisted messages
+PETUNIA_WARNING = 35
+logging.addLevelName(PETUNIA_WARNING, 'PETUNIA_WARNING')
+
 
 def important_log_level(self, message, *args, **kws):
     self._log(IMPORTANT, message, args, **kws)
 
 
 logging.Logger.important = important_log_level
+
+
+def petunia_warning_log_level(self, message, *args, **kws):
+    self._log(PETUNIA_WARNING, message, args, **kws)
+
+
+logging.Logger.petunia_warning = petunia_warning_log_level
 
 
 def print_exception_formatted(type, value, tb):
@@ -55,6 +66,7 @@ def colored_formatter(record):
                'debug': ('magenta', 'normal'),
                'warning': ('yellow', 'normal'),
                'important': ('green', 'normal'),
+               'petunia_warning': ('green', 'normal'),
                'error': ('red', 'bold')}
 
     levelname = record.levelname.lower()
@@ -103,6 +115,9 @@ class MyFormatter(logging.Formatter):
             self._fmt = MyFormatter.base_fmt
 
         elif record.levelno == logging.getLevelName('IMPORTANT'):
+            self._fmt = MyFormatter.base_fmt
+
+        elif record.levelno == logging.getLevelName('PETUNIA_WARNING'):
             self._fmt = MyFormatter.base_fmt
 
         elif record.levelno == logging.INFO:
