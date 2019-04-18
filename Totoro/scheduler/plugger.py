@@ -247,7 +247,7 @@ class Plugger(object):
         self.endDate = None
 
         log.warning('PLUGGER: no JD1, JD2 values provided. Plugger will '
-                      'only return plugged, on-completed plates.', TotoroPluggerWarning)
+                    'only return plugged, on-completed plates.', TotoroPluggerWarning)
 
         # Get MaNGA plugged plates
         pluggedPlates = getPlugged(fullCheck=False, updateSets=False)
@@ -485,9 +485,9 @@ class Plugger(object):
 
         if len(plates) > len(self.carts):
             log.warning('PLUGGER: {0} plates to allocate but only {1} carts '
-                          'available. Using the first {1} plates.'.format(len(plates),
-                                                                          len(self.carts)),
-                          TotoroPluggerWarning)
+                        'available. Using the first {1} plates.'.format(len(plates),
+                                                                        len(self.carts)),
+                        TotoroPluggerWarning)
             plates = plates[0:len(self.carts)]
 
         # Gets the active pluggings
@@ -576,9 +576,10 @@ class Plugger(object):
             cartData = self._getCart(sortedCarts, plate)
 
             if cartData is None:
-                log.warning('cannot allocate a cart for plate {}. '
-                              'There may be unallocated time as a result.'.format(plate.plate_id),
-                              TotoroPluggerWarning)
+                msg = ('cannot allocate a cart for plate {}. '
+                       'There may be unallocated time as a result.'.format(plate.plate_id))
+                log.warning(msg, TotoroPluggerWarning)
+                log.petunia_warning(msg)
                 continue
 
             cartNumber, pluggedPlate, statusCode, completion = cartData
