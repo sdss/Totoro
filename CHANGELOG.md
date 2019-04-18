@@ -1,5 +1,15 @@
 # Change Log
 
+## [2.1.3] - unreleased
+
+### Added
+- Two custom regions to the footprint.
+
+### Fixed
+- A bug in `getPlatesInFootprint` that would make `coords=True` return incorrect results.
+
+
+
 ## [2.1.2] - 2019-04-03
 
 ### Fixed
