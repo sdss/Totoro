@@ -1,9 +1,10 @@
 # Change Log
 
-## [2.1.3] - unreleased
+## [2.1.3] - 2019-04-18
 
 ### Added
 - Two custom regions to the footprint.
+- `PETUNIA_WARNING` log level that can be used to output warnings to Petunia.
 
 ### Fixed
 - A bug in `getPlatesInFootprint` that would make `coords=True` return incorrect results.
