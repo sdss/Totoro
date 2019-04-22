@@ -1,5 +1,11 @@
 # Change Log
 
+## [2.1.4] - unreleased
+
+### Changed
+- For MaNGa time, get only plates with `MaNGA dither` or `MaNGA 10min`. This prevents selecting plugged plates with `MaNGA Globular` survey mode.
+
+
 ## [2.1.3] - 2019-04-18
 
 ### Added
@@ -8,7 +14,6 @@
 
 ### Fixed
 - A bug in `getPlatesInFootprint` that would make `coords=True` return incorrect results.
-
 
 
 ## [2.1.2] - 2019-04-03

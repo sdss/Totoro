@@ -34,6 +34,8 @@ from Totoro.scheduler.footprint import getPlatesInFootprint
 
 __all__ = ['getPlugged', 'getAtAPO', 'getAll', 'getComplete', 'Plate', 'fromPlateID']
 
+DITHER_SURVEY_MODES = ['MaNGA dither', 'MaNGA 10min']
+
 
 def getPlugged(**kwargs):
 
@@ -48,8 +50,9 @@ def getPlugged(**kwargs):
             plateDB.ActivePlugging).join(plateDB.Plugging, plateDB.Plate, plateDB.PlateToSurvey,
                                          plateDB.Survey, plateDB.SurveyMode).filter(
                                              plateDB.Survey.label == 'MaNGA',
-                                             plateDB.SurveyMode.label.ilike('MaNGA%')).order_by(
-                                                 plateDB.Plate.plate_id).all()
+                                             plateDB.SurveyMode.label.in_(
+                                                 DITHER_SURVEY_MODES)).order_by(
+                                                     plateDB.Plate.plate_id).all()
 
     plates = [actPlug.plugging.plate for actPlug in activePluggings]
 
@@ -93,7 +96,7 @@ def getAtAPO(onlyIncomplete=False, onlyMarked=False, raRange=None, **kwargs):
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode).filter(
                 plateDB.Survey.label == 'MaNGA',
-                plateDB.SurveyMode.label.in_(['MaNGA dither', 'MaNGA 10min'])).join(
+                plateDB.SurveyMode.label.in_(DITHER_SURVEY_MODES)).join(
                     plateDB.PlateLocation).filter(plateDB.PlateLocation.label == 'APO').join(
                         plateDB.PlatePointing, plateDB.Pointing)
 
@@ -140,8 +143,7 @@ def getAll(onlyIncomplete=False, **kwargs):
         plates = session.query(plateDB.Plate).join(
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode).filter(
                 plateDB.Survey.label == 'MaNGA',
-                plateDB.SurveyMode.label.in_(['MaNGA dither',
-                                              'MaNGA 10min'])).order_by(plateDB.Plate.plate_id)
+                plateDB.SurveyMode.label.in_(DITHER_SURVEY_MODES)).order_by(plateDB.Plate.plate_id)
 
     platesAtAPO = plates.join(plateDB.PlateLocation).filter(plateDB.PlateLocation.label == 'APO')
     _checkNumberPlatesAtAPO(platesAtAPO)
@@ -200,7 +202,7 @@ def getComplete(**kwargs):
             plateDB.PlateToSurvey, plateDB.Survey, plateDB.SurveyMode, plateDB.Plugging,
             plateDB.PluggingStatus).filter(
                 plateDB.Survey.label == 'MaNGA',
-                plateDB.SurveyMode.label.in_(['MaNGA dither', 'MaNGA 10min']),
+                plateDB.SurveyMode.label.in_(DITHER_SURVEY_MODES),
                 plateDB.PluggingStatus.label.in_(['Good', 'Overridden Good'])).order_by(
                     plateDB.Plate.plate_id).all()
 
