@@ -174,3 +174,18 @@ class Field(TotoroPlate.Plate):
                 return True
             else:
                 return False
+
+    def getPlate(self):
+        """Returns the plate(s) drilled from this field, or `False` if none."""
+
+        __, Session, __, mangaDB = getConnectionFull()
+        session = Session()
+
+        with session.begin():
+            plates = session.query(mangaDB.Plate).filter(
+                mangaDB.Plate.manga_tileid == self.manga_tileid).all()
+
+        if len(plates) == 0:
+            return False
+
+        return [TotoroPlate.fromPlateID(plate.platedb_plate.plate_id) for plate in plates]

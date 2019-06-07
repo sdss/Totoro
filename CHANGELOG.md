@@ -2,6 +2,9 @@
 
 ## [2.1.4] - unreleased
 
+### Added
+- Added a `getPlate` method to `Field`.
+
 ### Changed
 - For MaNGa time, get only plates with `MaNGA dither` or `MaNGA 10min`. This prevents selecting plugged plates with `MaNGA Globular` survey mode.
 - Output warning about more plates than carts in plugger as `petunia_warning`.
