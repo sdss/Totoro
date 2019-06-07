@@ -21,7 +21,7 @@ import itertools
 import sys
 
 import numpy as np
-from scipy.misc import factorial
+from scipy.special import factorial
 
 from Totoro import config, exceptions, log, site
 from Totoro.db import getConnection

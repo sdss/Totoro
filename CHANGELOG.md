@@ -7,6 +7,7 @@
 
 ### Fixed
 - Fix check of incomplete S/N in a new exposure.
+- Import `factorial` from `scipy.special`.
 
 
 ## [2.1.3] - 2019-04-18
