@@ -5,6 +5,9 @@
 ### Changed
 - For MaNGa time, get only plates with `MaNGA dither` or `MaNGA 10min`. This prevents selecting plugged plates with `MaNGA Globular` survey mode.
 
+### Fixed
+- Fix check of incomplete S/N in a new exposure.
+
 
 ## [2.1.3] - 2019-04-18
 
