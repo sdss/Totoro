@@ -4,6 +4,7 @@
 
 ### Changed
 - For MaNGa time, get only plates with `MaNGA dither` or `MaNGA 10min`. This prevents selecting plugged plates with `MaNGA Globular` survey mode.
+- Output warning about more plates than carts in plugger as `petunia_warning`.
 
 ### Fixed
 - Fix check of incomplete S/N in a new exposure.
