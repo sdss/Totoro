@@ -21,11 +21,16 @@ import itertools
 import sys
 
 import numpy as np
-from scipy.special import factorial
 
 from Totoro import config, exceptions, log, site
 from Totoro.db import getConnection
 from Totoro.utils import intervals
+
+
+try:
+    from scipy.special import factorial
+except ImportError:
+    from scipy.misc import factorial
 
 
 def updatePlate(plate, rearrangeIncomplete=False, **kwargs):
