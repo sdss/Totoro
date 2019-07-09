@@ -303,15 +303,8 @@ class Plate(object):
             cls._instances[me._dbObject] = me
             return me
 
-    def __init__(self,
-                 input=None,
-                 format='pk',
-                 mock=False,
-                 updateSets=True,
-                 mjd=None,
-                 fullCheck=True,
-                 manga_tileid=None,
-                 **kwargs):
+    def __init__(self, input=None, format='pk', mock=False, updateSets=True,
+                 mjd=None, fullCheck=True, manga_tileid=None, **kwargs):
         """A custom class based on plateDB.Plate."""
 
         self.__dbAttributes__ = self._dbObject.__mapper__.attrs
