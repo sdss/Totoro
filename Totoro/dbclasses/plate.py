@@ -319,6 +319,10 @@ class Plate(object):
         self._manga_tileid = manga_tileid
         self._mlhalimit = None
 
+        # The completion at which the plate will be done. In principle 1.0 (100%)
+        # but it can be higher for plates we are observing deeper.
+        self.completion_factor = 1.0
+
         # Date (JD) at which the plate will arrive at APO. Used for field
         # selection. If None, it assumes the plate is already at APO.
         self._dateAtAPO = None
@@ -536,7 +540,7 @@ class Plate(object):
 
         completion_threshold = config['SN2thresholds']['completionThreshold']
         if hasattr(self, '_useOnlyCompletion'):
-            return self.getPlateCompletion() > completion_threshold
+            return self.getPlateCompletion() > (completion_threshold * self.completion_factor)
 
         if self._complete is not None:
             return self._complete

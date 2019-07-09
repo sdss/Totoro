@@ -101,13 +101,8 @@ def mark_plate_complete(plate):
     return True
 
 
-def isPlateComplete(plate,
-                    format='plate_id',
-                    forceCheckCompletion=False,
-                    write_apocomplete=True,
-                    overwrite=False,
-                    mark_complete=True,
-                    **kwargs):
+def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
+                    write_apocomplete=True, overwrite=False, mark_complete=True, **kwargs):
     """Returns True if a plate is complete using the MaNGA logic.
 
     If ``forceCheckCompletion`` is False and the plugging is marked as
@@ -143,7 +138,9 @@ def isPlateComplete(plate,
                 mark_plate_complete(plate)
         return plugComplete
 
-    completion_threshold = config['SN2thresholds']['completionThreshold']
+    completion_factor = getattr(plate, 'completion_factor', 1.0)  # For deeper plates
+    completion_threshold = config['SN2thresholds']['completionThreshold'] * completion_factor
+
     if plate.getPlateCompletion(includeIncompleteSets=False) >= completion_threshold:
         plateComplete = True
     else:
