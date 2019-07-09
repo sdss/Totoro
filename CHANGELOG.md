@@ -1,6 +1,6 @@
 # Change Log
 
-## [2.1.4] - unreleased
+## [2.1.4] - 2019-07-09
 
 ### Added
 - Added a `getPlate` method to `Field`.
