@@ -566,7 +566,8 @@ class Plate(object):
             if ss.getStatus()[0] in validStatuses:
                 sets.append(ss)
 
-        exposureSN2 = np.array([exp.getSN2Array() for ss in sets for exp in ss.totoroExposures])
+        exposureSN2 = np.array([exp.getSN2Array() for ss in sets
+                                for exp in ss.totoroExposures])
 
         if exposureSN2.shape[0] == 0:
             return 0
