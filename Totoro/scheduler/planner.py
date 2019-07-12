@@ -24,6 +24,7 @@ from Totoro import config, exceptions, log, readPath, site
 from Totoro.core.colourPrint import _color_text
 from Totoro.scheduler import observingPlan
 from Totoro.scheduler.timeline import Timelines
+from Totoro.utils import isPlateComplete
 
 
 __all__ = ['Planner']
@@ -103,7 +104,11 @@ class Planner(object):
             validPlates = self.getPlates(**kwargs)
 
             # Selects only plates that are incomplete and have enough priority
-            self.plates = [plate for plate in validPlates if plate.priority > minimumPlugPriority]
+            # self.plates = [plate for plate in validPlates
+            #                if plate.priority > minimumPlugPriority]
+            self.plates = [plate for plate in validPlates
+                           if not isPlateComplete(plate.plate_id, write_apocomplete=False,
+                                                  mark_complete=False)]
 
             if excludeStarted:
                 self.plates = [
