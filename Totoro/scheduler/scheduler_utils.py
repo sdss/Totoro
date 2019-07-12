@@ -269,7 +269,8 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
     plates = [plate for plate in plates if plate._after['nNewExposures'] > 0]
 
     # Sorts plates by inverse plate completion.
-    plates = sorted(plates, reverse=True, key=lambda plate: plate.getPlateCompletion())
+    plates = sorted(plates, reverse=True, key=lambda plate: plate.getPlateCompletion()
+                    if plate.getPlateCompletion() <= 1 else 1. / plate.getPlateCompletion())
 
     if len(plates) == 0:
         return None
@@ -463,7 +464,7 @@ def simulatePlates(plates,
                 if row['Position'] == 1 and jd == row['JD0']:
                     expTimeEff = expTime
 
-            if plate.getPlateCompletion() >= 1:
+            if plate.getPlateCompletion() >= plate.completion_factor:
                 break
 
             lst = site.localSiderealTime(jd)
