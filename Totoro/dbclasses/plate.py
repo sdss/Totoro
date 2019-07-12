@@ -319,10 +319,6 @@ class Plate(object):
         self._manga_tileid = manga_tileid
         self._mlhalimit = None
 
-        # The completion at which the plate will be done. In principle 1.0 (100%)
-        # but it can be higher for plates we are observing deeper.
-        self.completion_factor = 1.0
-
         # Date (JD) at which the plate will arrive at APO. Used for field
         # selection. If None, it assumes the plate is already at APO.
         self._dateAtAPO = None
@@ -400,6 +396,17 @@ class Plate(object):
             mockPlate.coords[0], mockPlate.coords[1]))
 
         return mockPlate
+
+    @property
+    def completion_factor(self):
+        """The completion at which the plate will be done."""
+
+        if not hasattr(self, 'mangadbPlate'):
+            return 1.0
+        elif not hasattr(self.mangadbPlate, 'completion_factor'):
+            return 1.0
+        else:
+            return self.mangadbPlate.completion_factor or 1.0
 
     def addExposure(self, exposure):
         return plateUtils.addExposure(exposure, self)
