@@ -427,7 +427,7 @@ HSC_N_Wide = getRectangle((15. * 15, 16.6666 * 15, 41.5, 45))
 
 Stripe82 = getRectangle((0, 360, -1, 1))
 
-SGC = [getRectangle((0, 5 * 15, -20, 20)), getRectangle((300, 360, -20, 20))]
+SGC = [getRectangle((0, 5 * 15, -3, 20)), getRectangle((300, 360, -3, 20))]
 
 # Herschel-ATLAS region
 ATLAS = getRectangle((199.5 - 7.5, 199.5 + 7.5, 29 - 5, 29 + 5), angle=-8)
@@ -579,9 +579,7 @@ def getPlatesInFootprint(plates, coords=False):
                 PerseusPisces.get_path().contains_points([plate.coords])[0] or
                 CVn.get_path().contains_points([plate.coords])[0] or
                 HSC_S_Wide.get_path().contains_points([plate.coords])[0] or
-                HSC_N_Wide.get_path().contains_points([plate.coords])[0] or
-                Custom_1.get_path().contains_points([plate.coords])[0] or
-                Custom_2.get_path().contains_points([plate.coords])[0]):
+                HSC_N_Wide.get_path().contains_points([plate.coords])[0]):
 
             if coords:
                 footprintPlates.append(True)
@@ -592,7 +590,6 @@ def getPlatesInFootprint(plates, coords=False):
 
             if coords:
                 footprintPlates.append(False)
-
 
     if len(footprintPlates) == 1:
         return footprintPlates[0]
@@ -627,7 +624,7 @@ def plotFootprint(ax, regions='all', projection='rect', org=0):
 
     if not regions or regions == 'all':
         plots = [plotGAMA, plotApertifMedDeep, plotATLAS, plotHSC, plotUKIDSS,
-                 plotALFALFA, plotCustom]
+                 plotALFALFA]
     else:
         if isinstance(regions, str):
             regions = [regions]
