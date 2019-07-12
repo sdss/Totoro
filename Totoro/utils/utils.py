@@ -20,6 +20,7 @@ from collections import OrderedDict
 from itertools import combinations
 
 import numpy as np
+from astropy import table
 from pydl.pydlutils.yanny import yanny
 from scipy.spatial.distance import pdist
 from sqlalchemy.exc import InvalidRequestError, ResourceClosedError
@@ -517,3 +518,29 @@ def avoid_cart_2(plate):
     else:
         _avoid_cart2_cahche[plate] = False
         return False
+
+
+def set_completion_factor(path):
+    """Sets the completion factor for a list of plates."""
+
+    assert os.path.exists(path), 'file does not exist.'
+
+    plate_factor = table.Table.read(path, format='ascii.commented_header')
+
+    totoroDB = getConnection()
+    session = totoroDB.Session()
+
+    with session.begin():
+
+        for plateid, factor in plate_factor:
+
+            mangadb_plate = session.query(totoroDB.mangaDB.Plate).join(
+                totoroDB.plateDB.Plate).filter(
+                    totoroDB.plateDB.Plate.plate_id == int(plateid)).first()
+
+            mangadb_plate.completion_factor = float(factor)
+
+            plate = mangadb_plate.platedbPlate
+            for plugging in plate.pluggings:
+                if plugging.status.label == 'Good':
+                    plugging.plugging_status_pk = 0
