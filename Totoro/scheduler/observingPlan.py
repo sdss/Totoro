@@ -26,7 +26,7 @@ def getScheduleFile():
         # Gets the master scheduler schedule file
         import autoscheduler
         autoschedulerDir = os.path.dirname(autoscheduler.__file__)
-        schedule = os.path.join(autoschedulerDir, '../../schedules', 'Sch_base.18_eb_MaStar.txt')
+        schedule = os.path.join(autoschedulerDir, '../../schedules', 'Sch_APO_base.dat')
     except Exception:
         # If the autoscheduler is not available, uses the local schedule file
         schedule = readPath(config['observingPlan']['fallBackSchedule'])
