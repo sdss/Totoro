@@ -1,5 +1,11 @@
 # Change Log
 
+## [2.1.5] - unreleased
+
+### Changed
+- Changed default schedule.
+
+
 ## [2.1.4] - 2019-07-09
 
 ### Added
