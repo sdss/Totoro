@@ -45,8 +45,7 @@ dbConnection: *dbConnectionProduction
 
 observingPlan:
     schedule: None
-
-    fallBackSchedule: +data/Sch_base.6yrs.txt.frm.dat
+    fallBackSchedule: +data/Sch_APO_base.dat
 
 fields:
     tilingCatalogue: $MANGA_TILING_CATALOGUE
