@@ -524,7 +524,6 @@ def set_completion_factor(path):
     """Sets the completion factor for a list of plates."""
 
     assert os.path.exists(path), 'file does not exist.'
-
     plate_factor = table.Table.read(path, format='ascii.commented_header')
 
     totoroDB = getConnection()
@@ -532,15 +531,20 @@ def set_completion_factor(path):
 
     with session.begin():
 
-        for plateid, factor in plate_factor:
+        for platef in plate_factor:
 
             mangadb_plate = session.query(totoroDB.mangaDB.Plate).join(
                 totoroDB.plateDB.Plate).filter(
-                    totoroDB.plateDB.Plate.plate_id == int(plateid)).first()
+                    totoroDB.plateDB.Plate.plate_id == int(platef['plate_id'])).first()
 
-            mangadb_plate.completion_factor = float(factor)
+            mangadb_plate.completion_factor = float(platef['completion_factor'])
 
             plate = mangadb_plate.platedbPlate
             for plugging in plate.pluggings:
                 if plugging.status.label == 'Good':
                     plugging.plugging_status_pk = 0
+
+            if 'ha_min' in plate_factor.colnames:
+                mangadb_plate.ha_min = platef['ha_min']
+            if 'ha_max' in plate_factor.colnames:
+                mangadb_plate.ha_max = platef['ha_max']
