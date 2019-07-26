@@ -22,7 +22,7 @@ from Totoro.exceptions import TotoroError
 
 
 def getIntervalIntersectionLength(aa, bb, wrapAt=360):
-    """Returns the length of the instersection between two intervals."""
+    """Returns the length of the intersection between two intervals."""
 
     intersection = getIntervalIntersection(aa, bb, wrapAt=wrapAt)
 
