@@ -739,18 +739,13 @@ class Plate(object):
 
             haRange = np.array([self.mangadbPlate.ha_min, self.mangadbPlate.ha_max])
 
-        elif self.completion_factor > 1:
-
-            haRange = np.array([-15, 15])
-
-        # elif self.manga_tileid >= 100000:
-
-        #     haRange = np.array([-1, 1])
-
         else:
 
-            ha0 = -self.mlhalimit
-            ha1 = self.mlhalimit
+            if isinstance(self.mlhalimit, (np.ndarray, list, tuple)):
+                ha0, ha1 = self.mlhalimit
+            else:
+                ha0 = -self.mlhalimit
+                ha1 = self.mlhalimit
 
             haRange = np.array([ha0, ha1])
 
