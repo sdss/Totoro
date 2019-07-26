@@ -98,8 +98,10 @@ def getDictOfSchedulablePlates(plates, mode):
 
     elif mode == 'planner':
         schPlates = OrderedDict([('platesWithSignal', []), ('drilled', []),
-                                 ('fieldsInFootprint', []), ('backup', []),
-                                 ('fieldsOutsideFootprint', [])])
+                                 ('fieldsInFootprint', []),
+                                 ('fieldsOutsideFootprint', []),
+                                 ('backup', []),
+                                 ('backup_outside', [])])
         for plate in plates:
             isPlate = isinstance(plate, Plate) and not isinstance(plate, Field)
             isBackup = (hasattr(plate, 'statuses') and len(plate.statuses) > 0 and
@@ -109,10 +111,10 @@ def getDictOfSchedulablePlates(plates, mode):
                 schPlates['platesWithSignal'].append(plate)
             elif ((isPlate and not isBackup) or
                   (plate.dateAtAPO is not None and plate.dateAtAPO > 0)):
-                if plate.inFootprint:
+                if isInFootPrint:
                     schPlates['drilled'].append(plate)
                 else:
-                    schPlates['backup'].append(plate)
+                    schPlates['backup_outside'].append(plate)
             elif not isPlate and isInFootPrint:
                 schPlates['fieldsInFootprint'].append(plate)
             elif isPlate and isBackup:
