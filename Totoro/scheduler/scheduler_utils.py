@@ -97,8 +97,9 @@ def getDictOfSchedulablePlates(plates, mode):
                 schPlates['backup'].append(plate)
 
     elif mode == 'planner':
-        schPlates = OrderedDict([('platesWithSignal', []), ('drilled', []), ('backup', []),
-                                 ('fieldsInFootprint', []), ('fieldsOutsideFootprint', [])])
+        schPlates = OrderedDict([('platesWithSignal', []), ('drilled', []),
+                                 ('fieldsInFootprint', []), ('backup', []),
+                                 ('fieldsOutsideFootprint', [])])
         for plate in plates:
             isPlate = isinstance(plate, Plate) and not isinstance(plate, Field)
             isBackup = (hasattr(plate, 'statuses') and len(plate.statuses) > 0 and
@@ -108,12 +109,17 @@ def getDictOfSchedulablePlates(plates, mode):
                 schPlates['platesWithSignal'].append(plate)
             elif ((isPlate and not isBackup) or
                   (plate.dateAtAPO is not None and plate.dateAtAPO > 0)):
-                schPlates['drilled'].append(plate)
+                if plate.inFootprint:
+                    schPlates['drilled'].append(plate)
+                else:
+                    schPlates['backup'].append(plate)
             elif not isPlate and isInFootPrint:
                 schPlates['fieldsInFootprint'].append(plate)
             elif isPlate and isBackup:
                 schPlates['backup'].append(plate)
             elif not isPlate and not isInFootPrint:
+                if not plate.completion_factor > 1:
+                    continue
                 schPlates['fieldsOutsideFootprint'].append(plate)
 
     # Performs a couple sanity checks. Makes sure each plate is in one and
@@ -121,8 +127,8 @@ def getDictOfSchedulablePlates(plates, mode):
     allPlatesFromDict = [plate for cc in schPlates for plate in schPlates[cc]]
     assert len(allPlatesFromDict) == len(set(allPlatesFromDict)), \
         'there are plates in more than one scheduling category.'
-    assert set(allPlatesFromDict) == set(plates), \
-        'some plates are not being assigned a scheduling category.'
+    # assert set(allPlatesFromDict) == set(plates), \
+    #     'some plates are not being assigned a scheduling category.'
 
     return schPlates
 
@@ -432,6 +438,8 @@ def simulatePlates(plates,
                    **kwargs):
     """Simulates exposures for a list of plates within a range of JDs."""
 
+    from .planner import IC342_range
+
     mode = mode.lower()
     efficiency = efficiency if efficiency else config[mode]['efficiency']
     SN2Factor = SN2Factor if SN2Factor else config[mode]['simulationFactor']
@@ -468,6 +476,11 @@ def simulatePlates(plates,
                 break
 
             lst = site.localSiderealTime(jd)
+
+            # LST reserved for IC342
+            if lst > IC342_range[0] and lst < IC342_range[1]:
+                break
+
             lstMean = site.localSiderealTime(jd + expTimeEff / 2. / 86400.)
 
             # Calculates how much time the exposure is observed above

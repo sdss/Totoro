@@ -25,6 +25,7 @@ from Totoro.core.colourPrint import _color_text
 from Totoro.scheduler import observingPlan
 from Totoro.scheduler.timeline import Timelines
 from Totoro.utils import isPlateComplete
+from Totoro.utils.intervals import getIntervalIntersectionLength
 
 
 __all__ = ['Planner']
@@ -32,6 +33,12 @@ __all__ = ['Planner']
 expTime = config['exposure']['exposureTime']
 expTimeEff = expTime / config['planner']['efficiency']
 minimumPlugPriority = config['planner']['noPlugPriority']
+
+# Time allocated to IC342
+_ic342_allocated = 0.0
+
+# LST range for IC342. This range will be skipped.
+IC342_range = (4, 5.5)
 
 
 class Planner(object):
@@ -235,7 +242,7 @@ class Planner(object):
             file whose path is defined in `config.fields.tilesBeingDrilled`.
             The file must contain as many lines as tiles to be considered
             drilled, with the format `manga_tileid,  dateAtAPO`. `dateAtAPO`
-            can be ommited (e.g., `6325,`), in which case the tile will be made
+            can be omitted (e.g., `6325,`), in which case the tile will be made
             available immediately.
 
         Returns
@@ -372,6 +379,8 @@ class Planner(object):
 
         """
 
+        global _ic342_allocated
+
         goodWeatherFraction = goodWeatherFraction \
             if goodWeatherFraction is not None \
             else config['planner']['goodWeatherFraction']
@@ -399,6 +408,12 @@ class Planner(object):
                          site.localSiderealTime(timeline.endDate),
                          startDate.iso.split()[0], totalTime))
 
+            ic342_lenght = getIntervalIntersectionLength(
+                [site.localSiderealTime(timeline.startDate),
+                 site.localSiderealTime(timeline.endDate)], IC342_range)
+
+            _ic342_allocated += ic342_lenght
+
             if nn not in goodWeatherIdx:
                 log.info(_color_text('... skipping timeline because of ' 'bad weather.', 'cyan'))
                 timeline.observed = False
@@ -416,7 +431,7 @@ class Planner(object):
                     prioritiseAPO=prioritiseAPO,
                     **kwargs)
 
-            remainingTime = timeline.remainingTime
+            remainingTime = timeline.remainingTime - ic342_lenght
             colour = 'red' if remainingTime > 0.1 else 'default'
             log.info(
                 _color_text(
@@ -435,6 +450,9 @@ class Planner(object):
                         len(timeline.scheduled), nCarts), exceptions.TotoroPlannerWarning)
 
         self.unallocatedJDs = np.array(self.unallocatedJDs)
+
+        log.warning('IC342 allocated time {0:.1f}h'.format(_ic342_allocated),
+                    exceptions.TotoroPlannerWarning)
 
     def getGoodWeatherIndices(self, goodWeatherFraction, seed=None):
         """Returns random indices with good weather."""
