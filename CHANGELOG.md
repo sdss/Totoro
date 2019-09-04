@@ -1,9 +1,10 @@
 # Change Log
 
-## [2.1.5] - unreleased
+## [2.1.5] - 2019-09-04
 
 ### Changed
 - Changed default schedule.
+- Modified planning logic for deep plates.
 
 
 ## [2.1.4] - 2019-07-09
