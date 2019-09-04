@@ -439,7 +439,8 @@ class Plate(object):
             raise AttributeError('Plate instance has no pk or plate_id.')
 
         if not self.isMaNGA:
-            raise TotoroExceptions.NoMangaPlate('this is not a MaNGA plate!')
+            raise TotoroExceptions.NoMangaPlate('plate_id={} is not a MaNGA plate!'
+                                                .format(self.plate_id))
 
         if full:
             nMaNGAExposures = len(self.getMangadbExposures())
