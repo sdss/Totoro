@@ -1,5 +1,12 @@
 # Change Log
 
+
+## [2.1.6] - unreleased
+
+### Fixed
+- In ``Planner``, improve performance of completion check and ensure that ``dateAtAPO`` is respected.
+
+
 ## [2.1.5] - 2019-09-04
 
 ### Changed

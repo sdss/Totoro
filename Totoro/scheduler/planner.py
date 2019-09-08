@@ -114,7 +114,7 @@ class Planner(object):
             # self.plates = [plate for plate in validPlates
             #                if plate.priority > minimumPlugPriority]
             self.plates = [plate for plate in validPlates
-                           if not isPlateComplete(plate.plate_id, write_apocomplete=False,
+                           if not isPlateComplete(plate, write_apocomplete=False,
                                                   mark_complete=False)]
 
             if excludeStarted:
