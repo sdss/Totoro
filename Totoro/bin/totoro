@@ -208,11 +208,43 @@ def info(exposures):
 
 
 @totoro.command()
-def load():
+@click.option('--deep-plates', type=click.Path(exists=True),
+              help='loads a list of deep plates')
+def load(deep_plates=None):
     """Loads plate information into mangaDB.Plate"""
 
     db = getConnection()
     session = db.Session()
+
+    # If deep_plates, only load deep plates
+    if deep_plates:
+
+        deep_data = table.Table.read(deep_plates, format='ascii.commented_header')
+
+        for plate_id, ha_min, ha_max, completion_factor in deep_data:
+
+            totoro_plate = fromPlateID(plate_id)
+
+            with session.begin(subtransactions=True):
+
+                plate = session.query(db.plateDB.Plate).filter(
+                    db.plateDB.Plate.plate_id == int(plate_id)).one()
+                mangadb_plate = plate.mangadbPlate
+
+                mangadb_plate.ha_min = ha_min
+                mangadb_plate.ha_max = ha_max
+                mangadb_plate.completion_factor = completion_factor
+
+                # If the plate completion < goal, change the plugging status
+                # back to Automatic.
+                automatic_pk = session.query(db.plateDB.PluggingStatus).filter(
+                    db.plateDB.PluggingStatus.label == 'Automatic').one().pk
+                if totoro_plate.getPlateCompletion() < completion_factor:
+                    for plugging in plate.pluggings:
+                        if plugging.status.label in ['Good', 'Overridden Good']:
+                            plugging.plugging_status_pk = automatic_pk
+
+        return
 
     mangaTileIDs, neverobserve = getMangaTileIDs()
 
