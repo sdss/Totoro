@@ -63,7 +63,7 @@ def _addBookkeepingAttrs(plates):
 
 
 def getDictOfSchedulablePlates(plates, mode):
-    """Returns an OrderedDict with categories of schedulable plates.
+    """Returns an OrderedDict with categories of scheduleable plates.
 
     This function creates an ordered dictionary in which the keys are the
     categories of plates in the order in which they should be scheduled to
@@ -107,11 +107,12 @@ def getDictOfSchedulablePlates(plates, mode):
             isBackup = (hasattr(plate, 'statuses') and len(plate.statuses) > 0 and
                         plate.statuses[0].label.lower() == 'backup')
             isInFootPrint = plate.inFootprint
-            if plate.getPlateCompletion(includeIncompleteSets=True) > 0:
+            if (plate.getPlateCompletion(includeIncompleteSets=True) > 0 and
+                    plate.completion_factor <= 1):
                 schPlates['platesWithSignal'].append(plate)
             elif ((isPlate and not isBackup) or
                   (plate.dateAtAPO is not None and plate.dateAtAPO > 0)):
-                if isInFootPrint:
+                if isInFootPrint or plate.completion_factor > 1:
                     schPlates['drilled'].append(plate)
                 else:
                     schPlates['backup_outside'].append(plate)
@@ -388,8 +389,16 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
     _completionFactor(plates, np.array(ancillaryPriorities))
 
     # Selects the plates that have the largest increase in completion
-    completionIncrease = np.array(
-        [plate._after['completion'] - plate._before['completion'] for plate in plates])
+    completionIncrease = [plate._after['completion'] - plate._before['completion']
+                          for plate in plates if plate.completion_factor <= 1.]
+
+    if len(completionIncrease) == 0:
+        for plate in plates:
+            if plate.completion_factor > 1:
+                completionIncrease.append(
+                    plate._after['completion'] - plate._before['completion'])
+
+    completionIncrease = np.array(completionIncrease)
 
     plates = np.array(plates)
     maxCompletionIncrease = np.max(completionIncrease)
@@ -460,6 +469,8 @@ def simulatePlates(plates,
         plateLST = plate.getLSTRange()
         plugging = plate.getActivePlugging()
 
+        initial_completion = plate.getPlateCompletion()
+
         jd = jdRange[0]
         while jd < jdRange[1]:
 
@@ -475,6 +486,11 @@ def simulatePlates(plates,
                     expTimeEff = expTime
 
             if plate.getPlateCompletion() >= plate.completion_factor:
+                break
+
+            # For deep plates, only allow one complete set at a time
+            if (plate.completion_factor > 1 and
+                    plate.getPlateCompletion() > initial_completion):
                 break
 
             lst = site.localSiderealTime(jd)
