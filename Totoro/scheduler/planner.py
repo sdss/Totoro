@@ -432,6 +432,9 @@ class Planner(object):
                     **kwargs)
 
             remainingTime = timeline.remainingTime - ic342_lenght
+            if remainingTime < 0:
+                remainingTime = 0.0
+
             colour = 'red' if remainingTime > 0.1 else 'default'
             log.info(
                 _color_text(
