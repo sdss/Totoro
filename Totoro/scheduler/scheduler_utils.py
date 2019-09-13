@@ -303,21 +303,24 @@ def selectPlate(plates, jdRange, normalise=False, scope='all'):
             if len(pluggedPlates) > 0:
                 plates = pluggedPlates
 
-    # Tries to select only plates at APO
-    platesAtAPO = [plate for plate in plates if plate.getLocation() == 'APO']
-    if len(platesAtAPO) > 0:
-        plates = platesAtAPO
+    # If plugger, tries to select only plates at APO
+    if scope == 'plugged':
 
-    # Now tries to select only plates that have been marked.
-    markedPlates = [
-        plate for plate in plates if 'Accepted' in [status.label for status in plate.statuses]
-    ]
-    if len(markedPlates) > 0:
-        plates = markedPlates
+        platesAtAPO = [plate for plate in plates if plate.getLocation() == 'APO']
+        if len(platesAtAPO) > 0:
+            plates = platesAtAPO
+
+        # Now tries to select only plates that have been marked.
+        markedPlates = [
+            plate for plate in plates if 'Accepted' in [status.label for status in plate.statuses]
+        ]
+        if len(markedPlates) > 0:
+            plates = markedPlates
 
     # We check if any of the plate is complete after the simulation.
     # If so, we return the one with fewer new exposures.
-    completePlates = [plate for plate in plates if plate._after['completion'] > 1]
+    completePlates = [plate for plate in plates
+                      if plate._after['completion'] > plate.completion_factor]
     nNewExposures = [plate._after['nNewExposures'] for plate in completePlates]
     if len(completePlates) > 0:
         return completePlates[np.argmin(nNewExposures)]
