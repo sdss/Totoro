@@ -108,7 +108,7 @@ def isPlateComplete(plate, format='plate_id', forceCheckCompletion=False,
 
     If ``forceCheckCompletion`` is False and the plugging is marked as
     complete, no plateCompletion check is performed (this saves some time). If
-    ``write_apocomplete=True`` and the plate is complte, the apocomplete file
+    ``write_apocomplete=True`` and the plate is complete, the apocomplete file
     will be written. If ``mark_complete=True``, changes the plugging status to
     ``Complete``.
 
