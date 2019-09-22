@@ -423,7 +423,9 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False, LST=None, si
         completions += plateCompletion
 
     # From the good arrangements already selected, find the optimal one.
-    optimalArrangement = selectOptimalArrangement(goodArrangements, completions, LST=LST)
+    optimalArrangement = selectOptimalArrangement(
+        goodArrangements, completions, LST=LST,
+        completion_factor=plate.completion_factor)
 
     # If the scope is 'incomplete', adds the good sets to the optimal
     # arrangement.
@@ -440,14 +442,14 @@ def rearrangeSets(plate, mode='complete', scope='all', force=False, LST=None, si
     return status
 
 
-def selectOptimalArrangement(arrangements, completions, LST=None):
+def selectOptimalArrangement(arrangements, completions, LST=None, completion_factor=1):
     """Selects the best possible option from a list of set arrangements."""
 
     arrangements = np.array(arrangements)
 
     # If one of the arrangements completes the plate, selects the one with the
     # largest completion and the fewest sets.
-    if np.any(completions > 1):
+    if np.any(completions > completion_factor):
         complete = arrangements[completions == np.max(completions)]
         if len(complete) == 1:
             return complete[0]
