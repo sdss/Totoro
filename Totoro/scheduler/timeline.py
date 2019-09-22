@@ -222,7 +222,7 @@ class Timeline(object):
         # on whether this is plate or a field.
         if not isinstance(plate, Field):
             log.info('...... plate_id={0}, ({1} new exps, '
-                     '{2:.2f} -> {3:.2f} complete) {4}'
+                     '{2:.2f} -> {3:.2f}) {4}'
                      .format(plate.plate_id, nExps, completionPre, completionPost, flagsStr))
 
             if nOrphanedPost > 0 and mode == 'plugger':
@@ -235,6 +235,6 @@ class Timeline(object):
             log.info(
                 _color_text(
                     '...... manga_tiledid={0} ({1} new exps, '
-                    '{2:.2f} -> {3:.2f} complete) {4}'
+                    '{2:.2f} -> {3:.2f}) {4}'
                     .format(plate.getMangaTileID(), nExps, completionPre, completionPost,
                             flagsStr), 'yellow'))
