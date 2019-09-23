@@ -1,7 +1,14 @@
 # Change Log
 
 
-## [2.1.6] - unreleased
+## [2.2.0] - unreleased
+
+### Added
+- Added scripts to load deep plates and logic to schedule them
+
+### Changed
+- Do not prefer Cosmic over APO in ``Planner``.
+- Some modifications to how timeline information is output to the console.
 
 ### Fixed
 - In ``Planner``, improve performance of completion check and ensure that ``dateAtAPO`` is respected.
