@@ -477,7 +477,7 @@ def simulatePlates(plates,
         jd = jdRange[0]
         while jd < jdRange[1]:
 
-            expTimeEff = expTime / efficiency
+            expTimeEff = plate.exposure_time / efficiency
 
             # If MaNGA is observing at the beginning of the night the cart is
             # already loaded, so we can assume that the efficiency of the first
@@ -496,11 +496,17 @@ def simulatePlates(plates,
                     plate.getPlateCompletion() > initial_completion):
                 break
 
+            # For IC342 check if plate is complete
+            if plate.field_name == 'IC342' and utils.isPlateComplete(plate, mark_complete=False,
+                                                                     write_apocomplete=False):
+                break
+
             lst = site.localSiderealTime(jd)
 
-            # LST reserved for IC342
+            # LST reserved for IC342 plates
             if lst > IC342_range[0] and lst < IC342_range[1]:
-                break
+                if plate.field_name != 'IC342':
+                    break
 
             lstMean = site.localSiderealTime(jd + expTimeEff / 2. / 86400.)
 

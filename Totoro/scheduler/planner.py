@@ -431,7 +431,7 @@ class Planner(object):
                     prioritiseAPO=prioritiseAPO,
                     **kwargs)
 
-            remainingTime = timeline.remainingTime - ic342_lenght
+            remainingTime = timeline.remainingTime
             if remainingTime < 0:
                 remainingTime = 0.0
 
