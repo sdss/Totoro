@@ -1202,3 +1202,12 @@ class Plate(object):
             return None
 
         return self.mangadbPlate.field_name
+
+    @property
+    def exposure_time(self):
+        """Returns the exposure time for this plate, in seconds."""
+
+        if self.field_name is not None and self.field_name in config['specialPrograms']:
+            return config['specialPrograms'][self.field_name].get('exposure_time', 900)
+
+        return 900
