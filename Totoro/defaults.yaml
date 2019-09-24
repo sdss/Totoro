@@ -145,6 +145,7 @@ specialPrograms:
         exposureRed: 0.0
         exposureBlue: 0.0
         complete_with_n_sets: 2
+        exposure_time: 600
 
 mangaCarts: [5, 4, 6, 3, 1, 2]
 offlineCarts: []
