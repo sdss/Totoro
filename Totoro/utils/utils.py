@@ -198,7 +198,7 @@ def getAPOcomplete(plates,
     plates : list of `Totoro.Plate` instances or list of ints
         Either a single `Totoro.Plate` instance or and integer, or a list of
         them. If an integer (or list), the appropriate plate(s) will be
-        obtained from that value and the `format` paramenter.
+        obtained from that value and the `format` parameter.
     format : string
         If `plates` are integers, the field of the plate table on which to
         perform the query. Normally either `'plate_id'` or `'pk'`.
