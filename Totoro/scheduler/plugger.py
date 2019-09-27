@@ -486,8 +486,7 @@ class Plugger(object):
         if len(plates) > len(self.carts):
             log.petunia_warning('PLUGGER: {0} plates to allocate but only {1} carts '
                                 'available. Using the first {1} plates.'.format(len(plates),
-                                                                                len(self.carts)),
-                                TotoroPluggerWarning)
+                                                                                len(self.carts)))
             plates = plates[0:len(self.carts)]
 
         # Gets the active pluggings
