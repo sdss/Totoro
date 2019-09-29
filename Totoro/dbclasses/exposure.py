@@ -606,6 +606,17 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
 
     pk = exposure._mangaExposure.pk
 
+    # First checks if this is a special field
+    if not exposure.isMock:
+        plate = exposure.observation.plate_pointing.plate
+        field_name = plate.mangadbPlate.field_name
+    else:
+        plate = exposure._plate
+        if exposure._plate is not None:
+            field_name = exposure._plate.field_name
+        else:
+            field_name = None
+
     # The following only applies to real exposure.
     if not exposure.isMock:
         # Gets the status of this exposure in plateDB and mangaDB
@@ -662,7 +673,11 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
         return flagExposure(exposure, False, 7, flag=flag, message=message)
 
     # Checks exposure time
-    minExpTime = config['exposure']['minExpTime']
+    if field_name is not None and field_name in config['specialPrograms']:
+        minExpTime = config['specialPrograms'].get('min_exposure_time',
+                                                   config['exposure']['minExpTime'])
+    else:
+        minExpTime = config['exposure']['minExpTime']
     expTime = exposure.exposure_time
     if expTime < minExpTime:
         message = ('Invalid exposure. plateDB.Exposure.pk={0} has an '
@@ -722,16 +737,6 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
             return flagExposure(exposure, False, 6, flag=flag, message=message)
 
     # Checks SN2
-
-    # First checks if this is a special field
-    if not exposure.isMock:
-        plate = exposure.observation.plate_pointing.plate
-        field_name = plate.mangadbPlate.field_name
-    else:
-        if exposure._plate is not None:
-            field_name = exposure._plate.field_name
-        else:
-            field_name = None
 
     if (field_name is None or field_name not in config['specialPrograms'] or
             'exposureRed' not in config['specialPrograms'][field_name]):
