@@ -1,10 +1,12 @@
 # Change Log
 
 
-## [2.2.0] - unreleased
+## [2.2.0] - 2019-09-30
 
 ### Added
-- Added scripts to load deep plates and logic to schedule them
+- Added scripts to load deep plates and logic to schedule them.
+- Added support for scheduling IC342 plates.
+- Improved options for external programs.
 
 ### Changed
 - Do not prefer Cosmic over APO in ``Planner``.

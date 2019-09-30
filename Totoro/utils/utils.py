@@ -474,7 +474,7 @@ def get_closest_holes(plateid):
 
     plateHoles = yanny(plateHoles_path)['STRUCT1']
 
-    mask = np.in1d(plateHoles['holetype'], valid_holes)
+    mask = np.in1d(plateHoles['holetype'].astype('U'), valid_holes)
     holes = plateHoles[mask]
 
     focal = np.zeros((len(holes['xfocal']), 2), dtype=np.float64)
@@ -486,8 +486,8 @@ def get_closest_holes(plateid):
 
     for kk in np.argsort(distances):
         ii, jj = pdist_indices[kk]
-        hole1_type = holes['holetype'][ii]
-        hole2_type = holes['holetype'][jj]
+        hole1_type = holes['holetype'][ii].astype('U')
+        hole2_type = holes['holetype'][jj].astype('U')
         if hole1_type != 'OBJECT' or hole2_type != 'OBJECT':
             return (distances[kk], focal[ii], focal[jj], hole1_type, hole2_type)
 
