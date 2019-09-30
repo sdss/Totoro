@@ -203,6 +203,9 @@ class Timeline(object):
         if not plate.inFootprint:
             flags.append(_color_text('not in footprint', 'red'))
 
+        if plate.field_name:
+            flags.append(_color_text(plate.field_name, 'green'))
+
         flagsStr = '** {0} **'.format('; '.join(flags)) \
             if len(flags) > 0 else ''
 
