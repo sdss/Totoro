@@ -38,7 +38,7 @@ minimumPlugPriority = config['planner']['noPlugPriority']
 _ic342_allocated = 0.0
 
 # LST range for IC342. This range will be skipped.
-IC342_range = (4, 5.5)
+IC342_range = config['specialPrograms']['IC342']['lst_range']
 
 
 class Planner(object):
