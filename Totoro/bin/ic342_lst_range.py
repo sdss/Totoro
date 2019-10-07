@@ -39,4 +39,4 @@ def load_lst_ranges(lst0, lst1):
 if __name__ == '__main__':
 
     lst0, lst1 = sys.argv[1:3]
-    load_lst_ranges(ha0, lst1)
+    load_lst_ranges(lst0, lst1)
