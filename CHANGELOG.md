@@ -3,6 +3,7 @@
 ## [2.2.0] - unreleased
 
 - Moved IC342 scheduling range to configuration.
+- Add tool to set IC342 LST range.
 
 
 ## [2.2.0] - 2019-09-30
