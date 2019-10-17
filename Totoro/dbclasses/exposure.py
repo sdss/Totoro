@@ -722,19 +722,30 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     blue = exposureSN2[0:2]
     red = exposureSN2[2:]
 
+    # Hotfix to deal with r1 not working. We consider the exposure complete in
+    # terms of S/N when r2 and b2 are available.
+
     # If the exposure is partially reduced
-    if None in exposureSN2 or not np.all(exposureSN2 > 0):
+    # if None in exposureSN2 or not np.all(exposureSN2 > 0):
+    if blue[1] is None or red[1] is None or blue[1] <= 0.0 or red[1] <= 0.0:
         # If at least one camera in each spectrograph is reduced, does not flag
         # the exposure but returns True
-        if np.any(blue) and np.any(red):
-            message = ('plateDB.Exposure.pk={0}: not completely reduced but '
-                       'temporarily considering it valid'.format(pk))
-            return flagExposure(exposure, True, 6, flag=flag, message=message)
-        else:
-            # Otherwise, returns False
-            message = ('plateDB.Exposure.pk={0}: not completely reduced but '
-                       'temporarily considering it invalid'.format(pk))
-            return flagExposure(exposure, False, 6, flag=flag, message=message)
+        # if np.any(blue) and np.any(red):
+        #     message = ('plateDB.Exposure.pk={0}: not completely reduced but '
+        #                'temporarily considering it valid'.format(pk))
+        #     return flagExposure(exposure, True, 6, flag=flag, message=message)
+        # else:
+        # Otherwise, returns False
+
+        message = ('plateDB.Exposure.pk={0}: not completely reduced but '
+                   'temporarily considering it invalid'.format(pk))
+
+        return flagExposure(exposure, False, 6, flag=flag, message=message)
+
+    else:
+
+        blue[0] = blue[1]
+        red[0] = red[1]
 
     # Checks SN2
 
