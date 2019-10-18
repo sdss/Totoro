@@ -584,8 +584,9 @@ class Plate(object):
         if exposureSN2.shape[0] == 0:
             return 0
 
-        blueSN2 = np.nansum(np.nanmean(exposureSN2[:, [0, 1]], axis=1))
-        redSN2 = np.nansum(np.nanmean(exposureSN2[:, [2, 3]], axis=1))
+        # Only using b2 and r2
+        blueSN2 = np.nansum(np.nanmean(exposureSN2[:, [1]], axis=1))
+        redSN2 = np.nansum(np.nanmean(exposureSN2[:, [3]], axis=1))
 
         if np.isnan(blueSN2) or np.isnan(redSN2):
             return 0
