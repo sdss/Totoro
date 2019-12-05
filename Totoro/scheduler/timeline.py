@@ -97,7 +97,8 @@ class Timeline(object):
 
         return np.sum(unallocatedRange[:, 1] - unallocatedRange[:, 0]) * 24.
 
-    def schedule(self, plates, mode='plugger', useDateAtAPO=True, **kwargs):
+    def schedule(self, plates, mode='plugger', useDateAtAPO=True,
+                 useNightlyPlugged=True, **kwargs):
         """Schedules a list of plates.
 
         Uses a list of `plates` to schedule all the available time in the
@@ -115,6 +116,9 @@ class Timeline(object):
             If True, only plates with `Totoro.Plate.dateAtAPO <= startDate`
             will be used. This assumes that the user has somehow added the
             `dateAtAPO` information to the `plates` before calling the method.
+        useNightlyPlugged : bool
+            If `True`, prioritises plates observed during the night (i.e.,
+            simulates the concept of "plugged" plates).
         kwargs : dict
             Additional parameters to be passed to `getOptimalPlate`.
 
@@ -139,7 +143,9 @@ class Timeline(object):
 
             # Finds the optimal plate for the range [jd0, self.endDate]
             optimalPlate, newExposures = logic.getOptimalPlate(
-                platesToSchedule, [jd0, self.endDate], mode=mode, **kwargs)
+                platesToSchedule, [jd0, self.endDate],
+                observedPlates=[] if not useNightlyPlugged else self.scheduled,
+                mode=mode, **kwargs)
 
             if optimalPlate is None:
                 # If no optimal plate is found, moves jd0 by one exposure time.

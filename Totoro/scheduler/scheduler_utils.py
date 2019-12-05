@@ -97,7 +97,8 @@ def getDictOfSchedulablePlates(plates, mode):
                 schPlates['backup'].append(plate)
 
     elif mode == 'planner':
-        schPlates = OrderedDict([('platesWithSignal', []), ('drilled', []),
+        schPlates = OrderedDict([('platesWithSignal', []),
+                                 ('drilled', []),
                                  ('fieldsInFootprint', []),
                                  ('fieldsOutsideFootprint', []),
                                  ('backup', []),
@@ -136,7 +137,8 @@ def getDictOfSchedulablePlates(plates, mode):
     return schPlates
 
 
-def getOptimalPlate(plates, jdRange, mode='plugger', prioritiseAPO=None, **kwargs):
+def getOptimalPlate(plates, jdRange, mode='plugger', prioritiseAPO=None,
+                    observedPlates=[], **kwargs):
     """Gets the optimal plate to observe in a range of JDs."""
 
     assert len(jdRange) == 2
@@ -165,7 +167,9 @@ def getOptimalPlate(plates, jdRange, mode='plugger', prioritiseAPO=None, **kwarg
         observablePlates = incompletePlates
 
     # Creates the dictionary of scheduling categories
-    schPlatesDict = getDictOfSchedulablePlates(observablePlates, mode)
+    schPlatesDict = {}
+    schPlatesDict['nightObserved'] = observedPlates
+    schPlatesDict.update(getDictOfSchedulablePlates(observablePlates, mode))
 
     # Loops over the list of categories, scheduling each list of plates
     # and trying to find an optimal plate. If it gets it, returns the

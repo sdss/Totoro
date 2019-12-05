@@ -361,6 +361,7 @@ class Planner(object):
                  goodWeatherFraction=config['planner']['goodWeatherFraction'],
                  efficiency=config['planner']['efficiency'],
                  prioritiseAPO=False,
+                 useNightlyPlugged=True,
                  **kwargs):
         """Runs the scheduling simulation.
 
@@ -374,6 +375,9 @@ class Planner(object):
             `config.planner.efficiency`.
         prioritiseAPO : bool
             If True, tries to find valid plates at APO first.
+        useNightlyPlugged : bool
+            If `True`, prioritises plates observed during the night (i.e.,
+            simulates the concept of "plugged" plates).
         kwargs : dict
             Additional arguments to be passed to `getOptimalPlate`.
 
@@ -423,12 +427,17 @@ class Planner(object):
 
             if not self._useFields:
                 timeline.schedule(
-                    self.plates, mode='planner', prioritiseAPO=prioritiseAPO, **kwargs)
+                    self.plates,
+                    mode='planner',
+                    prioritiseAPO=prioritiseAPO,
+                    useNightlyPlugged=useNightlyPlugged,
+                    **kwargs)
             else:
                 timeline.schedule(
                     self.plates + self.fields,
                     mode='planner',
                     prioritiseAPO=prioritiseAPO,
+                    useNightlyPlugged=useNightlyPlugged,
                     **kwargs)
 
             remainingTime = timeline.remainingTime
