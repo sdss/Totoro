@@ -55,10 +55,10 @@ def main(argv=None):
         help='The MJD for which the plugging is requested.')
     parser.add_argument(
         '-k',
-        '--marked',
+        '--no-marked',
         dest='marked',
-        action='store_true',
-        help='if set, only marked plates will be considered.')
+        action='store_false',
+        help='if set, not marked plates will be considered.')
     parser.add_argument(
         '-v', '--verbose', action='store_true', dest='verbose', help='Print lots of extra output.')
 

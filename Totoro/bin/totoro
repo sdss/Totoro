@@ -103,9 +103,10 @@ def simulate(end_date,
 
 @totoro.command()
 @click.option(
-    '-k', '--marked', is_flag=True, help='If set, only marked plates will be considered.')
+    '-k', '--no-marked', is_flag=True, default=True,
+    help='If set, not marked plates will be considered.')
 @click.argument('mjd', type=int, nargs=-1)
-def plugging(mjd=None, marked=False, verbose=False):
+def plugging(mjd=None, no_marked=True, verbose=False):
     """Creates a plugging request for a certain MJD."""
 
     if len(mjd) == 0:
@@ -126,7 +127,7 @@ def plugging(mjd=None, marked=False, verbose=False):
     log.info('creating plugging request for MJD=%s', print_MJD)
     jd0, jd1 = observingPlan.getJD(jd=int(tt.jd))
 
-    plugger = Plugger(jd0, jd1, onlyMarked=marked)
+    plugger = Plugger(jd0, jd1, onlyMarked=not no_marked)
     log.info('returned dictionary: %r', plugger.getASOutput())
 
 
