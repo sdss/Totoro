@@ -469,7 +469,7 @@ def simulatePlates(plates,
 
     # Defines if we are going to rearrange exposures in incomplete sets after
     # each new mock exposure is added to a plate
-    rearrange = True if mode == 'plugger' else False
+    rearrange = False  # True if mode == 'plugger' else False
 
     for plate in plates:
 
