@@ -287,9 +287,14 @@ class Exposure(object):
         valuesNaN = [np.nan if value is None else value for value in values]
 
         if useNaN is True:
-            return np.array(valuesNaN)
+            sn2Array = np.array(valuesNaN)
         else:
-            return np.array(values)
+            sn2Array = np.array(values)
+
+        if all(values):
+            self._sn2Array = sn2Array
+
+        return sn2Array
 
     @property
     def valid(self):
@@ -316,7 +321,7 @@ class Exposure(object):
 
         status = checkExposure(self, flag=flag, **kwargs)
 
-        if self.isMock:
+        if flag:
             self._valid = status[0]
 
         return status
@@ -331,9 +336,9 @@ class Exposure(object):
         """Gets the dither position for this exposure."""
 
         if self._ditherPosition is None and self.isMock is False:
-            return self._mangaExposure.dither_position[0].upper()
-        else:
-            return self._ditherPosition
+            self._ditherPosition = self._mangaExposure.dither_position[0].upper()
+
+        return self._ditherPosition
 
     @ditherPosition.setter
     def ditherPosition(self, value):
@@ -347,9 +352,9 @@ class Exposure(object):
         """Returns the seeing for this exposure."""
 
         if not self.isMock and self._seeing is None:
-            return self._mangaExposure.seeing
-        else:
-            return self._seeing
+            self._seeing = self._mangaExposure.seeing
+
+        return self._seeing
 
     def getLST(self):
         """Returns the LST interval for this exposure."""
