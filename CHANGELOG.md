@@ -1,10 +1,16 @@
 # Change Log
 
-## [2.2.0] - unreleased
+## [2.2.1] - unreleased
 
-- Moved IC342 scheduling range to configuration.
+### Added
 - Add tool to set IC342 LST range.
+
+### Changed
+- Moved IC342 scheduling range to configuration.
 - By default, prioritise incomplete plates already observed that night (planner).
+- Do some additional caching of ``Exposure.isValid()``, ``sn2``, and ``dither`` to make simulations faster.
+- By default, do not rearrange exposures during simulations.
+- By default, only use marked plates at APO for plugging.
 
 
 ## [2.2.0] - 2019-09-30
