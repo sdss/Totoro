@@ -562,6 +562,12 @@ class Plate(object):
     def copy(self):
         return deepcopy(self)
 
+    @property
+    def status_labels(self):
+        """Returns a list with the statuses of the plate."""
+
+        return [status.label for status in self.statuses]
+
     def getPlateCompletion(self, includeIncompleteSets=False, useMock=True):
 
         # totalSN = self.getCumulatedSN2(

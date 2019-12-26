@@ -8,9 +8,10 @@
 ### Changed
 - Moved IC342 scheduling range to configuration.
 - By default, prioritise incomplete plates already observed that night (planner).
-- Do some additional caching of ``Exposure.isValid()``, ``sn2``, and ``dither`` to make simulations faster.
+- Do some additional caching of `Exposure.isValid()`, `sn2`, and `dither` to make simulations faster.
 - By default, do not rearrange exposures during simulations.
 - By default, only use marked plates at APO for plugging.
+- In the `Planner`, only use plates in design if they have a valid `dateAtAPO` assigned.
 
 
 ## [2.2.0] - 2019-09-30
@@ -21,11 +22,11 @@
 - Improved options for external programs.
 
 ### Changed
-- Do not prefer Cosmic over APO in ``Planner``.
+- Do not prefer Cosmic over APO in `Planner`.
 - Some modifications to how timeline information is output to the console.
 
 ### Fixed
-- In ``Planner``, improve performance of completion check and ensure that ``dateAtAPO`` is respected.
+- In `Planner`, improve performance of completion check and ensure that `dateAtAPO` is respected.
 
 
 ## [2.1.5] - 2019-09-04
@@ -43,7 +44,7 @@
 ### Changed
 - For MaNGa time, get only plates with `MaNGA dither` or `MaNGA 10min`. This prevents selecting plugged plates with `MaNGA Globular` survey mode.
 - Output warning about more plates than carts in plugger as `petunia_warning`.
-- Changed default autoscheduler schedule file to ``Sch_base.18_eb_MaStar.txt``.
+- Changed default autoscheduler schedule file to `Sch_base.18_eb_MaStar.txt`.
 
 ### Fixed
 - Fix check of incomplete S/N in a new exposure.
@@ -63,7 +64,7 @@
 ## [2.1.2] - 2019-04-03
 
 ### Fixed
-- Logger not imported in deprecated script ``rearrangeSets.py``.
+- Logger not imported in deprecated script `rearrangeSets.py`.
 
 
 ## [2.1.1] - 2019-01-28
@@ -92,7 +93,7 @@
 ### Refactored
 - Totoro is now Python 2/3 compatible after applying futurize to all files.
 - Applied `isort`, `yapf`, and `unify` to all files.
-- Removed dependencies from ``sdss_python_module`` by moving the necessary files to Totoro.
+- Removed dependencies from `sdss_python_module` by moving the necessary files to Totoro.
 - Totoro now uses `pydl.pydlutils.yanny` for all Yanny files reading.
 
 ### Changed
@@ -143,7 +144,7 @@
 ### Added
 - Option `completionThreshold` in configuration to define the minimum completion needed to mark a plate as complete. Set to 0.985 by default
 - `utils.isPlateComplete` now accepts a `write_apocomplete` option that, if the plate is complete, write the APOcomplete file to the corresponding directory in mangacore.
-- `utils.isPlateComplete` now accepts a `mark_complete` option that, if the plate is complete, sets the plugging status to ``Complete``.
+- `utils.isPlateComplete` now accepts a `mark_complete` option that, if the plate is complete, sets the plugging status to `Complete`.
 
 ### Fixed
 - Fixed a bug that would mark Unplugged sets as complete.

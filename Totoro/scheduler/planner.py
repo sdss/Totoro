@@ -122,6 +122,11 @@ class Planner(object):
                     plate for plate in self.plates if len(plate.getTotoroExposures()) == 0
                 ]
 
+            # Remove plates in design that don't have a date to arrive at APO.
+            self.plates = [plate for plate in self.plates
+                           if 'Design' not in plate.status_labels or
+                           (plate.dateAtAPO and plate.dateAtAPO > 0)]
+
             # Outputs the number of plates.
             drilling = [plate for plate in self.plates if not plate.drilled]
 
