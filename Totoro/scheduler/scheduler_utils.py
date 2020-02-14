@@ -99,6 +99,7 @@ def getDictOfSchedulablePlates(plates, mode):
     elif mode == 'planner':
         schPlates = OrderedDict([('platesWithSignal', []),
                                  ('drilled', []),
+                                 ('deep_plates', []),
                                  ('fieldsInFootprint', []),
                                  ('fieldsOutsideFootprint', []),
                                  ('backup', []),
@@ -111,19 +112,24 @@ def getDictOfSchedulablePlates(plates, mode):
             if (plate.getPlateCompletion(includeIncompleteSets=True) > 0 and
                     plate.completion_factor <= 1):
                 schPlates['platesWithSignal'].append(plate)
-            elif ((isPlate and not isBackup) or
-                  (plate.dateAtAPO is not None and plate.dateAtAPO > 0)):
-                if isInFootPrint or plate.completion_factor > 1:
-                    schPlates['backup'].append(plate)
-                else:
-                    schPlates['backup_outside'].append(plate)
+            elif isPlate and plate.completion_factor <= 1:
+                schPlates['drilled'].append(plate)
+            elif isPlate and plate.completion_factor > 1:
+                schPlates['deep_plates'].append(plate)
+            # elif ((isPlate and not isBackup) or
+            #       (plate.dateAtAPO is not None and plate.dateAtAPO > 0)):
+            #     if isInFootPrint:
+            #         schPlates['backup'].append(plate)
+            #     else:
+            #         schPlates['backup_outside'].append(plate)
             elif not isPlate and isInFootPrint:
                 schPlates['fieldsInFootprint'].append(plate)
             elif isPlate and isBackup:
-                schPlates['backup'].append(plate)
+                if isInFootPrint:
+                    schPlates['backup'].append(plate)
+                else:
+                    schPlates['backup_outside'].append(plate)
             elif not isPlate and not isInFootPrint:
-                if not plate.completion_factor > 1:
-                    continue
                 schPlates['fieldsOutsideFootprint'].append(plate)
 
     # Performs a couple sanity checks. Makes sure each plate is in one and
