@@ -114,7 +114,7 @@ def getDictOfSchedulablePlates(plates, mode):
             elif ((isPlate and not isBackup) or
                   (plate.dateAtAPO is not None and plate.dateAtAPO > 0)):
                 if isInFootPrint or plate.completion_factor > 1:
-                    schPlates['drilled'].append(plate)
+                    schPlates['backup'].append(plate)
                 else:
                     schPlates['backup_outside'].append(plate)
             elif not isPlate and isInFootPrint:
