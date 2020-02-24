@@ -1,6 +1,11 @@
 # Change Log
 
-## [2.2.1] - unreleased
+## [2.2.2] - 2020-02-24
+
+### Changed
+- Use out-of-footprint plates before deep plates.
+
+## [2.2.1] - 2020-01-27
 
 ### Added
 - Add tool to set IC342 LST range.
