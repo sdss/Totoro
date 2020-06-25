@@ -456,6 +456,13 @@ class Exposure(object):
     def mlhalimit(self):
         """Returns the HA range for this exposure."""
 
+        try:
+            manga_plate = self.observation.plate_pointing.plate.mangadbPlate
+            if manga_plate.ha_min and manga_plate.ha_max:
+                return (manga_plate.ha_min, manga_plate.ha_max)
+        except BaseException:
+            pass
+
         if self._mlhalimit is None:
             self._mlhalimit = utils.mlhalimit(self.dec)
         return self._mlhalimit
@@ -701,7 +708,14 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
     # Checks visibility window
     buffer = config['exposure']['exposureBuffer']
     exposureHA = exposure.getHA()
-    visibilityWindow = np.array([-exposure.mlhalimit - buffer, exposure.mlhalimit + buffer])
+    mlhalimit = exposure.mlhalimit
+    if isinstance(mlhalimit, (tuple, list)):
+        visibilityWindow = np.array(mlhalimit)
+    else:
+        visibilityWindow = np.array([-exposure.mlhalimit, exposure.mlhalimit])
+    visibilityWindow[0] -= buffer
+    visibilityWindow[1] += buffer
+    print(visibilityWindow)
     if not utils.isIntervalInsideOther(exposureHA, visibilityWindow, onlyOne=False, wrapAt=360):
         message = ('Invalid exposure. plateDB.Exposure.pk={0} '
                    'has HA range [{1}, {2}] that is outside the '
