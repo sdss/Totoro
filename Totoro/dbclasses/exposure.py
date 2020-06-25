@@ -715,7 +715,6 @@ def checkExposure(exposure, flag=True, force=False, **kwargs):
         visibilityWindow = np.array([-exposure.mlhalimit, exposure.mlhalimit])
     visibilityWindow[0] -= buffer
     visibilityWindow[1] += buffer
-    print(visibilityWindow)
     if not utils.isIntervalInsideOther(exposureHA, visibilityWindow, onlyOne=False, wrapAt=360):
         message = ('Invalid exposure. plateDB.Exposure.pk={0} '
                    'has HA range [{1}, {2}] that is outside the '
