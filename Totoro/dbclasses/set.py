@@ -229,11 +229,23 @@ class Set(object):
         ha = self.getHA()
         haRange = np.array([np.max(ha) - maxHARange, np.min(ha) + maxHARange]) % 360.
 
-        plateHALimit = utils.mlhalimit(self.dec)
+        if len(self.exposures) > 0:
+            exposure = self.exposures[0]
+            try:
+                manga_plate = (exposure.platedbExposure.observation
+                               .plate_pointing.plate.mangadbPlate)
+                if manga_plate.ha_min and manga_plate.ha_max:
+                    plateHALimit = (manga_plate.ha_min, manga_plate.ha_max)
+                else:
+                    mlhalimit = utils.mlhalimit(self.dec)
+                    plateHALimit = (-mlhalimit, mlhalimit)
+            except BaseException:
+                mlhalimit = utils.mlhalimit(self.dec)
+                plateHALimit = (-mlhalimit, mlhalimit)
 
-        haRangePlate = utils.getIntervalIntersection(
-            haRange, np.array([-plateHALimit, plateHALimit]), wrapAt=360.)
-        haRangePlate[haRangePlate > 180] -= 360
+        haRangePlate = utils.getIntervalIntersection(haRange,
+                                                     np.array(plateHALimit),
+                                                     wrapAt=360.)
 
         return haRangePlate
 
