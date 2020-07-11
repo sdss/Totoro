@@ -595,7 +595,9 @@ class Plugger(object):
         # Checks unassigned carts
         for cart in remainingCarts:
             cartNumber, pluggedPlate, statusCode, completion = cart
-            if completion >= 1:
+            completion_threshold = (pluggedPlate.completion_factor *
+                                    config['SN2thresholds']['completionThreshold'])
+            if completion >= completion_threshold:
                 continue
             elif (cartStatusCodes[statusCode] != 'noMaNGAplate' and pluggedPlate is not None):
                 # If this is a MaNGA plate, keeps it.
@@ -680,11 +682,13 @@ class Plugger(object):
         forcePlug = []
 
         for cart, plate in self.carts.items():
+            completion_threshold = (plate.completion_factor *
+                                    config['SN2thresholds']['completionThreshold'])
             if plate is None:
                 continue
             if plate.priority == forcePlugPriority:
                 forcePlug.append((cart, plate))
-            elif plate.getPlateCompletion(useMock=False) > 1:
+            elif plate.getPlateCompletion(useMock=False) > completion_threshold:
                 completed.append((cart, plate))
             else:
                 scheduled.append((cart, plate))

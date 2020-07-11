@@ -115,7 +115,8 @@ class Planner(object):
             #                if plate.priority > minimumPlugPriority]
             self.plates = [plate for plate in validPlates
                            if not isPlateComplete(plate, write_apocomplete=False,
-                                                  mark_complete=False)]
+                                                  mark_complete=False) and
+                           plate.completion_factor == 1]
 
             if excludeStarted:
                 self.plates = [
@@ -405,6 +406,9 @@ class Planner(object):
         # Gets the indices of the timelines with good weather.
         goodWeatherIdx = self.getGoodWeatherIndices(goodWeatherFraction)
 
+        unused_time = 0.0
+        n_complete = 0
+
         for nn, timeline in enumerate(self.timelines):
 
             startDate = time.Time(timeline.startDate, format='jd')
@@ -449,11 +453,19 @@ class Planner(object):
             if remainingTime < 0:
                 remainingTime = 0.0
 
+            unused_time += remainingTime
+
             colour = 'red' if remainingTime > 0.1 else 'default'
             log.info(
                 _color_text(
                     '... plates observed: {0} (Unused time {1:.2f}h)'.format(
                         len(timeline.scheduled), remainingTime), colour))
+
+            for plate in timeline.scheduled:
+                completion_threshold = (plate.completion_factor *
+                                        config['SN2thresholds']['completionThreshold'])
+                if plate.getPlateCompletion() >= completion_threshold:
+                    n_complete += 1
 
             if remainingTime > 0:
                 unallocatedThisTimeline = np.atleast_2d(timeline.unallocatedRange)
@@ -465,6 +477,9 @@ class Planner(object):
                 log.warning(
                     'more plates ({0}) scheduled than carts available ({1})'.format(
                         len(timeline.scheduled), nCarts), exceptions.TotoroPlannerWarning)
+
+            print('unused:', unused_time)
+            print('complete', n_complete)
 
         self.unallocatedJDs = np.array(self.unallocatedJDs)
 
