@@ -681,10 +681,13 @@ class Plugger(object):
         forcePlug = []
 
         for cart, plate in self.carts.items():
-            completion_threshold = (plate.completion_factor *
-                                    config['SN2thresholds']['completionThreshold'])
+
             if plate is None:
                 continue
+
+            completion_threshold = (plate.completion_factor *
+                                    config['SN2thresholds']['completionThreshold'])
+
             if plate.priority == forcePlugPriority:
                 forcePlug.append((cart, plate))
             elif plate.getPlateCompletion(useMock=False) > completion_threshold:
