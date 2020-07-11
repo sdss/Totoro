@@ -498,7 +498,8 @@ def simulatePlates(plates,
                 if row['Position'] == 1 and jd == row['JD0']:
                     expTimeEff = expTime
 
-            if plate.getPlateCompletion() >= plate.completion_factor:
+            if plate.getPlateCompletion() >= (plate.completion_factor *
+                                              config['SN2thresholds']['completionThreshold']):
                 break
 
             # For deep plates, only allow one complete set at a time
