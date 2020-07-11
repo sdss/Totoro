@@ -392,7 +392,7 @@ class Plate(object):
         mockPlate = cls(mock=True, ra=ra, dec=dec, **kwargs)
         mockPlate.isMock = True
 
-        log.debug('created mock plate with ra={0:.3f} and dec={0:.3f}'.format(
+        log.debug('created mock plate with ra={0:.3f} and dec={1:.3f}'.format(
             mockPlate.coords[0], mockPlate.coords[1]))
 
         return mockPlate
