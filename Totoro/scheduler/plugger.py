@@ -595,8 +595,7 @@ class Plugger(object):
         # Checks unassigned carts
         for cart in remainingCarts:
             cartNumber, pluggedPlate, statusCode, completion = cart
-            completion_threshold = (pluggedPlate.completion_factor *
-                                    config['SN2thresholds']['completionThreshold'])
+            completion_threshold = config['SN2thresholds']['completionThreshold']
             if completion >= completion_threshold:
                 continue
             elif (cartStatusCodes[statusCode] != 'noMaNGAplate' and pluggedPlate is not None):
