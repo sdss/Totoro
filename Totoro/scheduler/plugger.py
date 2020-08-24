@@ -356,7 +356,8 @@ class Plugger(object):
             raRange=raRange)
         plugged = dbclasses.getPlugged()
 
-        platesToSchedule = platesAtAPO + [plate for plate in plugged if plate not in platesAtAPO]
+        platesToSchedule = platesAtAPO + [plate for plate in plugged
+                                          if plate not in platesAtAPO]
 
         log.info('PLUGGER: plates found: {0}'.format(len(platesToSchedule)))
 

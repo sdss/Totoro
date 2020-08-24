@@ -270,7 +270,7 @@ def load(deep_plates=None):
                 newPlate = db.mangaDB.Plate()
 
             if plate.plate_id in mangaTileIDs:
-                newPlate.manga_tileid = float(mangaTileIDs[plate.plate_id])
+                newPlate.manga_tileid = int(mangaTileIDs[plate.plate_id])
             else:
                 log.warning('cannot find a valid manga_tileid for plate {}'
                             .format(plate.plate_id), TotoroUserWarning)
@@ -297,7 +297,7 @@ def load(deep_plates=None):
                 newPlate.neverobserve = False
 
             newPlate.platedb_plate_pk = float(plate.pk)
-
+            print(newPlate.platedb_plate_pk, newPlate.manga_tileid)
             session.add(newPlate)
 
     log.important('DONE')
