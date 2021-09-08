@@ -329,10 +329,13 @@ def plotApertifMedDeep(ax, **kwargs):
     color = kwargs.get('color', defaultColours['Apertif'])
 
     # plotRectangle(ax, Perseus-Pisces, **kwargs)
-    plotPatch(ax, CVn, color=color, **kwargs)
-    plotPatch(ax, HETDEX, color=color, **kwargs)
+    # plotPatch(ax, CVn, color=color, **kwargs)
+    # plotPatch(ax, HETDEX, color=color, **kwargs)
 
-    addText(ax, 210, 59, 'Apertif', color=color, **kwargs)
+    plotPatch(ax, Draw_North, color=color, **kwargs)
+    plotPatch(ax, Draw_South, color=color, **kwargs)
+
+    addText(ax, 210, 57, 'Apertif', color=color, **kwargs)
 
     return
 
@@ -543,6 +546,24 @@ ALFALFA_NGC = ALFALFA[0]
 Custom_1 = getRectangle((15 * 15, 240, -2, 11.5))
 Custom_2 = getRectangle((123.5, 127.5, -2, 9.5))
 Custom = [Custom_1, Custom_2]
+
+
+# Draw South (around Herschel-Atlas)
+ra = [190.5, 199.5, 199.5, 207.5, 207.5, 221.6, 221.6, 224.,
+      224, 205.5, 205.5, 202.1, 202.1, 195.3, 195.3,
+      192.3, 192., 184, 184, 190.3, 190.3]
+dec = [25.2, 25.2, 27.5, 27.5, 30.0, 30.0, 32.5, 32.5, 40.0,
+       40.0, 37.8, 37.8, 35.5, 35.5, 37.8, 37.8, 40.0, 40, 32.8, 32.8, 25.2]
+Draw_South = getPolygon(list(zip(ra, dec)))
+
+# Draw North (around LoTSS)
+ra = [153.5, 153.5, 158, 158, 162.5, 162.5, 189., 189., 217, 217,
+      233, 233, 245.2, 245.2, 250, 250, 236, 236, 220, 220, 198.5,
+      198.5, 180, 180, 153.5]
+dec = [62.3, 54, 54, 49.7, 49.7, 52, 52, 49.7, 49.7, 47.5, 47.5, 49.7,
+       49.7, 52, 52, 57.5, 57.5, 59.5, 59.5, 62.3, 62.3, 64.5, 64.5,
+       62.3, 62.3]
+Draw_North = getPolygon(list(zip(ra, dec)))
 
 
 def getPlatesInFootprint(plates, coords=False):
